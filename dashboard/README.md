@@ -29,6 +29,24 @@ npm test                         # unit + integration + boundary (needs the db c
 npx vitest run tests/unit/geo.test.ts   # one file
 ```
 
+## Simulation feeds
+
+Camera feeds loop footage recorded by the research simulator and imported through the `sim-import-v1` adapter. The adapter reads only a run's public outputs and refuses `private/` paths.
+
+```bash
+# repo root: record the four demo runs (needs `npm run dev` on port 5173)
+.venv/bin/python scripts/demo_runs.py
+# dashboard/web: import one run per zone pair
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-901 --pair A
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-907 --pair B
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-911 --pair C
+npm run sim:import -- --run ../../artifacts/public/A-swarm-night-demo-919 --pair D
+```
+
+If Playwright's bundled browser is missing, `scripts/demo_runs.py` needs `NESTTRACE_BROWSER` pointing at a Chrome binary, for example `export NESTTRACE_BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
+
+Media lands in `dashboard/media/` (git-ignored, bind-mounted into the container). Pins are placed at true scale around each zone's centre and labelled "Simulated · approximate position"; they mark digging activity for inspection, never a confirmed nest.
+
 ## Limits
 
 Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.
