@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {ParticleSand,sandFloor,BEACH_LENGTH,BEACH_WIDTH,type SandForcing} from './sand';
-export type Scenario='clean'|'multi'|'swarm'|'swarm-night'|'travel'|'rest'|'abandoned'|'unrelated'|'no-eggs'|'weak'|'obstructed'|'low-light';
+export type Scenario='clean'|'multi'|'swarm'|'swarm-night'|'swarm-spread'|'travel'|'rest'|'abandoned'|'unrelated'|'no-eggs'|'weak'|'obstructed'|'low-light';
 export type SimConfig={seed:number;scenario:Scenario;model:'A'|'B';eggs?:boolean};
 export const WIDTH=1280,HEIGHT=720,DURATION=40,FPS=8;
 function rng(seed:number){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296}}
@@ -13,12 +13,14 @@ export class Simulation{
  actors:TurtleActor[]=[];sand:ParticleSand;config:SimConfig;random:()=>number;light:THREE.DirectionalLight;night:boolean;nightCanvas?:HTMLCanvasElement;nightContext?:CanvasRenderingContext2D;noiseCanvas?:HTMLCanvasElement;noiseContext?:CanvasRenderingContext2D;
  constructor(canvas:HTMLCanvasElement,config:SimConfig){
  this.config=config;this.random=rng(config.seed);this.night=config.scenario==='swarm-night'||config.scenario==='low-light';
- const swarm=config.scenario==='swarm'||config.scenario==='swarm-night',multi=config.scenario==='multi'||swarm;
+ const spread=config.scenario==='swarm-spread',swarm=config.scenario==='swarm'||config.scenario==='swarm-night'||spread,multi=config.scenario==='multi'||swarm;
+ // Preview-only spread layout: each turtle gets its own [x, z] lane so the end cameras don't see them stacked.
+ const spreadSites=[[-9,-5],[-5,3],[-1,-1],[3,5],[7,-3],[10,1]];
  const specs=Array.from({length:swarm?6:multi?3:1},(_,id)=>{
- const targetX=swarm?-10+id*4+(this.random()-.5)*.6:multi?-5+id*5+(this.random()-.5)*.8:(this.random()-.5)*6;
+ const targetX=spread?spreadSites[id][0]+(this.random()-.5)*.6:swarm?-10+id*4+(this.random()-.5)*.6:multi?-5+id*5+(this.random()-.5)*.8:(this.random()-.5)*6;
  const startX=multi?targetX+(this.random()-.5)*1.4:(this.random()-.5)*7;
- const target=new THREE.Vector2(targetX,-.8+this.random()*3);
- const size=.85+this.random()*.25,speed=.9+this.random()*.2,startAt=3+(swarm?id*1.5:multi?id*3.5:0);
+ const target=new THREE.Vector2(targetX,spread?spreadSites[id][1]+(this.random()-.5)*.6:-.8+this.random()*3);
+ const size=.85+this.random()*.25,speed=.9+this.random()*.2,startAt=3+(spread?id*.4:swarm?id*1.5:multi?id*3.5:0);
  const digStart=startAt+(swarm?9:8)/speed,digEnd=digStart+(swarm?6+this.random()*1.5:multi?6.5+this.random()*1.5:8+this.random()*3);
  const coverEnd=digEnd+(swarm?2.5+this.random()*.5:multi?2.6+this.random()*.5:3.5+this.random());
  return {id,target,startX,startAt,size,speed,digStart,digEnd:config.scenario==='abandoned'?digStart+4:digEnd,coverEnd:config.scenario==='abandoned'?digStart+4:coverEnd,strength:.85+.3*this.random()};
