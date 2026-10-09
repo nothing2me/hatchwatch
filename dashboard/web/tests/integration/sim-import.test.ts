@@ -142,4 +142,34 @@ describe('importSimRun', () =>
         expect(await prisma.alert.count()).toBe(1);
         expect(await prisma.alertNote.count()).toBe(0);
     });
+
+    it('replaces a different run previously imported onto the same pair', async () =>
+    {
+        const media = join(work, 'media');
+        await importSimRun({ runDir: makeRun('A-swarm-demo-907', [pin('pin-1', 'two_camera')]), pair: 'B', mediaRoot: media, prisma });
+        const alert = await prisma.alert.findFirstOrThrow();
+        const admin = await prisma.user.findFirstOrThrow();
+        await prisma.alertNote.create({ data: { alertId: alert.id, userId: admin.id, body: 'checked' } });
+        await prisma.alertStatusChange.create({ data: { alertId: alert.id, userId: admin.id, from: 'NEW', to: 'REVIEWED' } });
+        await importSimRun({ runDir: makeRun('A-swarm-demo-911', [pin('pin-1', 'two_camera'), pin('pin-2', 'single_camera')]), pair: 'B', mediaRoot: media, prisma });
+
+        const videos = await prisma.video.findMany();
+        expect(videos.map(video => video.simRunId)).toEqual(['A-swarm-demo-911', 'A-swarm-demo-911']);
+        expect(await prisma.alert.count({ where: { videoId: { in: videos.map(video => video.id) } } })).toBe(2);
+        expect(await prisma.alert.count()).toBe(2);
+        expect(await prisma.alertNote.count()).toBe(0);
+        expect(await prisma.alertStatusChange.count()).toBe(0);
+    });
+
+    it('attaches a single-camera pin to the camera that saw it', async () =>
+    {
+        const runDir = makeRun('A-swarm-demo-907', [pin('pin-1', 'two_camera'), pin('pin-2', 'single_camera')]);
+        await importSimRun({ runDir, pair: 'B', mediaRoot: join(work, 'media'), prisma });
+        const alerts = await prisma.alert.findMany({ include: { camera: true, video: true } });
+        const byTier = Object.fromEntries(alerts.map(alert => [alert.evidenceTier, alert]));
+        expect(byTier.TWO_CAMERA.camera.code).toBe('B1');
+        expect(byTier.SINGLE_CAMERA.camera.code).toBe('B2');
+        expect(byTier.SINGLE_CAMERA.video.cameraId).toBe(byTier.SINGLE_CAMERA.cameraId);
+        expect(byTier.SINGLE_CAMERA.video.simRunId).toBe('A-swarm-demo-907');
+    });
 });

@@ -1,17 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { MapSnapshot } from '@/lib/types';
+import type { AlertView, MapSnapshot } from '@/lib/types';
+import type { Playback } from '@/features/map/playback';
 
 // MapLibre needs WebGL; replace MapView with a stub that exposes camera buttons.
 vi.mock('@/features/map/MapView', async () =>
 {
     const React = await import('react');
+    const { visibleAlerts } = await import('@/features/map/playback');
     return {
         initialBounds: () => [[0, 0], [1, 1]],
-        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback?: unknown }, ref)
+        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null }, ref)
         {
-            React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn() }));
-            return <div>{props.snapshot.cameras.map(camera => <button key={camera.id} onClick={() => props.onSelectCamera(camera.id)}>cam {camera.code}</button>)}</div>;
+            React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn(), flyTo: vi.fn() }));
+            const visible = visibleAlerts(props.snapshot.alerts, props.playback).map(alert => alert.id).join(',');
+            return (
+                <div>
+                    {props.snapshot.cameras.map(camera => <button key={camera.id} onClick={() => props.onSelectCamera(camera.id)}>cam {camera.code}</button>)}
+                    <span data-testid="visible-pins">{visible}</span>
+                </div>
+            );
         }),
     };
 });
@@ -74,5 +82,45 @@ describe('MapScreen', () =>
         fireEvent.click(screen.getByText('cam B1'));
         expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(screen.queryByText('No footage yet')).toBeNull();
+        expect(screen.getByText('Simulated footage · pins placed approximately')).toBeTruthy();
+        expect(screen.queryByText(/Calibrate this camera/)).toBeNull();
+    });
+
+    const simAlert = (id: string, runId: string, cameraCode: string, startT: number): AlertView => ({
+        id, kind: 'DIGGING', message: `Digging activity detected; nesting unresolved.`, status: 'NEW', zoneCode: 'B', cameraCode,
+        position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `video-${runId}`,
+        simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true,
+    });
+    const twoRuns: MapSnapshot = {
+        ...snapshot,
+        cameras: [
+            { ...snapshot.cameras[0], video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } },
+            { ...snapshot.cameras[0], id: 'c2', code: 'C1', zoneCode: 'C', video: { id: 'v2', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R2' } },
+        ],
+        alerts: [simAlert('a1', 'R1', 'B1', 8), simAlert('a2', 'R2', 'C1', 3)],
+    };
+
+    it('seeks the alert camera feed to the alert start and marks the alert active', () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        fireEvent.click(screen.getAllByText('Digging activity detected; nesting unresolved.')[0]);
+        const element = screen.getByTestId('camera-video') as HTMLVideoElement;
+        expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
+        fireEvent(element, new Event('loadedmetadata'));
+        expect(element.currentTime).toBeCloseTo(8);
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1');
+        const [first, second] = screen.getAllByRole('button', { name: /Digging activity detected/ });
+        expect(first.getAttribute('aria-current')).toBe('true');
+        expect(second.getAttribute('aria-current')).toBeNull();
+    });
+
+    it('never shows other runs\' pins when a camera opens', () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
+        fireEvent.click(screen.getByText('cam C1'));
+        expect(screen.getByTestId('visible-pins').textContent).toBe('');
+        fireEvent.click(screen.getByLabelText('Close camera panel'));
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
     });
 });

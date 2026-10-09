@@ -37,6 +37,8 @@ const levelColor = ['match', ['get', 'level'], 'HIGH', '#E2581F', 'MEDIUM', '#FF
 // Pins seen by both cameras of a pair are green; single-camera pins stay amber.
 const tierFill = ['match', ['get', 'tier'], 'TWO_CAMERA', 'rgba(74,222,128,0.25)', 'SINGLE_CAMERA', 'rgba(255,181,71,0.25)', 'rgba(255,181,71,0.2)'] as unknown as string;
 const tierStroke = ['match', ['get', 'tier'], 'TWO_CAMERA', '#4ADE80', '#FFB547'] as unknown as string;
+// Pins a metre or two apart overlap at beach zoom; grow them only as the map zooms in.
+const alertRadius = ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10, 20, 16] as unknown as number;
 
 export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback }, ref)
 {
@@ -61,14 +63,20 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
         })),
     }), [snapshot.cameras, selectedCameraId]);
 
-    const alertsGeoJson = useMemo<FeatureCollection>(() => ({
-        type: 'FeatureCollection',
-        features: visibleAlerts(snapshot.alerts, playback).map(alert => ({
-            type: 'Feature',
-            properties: { status: alert.status, tier: alert.evidenceTier ?? 'NONE' },
-            geometry: { type: 'Point', coordinates: alert.position! },
-        })),
-    }), [snapshot.alerts, playback]);
+    // Rebuild (and so MapLibre setData) only when the visible set changes, not on every clock tick.
+    const visibleIds = visibleAlerts(snapshot.alerts, playback).map(alert => alert.id).join(',');
+    const alertsGeoJson = useMemo<FeatureCollection>(() =>
+    {
+        const ids = new Set(visibleIds.split(','));
+        return {
+            type: 'FeatureCollection',
+            features: snapshot.alerts.filter(alert => alert.position !== null && ids.has(alert.id)).map(alert => ({
+                type: 'Feature',
+                properties: { status: alert.status, tier: alert.evidenceTier ?? 'NONE' },
+                geometry: { type: 'Point', coordinates: alert.position! },
+            })),
+        };
+    }, [snapshot.alerts, visibleIds]);
 
     const [[west, south], [east, north]] = initialBounds(snapshot);
     const padding = typeof window === 'undefined' ? 80 : fitPadding(window.innerWidth, window.innerHeight);
@@ -117,7 +125,7 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 {layers.alerts && (
                     <Source id="alerts" type="geojson" data={alertsGeoJson}>
                         <Layer id="alert-ring" type="circle" paint={{
-                            'circle-radius': 10, 'circle-color': tierFill,
+                            'circle-radius': alertRadius, 'circle-color': tierFill,
                             'circle-stroke-color': tierStroke, 'circle-stroke-width': 2,
                         }} />
                     </Source>

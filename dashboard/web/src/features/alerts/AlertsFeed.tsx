@@ -56,6 +56,7 @@ export function AlertsFeed({ alerts, onSelect, playback = null }: { alerts: Aler
                             <button
                                 type="button"
                                 onClick={() => onSelect(alert)}
+                                aria-current={active || undefined}
                                 className={cn('w-full rounded-lg border-l-[3px] px-3 py-2 text-left text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-amber',
                                     alert.kind === 'DIGGING' && alert.status === 'NEW' ? 'border-amber bg-amber/7' : 'border-white/15',
                                     active && 'bg-amber/10 ring-1 ring-amber/60')}

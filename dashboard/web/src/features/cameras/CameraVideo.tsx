@@ -2,14 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
-import type { CameraVideo as CameraVideoData } from '@/lib/types';
+import type { FeedVideo } from '@/lib/types';
 
 export type FeedVariant = 'raw' | 'motion';
 
+export interface SeekRequest
+{
+    t: number;
+    nonce: number;   // a new nonce re-seeks even to the same time
+}
+
 const CLOCK_MS = 250;
+const HAVE_METADATA = 1;
 
 // Looping muted feed with an optional Raw/Motion switch. Publishes its clock so the map can gate pins.
-export function CameraVideo({ video, onTime }: { video: CameraVideoData; onTime?: (t: number) => void })
+export function CameraVideo({ video, onTime, seekTo = null }: { video: FeedVideo; onTime?: (t: number) => void; seekTo?: SeekRequest | null })
 {
     const ref = useRef<HTMLVideoElement>(null);
     const resumeAt = useRef<number | null>(null);
@@ -23,7 +30,8 @@ export function CameraVideo({ video, onTime }: { video: CameraVideoData; onTime?
         }
         const timer = setInterval(() =>
         {
-            if (ref.current)
+            // While a seek or variant switch waits for metadata the element's clock is not the feed's.
+            if (ref.current && resumeAt.current === null)
             {
                 onTime(ref.current.currentTime);
             }
@@ -31,11 +39,32 @@ export function CameraVideo({ video, onTime }: { video: CameraVideoData; onTime?
         return () => clearInterval(timer);
     }, [onTime]);
 
+    useEffect(() =>
+    {
+        const element = ref.current;
+        if (!seekTo || !element)
+        {
+            return;
+        }
+        if (element.readyState >= HAVE_METADATA && resumeAt.current === null)
+        {
+            element.currentTime = seekTo.t;
+        }
+        else
+        {
+            resumeAt.current = seekTo.t;
+        }
+    }, [seekTo]);
+
     function choose(next: FeedVariant)
     {
         if (next !== variant)
         {
-            resumeAt.current = ref.current?.currentTime ?? 0;
+            // A second toggle before metadata loads keeps the original position.
+            if (resumeAt.current === null)
+            {
+                resumeAt.current = ref.current?.currentTime ?? 0;
+            }
             setVariant(next);
         }
     }

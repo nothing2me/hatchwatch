@@ -46,4 +46,35 @@ describe('CameraVideo', () =>
         expect(onTime).toHaveBeenCalledWith(3);
         vi.useRealTimers();
     });
+
+    it('holds the clock while a toggle waits for metadata and keeps the first resume time', () =>
+    {
+        vi.useFakeTimers();
+        const onTime = vi.fn();
+        render(<CameraVideo video={video} onTime={onTime} />);
+        const element = screen.getByTestId('camera-video') as HTMLVideoElement;
+        element.currentTime = 12.5;
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion' }));
+        element.currentTime = 0;
+        vi.advanceTimersByTime(600);
+        expect(onTime).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('radio', { name: 'Raw' }));
+        fireEvent(element, new Event('loadedmetadata'));
+        expect(element.currentTime).toBeCloseTo(12.5);
+        vi.advanceTimersByTime(300);
+        expect(onTime).toHaveBeenCalledWith(12.5);
+        vi.useRealTimers();
+    });
+
+    it('seeks to a requested time once metadata loads, and immediately when already loaded', () =>
+    {
+        const { rerender } = render(<CameraVideo video={video} seekTo={{ t: 8, nonce: 1 }} />);
+        const element = screen.getByTestId('camera-video') as HTMLVideoElement;
+        fireEvent(element, new Event('loadedmetadata'));
+        expect(element.currentTime).toBeCloseTo(8);
+        Object.defineProperty(element, 'readyState', { configurable: true, value: 1 });
+        element.currentTime = 20;
+        rerender(<CameraVideo video={video} seekTo={{ t: 8, nonce: 2 }} />);
+        expect(element.currentTime).toBeCloseTo(8);
+    });
 });

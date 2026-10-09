@@ -7,7 +7,7 @@ export const pinSchema = z.object({
     interval: z.tuple([z.number(), z.number()]),
     score: z.number(),
     evidence_tier: z.enum(['two_camera', 'single_camera']),
-    source_views: z.array(z.number()).min(1),
+    source_views: z.array(z.number().int().min(0).max(1)).min(1),
 }).refine(pin => pin.interval[0] <= pin.interval[1], { message: 'pin interval must not run backwards', path: ['interval'] });
 
 export const pinsFileSchema = z.object({

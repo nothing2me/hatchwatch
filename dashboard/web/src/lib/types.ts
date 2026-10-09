@@ -23,7 +23,7 @@ export interface ZoneView
     ring: LngLat[];          // closed ring, first point repeated last
 }
 
-export interface CameraVideo
+export interface FeedVideo
 {
     id: string;
     source: VideoSource;
@@ -43,7 +43,7 @@ export interface CameraView
     rangeM: number;
     status: CameraStatus;
     calibrated: boolean;
-    video: CameraVideo | null;
+    video: FeedVideo | null;
 }
 
 export interface AlertView

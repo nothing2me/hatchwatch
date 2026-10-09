@@ -77,12 +77,14 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
 
     return prisma.$transaction(async tx =>
     {
-        const old = await tx.video.findMany({ where: { simRunId: runId }, select: { id: true } });
+        // Replace this run anywhere, and any other simulated run previously imported onto this pair.
+        const previous = { OR: [{ simRunId: runId }, { source: 'SIMULATION' as const, cameraId: { in: cameras.map(camera => camera.id) } }] };
+        const old = await tx.video.findMany({ where: previous, select: { id: true } });
         const oldAlerts = { alert: { videoId: { in: old.map(video => video.id) } } };
         await tx.alertStatusChange.deleteMany({ where: oldAlerts });
         await tx.alertNote.deleteMany({ where: oldAlerts });
         await tx.alert.deleteMany({ where: { videoId: { in: old.map(video => video.id) } } });
-        await tx.video.deleteMany({ where: { simRunId: runId } });
+        await tx.video.deleteMany({ where: previous });
 
         const videos = await Promise.all(cameras.map((camera, index) => tx.video.create({
             data: {
@@ -102,10 +104,12 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
         for (const simPin of pins)
         {
             const [lng, lat] = simPointToLngLat(frame, simPin.point);
+            // A pin seen by one camera belongs to that camera; two-camera pins stay on <pair>1.
+            const view = simPin.source_views.length === 1 ? simPin.source_views[0] : 0;
             await tx.alert.create({
                 data: {
-                    videoId: videos[0].id,
-                    cameraId: cameras[0].id,
+                    videoId: videos[view].id,
+                    cameraId: cameras[view].id,
                     zoneId: zone.id,
                     kind: 'DIGGING',
                     message: ALERT_MESSAGES.DIGGING,
