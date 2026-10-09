@@ -1,5 +1,6 @@
 // List of every nest site, newest first, with filters for what the patrol
 // cares about most: sites that are still unprotected or never visited.
+// Sites that have faded off the live map stay here under "Archived".
 
 import { useState } from 'react';
 import { protectionStatuses } from '../config/nestStatuses.js';
@@ -10,11 +11,11 @@ import { formatDateTime } from '../utils/formatTime.js';
 const filterOptions =
 [
     {
-        value: 'all',
-        label: 'All',
-        matches: function matchesAll()
+        value: 'active',
+        label: 'On map',
+        matches: function matchesActive(summary)
         {
-            return true;
+            return !summary.isArchived;
         },
     },
     {
@@ -22,7 +23,7 @@ const filterOptions =
         label: 'Unprotected',
         matches: function matchesUnprotected(summary)
         {
-            return summary.protectionStatus === 'unprotected';
+            return !summary.isArchived && summary.protectionStatus === 'unprotected';
         },
     },
     {
@@ -30,7 +31,7 @@ const filterOptions =
         label: 'No patrol yet',
         matches: function matchesNeedsPatrol(summary)
         {
-            return !summary.patrolVisited;
+            return !summary.isArchived && !summary.patrolVisited;
         },
     },
     {
@@ -38,7 +39,15 @@ const filterOptions =
         label: 'Protected',
         matches: function matchesProtected(summary)
         {
-            return summary.protectionStatus === 'protected';
+            return !summary.isArchived && summary.protectionStatus === 'protected';
+        },
+    },
+    {
+        value: 'archived',
+        label: 'Archived',
+        matches: function matchesArchived(summary)
+        {
+            return summary.isArchived;
         },
     },
 ];
@@ -47,12 +56,13 @@ export default function NestList(
 {
     nestSites,
     zones,
+    dataTag,
     selectedNestIdentifier,
     onSelectNest,
     onClearPatrolEntries,
 })
 {
-    const [selectedFilter, setSelectedFilter] = useState('all');
+    const [selectedFilter, setSelectedFilter] = useState('active');
 
     const activeFilter = filterOptions.find(function isSelectedFilter(option)
     {
@@ -78,7 +88,7 @@ export default function NestList(
         <section className="panel nest-list" aria-labelledby="nest-list-heading">
             <div className="map-panel__title-row">
                 <h1 id="nest-list-heading" className="map-panel__title">Nest log</h1>
-                <span className="sample-tag">Sample data</span>
+                <span className="sample-tag">{dataTag}</span>
             </div>
 
             <div role="group" aria-label="Filter nest sites" className="segmented-control nest-list__filters">
@@ -131,6 +141,7 @@ export default function NestList(
                                 <span className="nest-row__title">
                                     {nestSite.nestIdentifier}
                                     {summary.isOnSite && <span className="on-site-tag">On site now</span>}
+                                    {nestSite.evidenceTier === 'single_camera' && <span className="review-tag">One camera</span>}
                                 </span>
                                 <span className="nest-row__meta">
                                     Zone {nestSite.zoneIdentifier}{zone ? `, ${zone.name}` : ''} · arrived {formatDateTime(summary.arrivedAt)}
@@ -145,9 +156,12 @@ export default function NestList(
                 })}
             </div>
 
-            <button type="button" className="text-button" onClick={onClearPatrolEntries}>
-                Reset demo patrol entries
-            </button>
+            {/* Sample mode only: the live log is shared and append-only. */}
+            {onClearPatrolEntries && (
+                <button type="button" className="text-button" onClick={onClearPatrolEntries}>
+                    Reset demo patrol entries
+                </button>
+            )}
         </section>
     );
 }

@@ -7,12 +7,19 @@ import { summarizeNestSite } from '../utils/nestStatus.js';
 // Unprotected sites come first, then protected, then no-nest sites.
 const protectionSortOrder = ['unprotected', 'protected', 'notNeeded'];
 
+// Keeps the card short on a busy night; the Nest log page lists everything.
+const maximumRows = 8;
+
 export default function NestSummaryPanel({ nestSites, onOpenNest })
 {
     const rows = nestSites
         .map(function summarize(nestSite)
         {
             return { nestSite, summary: summarizeNestSite(nestSite) };
+        })
+        .filter(function isOnLiveMap(row)
+        {
+            return !row.summary.isArchived;
         })
         .sort(function byUrgencyThenNewest(firstRow, secondRow)
         {
@@ -41,8 +48,10 @@ export default function NestSummaryPanel({ nestSites, onOpenNest })
                 </span>
             </div>
 
+            {rows.length === 0 && <p className="panel__empty">No sites on the map right now.</p>}
+
             <div className="pair-list">
-                {rows.map(function renderNestRow({ nestSite, summary })
+                {rows.slice(0, maximumRows).map(function renderNestRow({ nestSite, summary })
                 {
                     const protection = protectionStatuses[summary.protectionStatus];
 

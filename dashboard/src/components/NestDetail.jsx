@@ -33,6 +33,18 @@ export default function NestDetail({ nestSite, zones, onAddPatrolEntry })
                 <p className="nest-detail__alert" role="status">{detectionAlertText}</p>
             )}
 
+            {nestSite.evidenceTier === 'single_camera' && (
+                <p className="nest-detail__note">
+                    Only {nestSite.seenByCameras[0]} picked this up; the other camera in the pair didn't. Review the clips before sending a patrol.
+                </p>
+            )}
+
+            {summary.isArchived && (
+                <p className="nest-detail__note">
+                    This site faded off the live map {formatDateTime(summary.archivedAt)}. Its log is kept, and patrol updates can still be added.
+                </p>
+            )}
+
             <div className="fact-grid fact-grid--wide">
                 <div className="fact">
                     <span className="fact__label">Arrived</span>
@@ -54,8 +66,17 @@ export default function NestDetail({ nestSite, zones, onAddPatrolEntry })
                 </div>
                 <div className="fact">
                     <span className="fact__label">Seen by</span>
-                    <span className="fact__value">{nestSite.seenByCameras.join(' and ')}</span>
+                    <span className="fact__value">
+                        {nestSite.seenByCameras.join(' and ')}
+                        {nestSite.evidenceTier === 'single_camera' && ' (one camera)'}
+                    </span>
                 </div>
+                {nestSite.alertRaisedAt && (
+                    <div className="fact">
+                        <span className="fact__label">Alert raised</span>
+                        <span className="fact__value">{formatDateTime(nestSite.alertRaisedAt)}</span>
+                    </div>
+                )}
                 <div className="fact">
                     <span className="fact__label">Patrol</span>
                     <span className="fact__value">
@@ -69,6 +90,11 @@ export default function NestDetail({ nestSite, zones, onAddPatrolEntry })
                 <div className="fact">
                     <span className="fact__label">Location</span>
                     <span>{nestSite.locationDescription}</span>
+                    {nestSite.groundPointMetres && (
+                        <span className="fact__label">
+                            Ground position {nestSite.groundPointMetres.x} m along shore, {nestSite.groundPointMetres.z} m across, inspection radius {nestSite.radiusMetres} m (simulated camera calibration).
+                        </span>
+                    )}
                     <span className="fact__label">GPS coordinates will appear here once cameras are surveyed.</span>
                 </div>
             </div>

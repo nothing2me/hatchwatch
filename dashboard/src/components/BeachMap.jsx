@@ -129,17 +129,27 @@ function CameraLayer({ cameraPairs, selectedPairIdentifier, onSelectPair })
     );
 }
 
-// Draws a pin at every nest site, colored by its protection status. Sites
-// where activity is still going on get an extra ring. Clicking a pin opens
-// that site's log.
+// Draws a pin at every nest site still on the live map, colored by its
+// protection status and fading as it ages (visibility comes from the
+// backend; sample sites have none and stay solid). Sites where activity is
+// still going on get an extra ring. Clicking a pin opens that site's log.
 function NestSiteLayer({ nestSites, onSelectNest })
 {
+    // Oldest first, so the newest pins are drawn on top.
+    const visibleSites = nestSites
+        .filter(function isOnMap(nestSite)
+        {
+            return nestSite.visibility !== 0 && !summarizeNestSite(nestSite).isArchived;
+        })
+        .reverse();
+
     return (
         <g>
-            {nestSites.map(function renderNestPin(nestSite)
+            {visibleSites.map(function renderNestPin(nestSite)
             {
                 const summary = summarizeNestSite(nestSite);
                 const protection = protectionStatuses[summary.protectionStatus];
+                const opacity = nestSite.visibility ?? 1;
 
                 function handleKeyDown(keyboardEvent)
                 {
@@ -154,6 +164,7 @@ function NestSiteLayer({ nestSites, onSelectNest })
                     <g
                         key={nestSite.nestIdentifier}
                         className="nest-pin"
+                        opacity={opacity}
                         transform={`translate(${nestSite.position.x} ${nestSite.position.y})`}
                         role="button"
                         tabIndex={0}
@@ -164,9 +175,16 @@ function NestSiteLayer({ nestSites, onSelectNest })
                         }}
                         onKeyDown={handleKeyDown}
                     >
-                        {summary.isOnSite && <circle r="17" className="nest-pin__on-site-ring" stroke={protection.pinFill} />}
-                        <circle r="9" fill={protection.pinFill} stroke="#FFFFFF" strokeWidth="2.5" />
-                        <text y="-15" className="nest-pin__label">{nestSite.nestIdentifier}</text>
+                        <title>{`${nestSite.nestIdentifier} · ${protection.label}`}</title>
+                        {summary.isOnSite && <circle r="15" className="nest-pin__on-site-ring" stroke={protection.pinFill} />}
+                        {/* Single-camera sites get a dashed outline: they need review. */}
+                        <circle
+                            r="7"
+                            fill={protection.pinFill}
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                            strokeDasharray={nestSite.evidenceTier === 'single_camera' ? '3 2' : undefined}
+                        />
                     </g>
                 );
             })}

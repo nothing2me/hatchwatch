@@ -4,7 +4,7 @@ This repository has two separate products with different data and trust boundari
 
 ## Real dashboard (team-owned application)
 
-The real monitoring dashboard lives under `dashboard/` as a separate React/Vite application on port 5180. It currently renders sample data through `dashboard/src/data/dataSource.js`. As the team adds real camera integrations, users, access control, persistent records, and production deployment, keep its dependency manifest, build output, configuration, tests, and runtime separate. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
+The real monitoring dashboard lives under `dashboard/` as a separate React/Vite application on port 5180. Its backend (`dashboard/server`, port 5182) feeds it from the synthetic live runner through the adapter below; `VITE_DATA_SOURCE=sample` runs it on made-up data alone. As the team adds real camera integrations, users, access control, persistent records, and production deployment, keep its dependency manifest, build output, configuration, tests, and runtime separate. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
 
 `dashboard/README.md` documents the dashboard scaffold and its independent launch. The current simulation UI is a separate research tool.
 
@@ -17,6 +17,8 @@ Keep simulation-only data—seeds, turtle state, scenario names, sand particle s
 ## Integration boundary
 
 The dashboard team may later create an explicit adapter for reviewed outputs: `predictions.json`, public camera calibration, video evidence, and `motion-map.png`. Treat the motion map as an approximate ground projection. Keep the existing alert wording: **“Digging activity detected; nesting unresolved.”** It does not establish egg deposition or a confirmed nest. Do not expose `examples/*/private` or `artifacts/private` through production endpoints.
+
+The live demo uses exactly one such contract: `schemas/live-chunk.v1.json`. `scripts/live-runner.mjs` (simulation side) publishes a `live-chunk.json` manifest per chunk in `artifacts/public/<chunk>/`, and `dashboard/server/liveChunkAdapter.js` (dashboard side) reads only that manifest, `pins/predictions.json`, and the two camera videos, under fixed file names. The runner never runs evaluation and skips registered seeds; its `swarm-spread` layout is unregistered and not a source of reportable results.
 
 Coordinate any shared JSON contract in a small versioned schema before wiring the two applications together. Keep their ports, environment variables, storage locations, and deployment pipelines separate. If a change affects both applications, test each one independently and include an integration check at the adapter boundary.
 

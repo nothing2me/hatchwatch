@@ -3,6 +3,7 @@
 
 import { activityLevels } from '../config/activityLevels.js';
 import { describePairStatus } from '../utils/cameraStatus.js';
+import { formatDateTime } from '../utils/formatTime.js';
 
 export default function SelectedPairPanel({ cameraPair, zone })
 {
@@ -27,7 +28,8 @@ export default function SelectedPairPanel({ cameraPair, zone })
                 <span className={`status-badge status-badge--${pairStatus.tone}`}>{pairStatus.text}</span>
             </div>
 
-            {/* One feed per camera, so judges can see the two angles */}
+            {/* One feed per camera, so judges can see the two angles. Live
+                footage is the pair's most recent synthetic chunk. */}
             <div className="camera-feeds">
                 {cameraPair.cameras.map(function renderFeed(camera)
                 {
@@ -35,14 +37,29 @@ export default function SelectedPairPanel({ cameraPair, zone })
 
                     return (
                         <div key={camera.cameraIdentifier} className="camera-feed">
-                            <div className="camera-feed__screen">
-                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-                                    <rect x="2" y="6" width="14" height="12" rx="2" />
-                                    <path d="M16 10l6-3v10l-6-3" />
-                                </svg>
-                                {/* TODO: replace with the real or simulated camera frame */}
-                                {isOnline ? 'Live feed' : 'No signal'}
-                            </div>
+                            {camera.videoUrl
+                                ? (
+                                    // The latest clip from this camera, looping. Muted so browsers allow autoplay.
+                                    <video
+                                        key={camera.videoUrl}
+                                        className="camera-feed__screen camera-feed__video"
+                                        src={camera.videoUrl}
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                        aria-label={`Latest clip from camera ${camera.cameraIdentifier}, ${camera.facingDescription}`}
+                                    />
+                                )
+                                : (
+                                    <div className="camera-feed__screen">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+                                            <rect x="2" y="6" width="14" height="12" rx="2" />
+                                            <path d="M16 10l6-3v10l-6-3" />
+                                        </svg>
+                                        {isOnline ? 'Live feed' : 'No signal'}
+                                    </div>
+                                )}
                             <span className="camera-feed__caption">
                                 {camera.cameraIdentifier}, {camera.facingDescription}
                             </span>
@@ -64,7 +81,9 @@ export default function SelectedPairPanel({ cameraPair, zone })
                 </div>
                 <div className="fact">
                     <span className="fact__label">Last frame</span>
-                    <span className="fact__value">Not connected</span>
+                    <span className="fact__value">
+                        {cameraPair.feed ? formatDateTime(cameraPair.feed.lastFrameTime) : 'Not connected'}
+                    </span>
                 </div>
             </div>
         </section>

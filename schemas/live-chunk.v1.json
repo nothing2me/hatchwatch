@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nothing2me/nesttrace/schemas/live-chunk.v1.json",
+  "title": "NestTrace live chunk manifest, version 1",
+  "description": "Written last, as artifacts/public/<chunk_id>/live-chunk.json, by scripts/live-runner.mjs once a chunk's public outputs are complete. It is the only contract between the continuous simulator and the dashboard adapter. Every path is relative to the chunk's public folder and must match the fixed names below; nothing here may point at artifacts/private, seeds, scenario names, simulator state, or evaluator truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "chunk_id", "sequence", "recording_started_at", "published_at", "clip_seconds", "fps", "rendering", "ground_bounds_m", "cameras", "pins", "note"],
+  "properties": {
+    "schema": { "const": "nesttrace.live-chunk" },
+    "version": { "const": 1 },
+    "chunk_id": { "type": "string", "pattern": "^live-[0-9]{6}-[A-Za-z0-9]+$", "description": "Same as the chunk's folder name." },
+    "sequence": { "type": "integer", "minimum": 0, "description": "Increases by one per chunk, across runner restarts." },
+    "recording_started_at": { "type": "string", "format": "date-time", "description": "Wall-clock time that clip second 0 maps to." },
+    "published_at": { "type": "string", "format": "date-time" },
+    "clip_seconds": { "type": "number", "exclusiveMinimum": 0 },
+    "fps": { "type": "number", "exclusiveMinimum": 0 },
+    "rendering": { "enum": ["synthetic-daylight", "synthetic-very-dark"] },
+    "ground_bounds_m": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "[x_min, x_max, z_min, z_max] of the analyzed ground area. x runs along the shore from camera 0's end; z runs from the water (z_min) toward the dunes (z_max)."
+    },
+    "cameras": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "end", "video", "calibration"],
+        "properties": {
+          "index": { "enum": [0, 1] },
+          "end": { "enum": ["x_min", "x_max"], "description": "Which end of the analyzed area the camera sits at; it faces the other end." },
+          "video": { "enum": ["camera-0.mp4", "camera-1.mp4"] },
+          "calibration": { "enum": ["calibration-0.json", "calibration-1.json"] }
+        }
+      }
+    },
+    "pins": { "const": "pins/predictions.json", "description": "Two-camera site pins from pipeline/pin_fuse.py (schema_version 1)." },
+    "note": { "type": "string" }
+  }
+}

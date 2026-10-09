@@ -8,6 +8,7 @@ export default function NestLogView(
 {
     nestSites,
     zones,
+    dataTag,
     selectedNestIdentifier,
     onSelectNest,
     onAddPatrolEntry,
@@ -39,6 +40,7 @@ export default function NestLogView(
             <NestList
                 nestSites={nestSites}
                 zones={zones}
+                dataTag={dataTag}
                 selectedNestIdentifier={selectedNestIdentifier}
                 onSelectNest={selectNestFromList}
                 onClearPatrolEntries={onClearPatrolEntries}

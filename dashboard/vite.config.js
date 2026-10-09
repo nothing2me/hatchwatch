@@ -13,6 +13,14 @@ export default defineConfig(
     {
         port: 5180,
         strictPort: true,
+
+        // The dashboard backend (server/server.js) runs on its own port; the
+        // browser reaches it through this proxy so everything is same-origin.
+        proxy:
+        {
+            '/api': 'http://127.0.0.1:5182',
+            '/media': 'http://127.0.0.1:5182',
+        },
     },
     preview:
     {

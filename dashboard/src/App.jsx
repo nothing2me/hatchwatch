@@ -3,8 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createSampleDataSource } from './data/dataSource.js';
-import { createLocalNestLogStore } from './data/nestLogStore.js';
-import { sampleNestSites } from './data/sampleNestLog.js';
+import { createLiveDataSource } from './data/liveDataSource.js';
 import { countAllCameras, countOnlineCameras } from './utils/cameraStatus.js';
 import { countUnprotectedSites } from './utils/nestStatus.js';
 import AppBar from './components/AppBar.jsx';
@@ -15,26 +14,32 @@ import NestSummaryPanel from './components/NestSummaryPanel.jsx';
 import ZoneList from './components/ZoneList.jsx';
 import CameraPairList from './components/CameraPairList.jsx';
 import NestLogView from './components/NestLogView.jsx';
+import AlertToasts from './components/AlertToasts.jsx';
+import FeedStatusBanner from './components/FeedStatusBanner.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
-// Swap this line for the pipeline adapter data source once it exists
-// (see data/dataSource.js and agent.md for the boundary rules).
-const dataSource = createSampleDataSource();
+// Live by default: the dashboard backend feeds it from the continuous
+// simulator. Set VITE_DATA_SOURCE=sample to run on made-up data alone.
+const dataSource = import.meta.env.VITE_DATA_SOURCE === 'sample'
+    ? createSampleDataSource()
+    : createLiveDataSource();
 
-// Nest sites and their logs. Swap for a backend store with the same
-// methods so every patrol shares one log (see data/nestLogStore.js).
-const nestLogStore = createLocalNestLogStore(sampleNestSites);
+// Alerts stay on screen this long unless dismissed or opened.
+const alertDisplayMilliseconds = 15000;
+const maximumAlertsShown = 4;
 
 export default function App()
 {
     // The latest snapshot of the beach from the data source (null until the first one arrives).
     const [snapshot, setSnapshot] = useState(null);
+    const [connectionState, setConnectionState] = useState('connecting');
+    const [alerts, setAlerts] = useState([]);
 
     // Which camera pair the user is looking at. Starts on pair B (Holiday Beach).
     const [selectedPairIdentifier, setSelectedPairIdentifier] = useState('B');
 
     // Which page is showing ("map" or "nest-log"), and which nest site is open.
     const [currentView, setCurrentView] = useState('map');
-    const [nestSites, setNestSites] = useState([]);
     const [selectedNestIdentifier, setSelectedNestIdentifier] = useState(null);
 
     // Map controls.
@@ -46,28 +51,70 @@ export default function App()
     // Start listening to the data source when the page loads, and stop when it closes.
     useEffect(function connectToDataSource()
     {
-        const unsubscribe = dataSource.subscribe(function handleSnapshot(newSnapshot)
+        const stopSnapshots = dataSource.subscribe(setSnapshot);
+        const stopConnection = dataSource.subscribeToConnection(setConnectionState);
+        const stopAlerts = dataSource.subscribeToAlerts(function handleAlert(alert)
         {
-            setSnapshot(newSnapshot);
+            setAlerts(function addAlert(current)
+            {
+                return [{ ...alert, receivedAt: Date.now() }, ...current].slice(0, maximumAlertsShown);
+            });
         });
 
-        return unsubscribe;
+        return function disconnect()
+        {
+            stopSnapshots();
+            stopConnection();
+            stopAlerts();
+        };
     }, []);
 
-    // Same for the nest log, which updates whenever a patrol adds an entry.
-    useEffect(function connectToNestLog()
+    // Drop alerts once they've been on screen long enough.
+    useEffect(function expireAlerts()
     {
-        return nestLogStore.subscribe(setNestSites);
-    }, []);
+        if (alerts.length === 0)
+        {
+            return undefined;
+        }
 
-    // Opens a nest site's log page, from a map pin or the sidebar list.
+        const timer = setInterval(function removeOldAlerts()
+        {
+            setAlerts(function keepRecent(current)
+            {
+                return current.filter(function isRecent(alert)
+                {
+                    return Date.now() - alert.receivedAt < alertDisplayMilliseconds;
+                });
+            });
+        }, 1000);
+
+        return function stopTimer()
+        {
+            clearInterval(timer);
+        };
+    }, [alerts.length]);
+
+    const nestSites = snapshot ? snapshot.nestSites : [];
+
+    // Opens a nest site's log page, from a map pin, the sidebar list, or an alert.
     function openNestSite(nestIdentifier)
     {
         setSelectedNestIdentifier(nestIdentifier);
         setCurrentView('nest-log');
     }
 
-    // Arriving on the log page with nothing chosen: open the first site.
+    function dismissAlert(nestIdentifier)
+    {
+        setAlerts(function removeAlert(current)
+        {
+            return current.filter(function isOther(alert)
+            {
+                return alert.nestIdentifier !== nestIdentifier;
+            });
+        });
+    }
+
+    // Arriving on the log page with nothing chosen: open the newest site.
     function changeView(view)
     {
         if (view === 'nest-log' && selectedNestIdentifier === null && nestSites.length > 0)
@@ -109,8 +156,17 @@ export default function App()
     // Still waiting on the first snapshot.
     if (!snapshot)
     {
-        return <p className="loading-message">Connecting to cameras…</p>;
+        return (
+            <p className="loading-message" role="status">
+                {connectionState === 'disconnected' || connectionState === 'connecting'
+                    ? 'Connecting to the dashboard backend… Start it with "npm run server" in the dashboard folder.'
+                    : 'Connecting to cameras…'}
+            </p>
+        );
     }
+
+    const isLive = snapshot.mode === 'live';
+    const dataTag = isLive ? 'Synthetic live feed' : 'Sample data';
 
     return (
         <div className="app">
@@ -122,76 +178,91 @@ export default function App()
                 totalCameraCount={countAllCameras(snapshot.cameraPairs)}
             />
 
+            {/* Each area is guarded separately, so one failure can't blank the dashboard. */}
+            <ErrorBoundary name="Feed status">
+                <FeedStatusBanner snapshot={snapshot} connectionState={connectionState} />
+            </ErrorBoundary>
+
+            <ErrorBoundary name="Alerts">
+                <AlertToasts alerts={alerts} onOpen={openNestSite} onDismiss={dismissAlert} />
+            </ErrorBoundary>
+
             {currentView === 'nest-log' && (
-                <NestLogView
-                    nestSites={nestSites}
-                    zones={snapshot.zones}
-                    selectedNestIdentifier={selectedNestIdentifier}
-                    onSelectNest={setSelectedNestIdentifier}
-                    onAddPatrolEntry={nestLogStore.addPatrolEntry}
-                    onClearPatrolEntries={nestLogStore.clearPatrolEntries}
-                />
+                <ErrorBoundary key={selectedNestIdentifier} name="Nest log">
+                    <NestLogView
+                        nestSites={nestSites}
+                        zones={snapshot.zones}
+                        dataTag={dataTag}
+                        selectedNestIdentifier={selectedNestIdentifier}
+                        onSelectNest={setSelectedNestIdentifier}
+                        onAddPatrolEntry={dataSource.addPatrolEntry}
+                        onClearPatrolEntries={dataSource.clearPatrolEntries}
+                    />
+                </ErrorBoundary>
             )}
 
             {currentView === 'map' && (
-                <main className="layout">
-                    <section className="map-panel" aria-labelledby="map-heading">
-                        <div className="map-panel__header">
-                            <div className="map-panel__titles">
-                                <div className="map-panel__title-row">
-                                    <h1 id="map-heading" className="map-panel__title">Beach activity</h1>
-                                    <span className="sample-tag">Sample data</span>
+                <ErrorBoundary name="Map">
+                    <main className="layout">
+                        <section className="map-panel" aria-labelledby="map-heading">
+                            <div className="map-panel__header">
+                                <div className="map-panel__titles">
+                                    <div className="map-panel__title-row">
+                                        <h1 id="map-heading" className="map-panel__title">Beach activity</h1>
+                                        <span className="sample-tag">{dataTag}</span>
+                                    </div>
+                                    <span className="map-panel__subtitle">
+                                        Along Port Aransas Beach Road, from Sand Point to Ocean View Drive
+                                        {isLive && ` · sites fade after ${snapshot.settings.fadeStartMinutes} min and leave the map after ${snapshot.settings.archiveAfterMinutes} min`}
+                                    </span>
                                 </div>
-                                <span className="map-panel__subtitle">
-                                    Along Port Aransas Beach Road, from Sand Point to Ocean View Drive
-                                </span>
+    
+                                <MapControls
+                                    selectedTimeRange={selectedTimeRange}
+                                    onTimeRangeChange={setSelectedTimeRange}
+                                    showZones={showZones}
+                                    onToggleZones={function toggleZones()
+                                    {
+                                        setShowZones(!showZones);
+                                    }}
+                                    showCameras={showCameras}
+                                    onToggleCameras={function toggleCameras()
+                                    {
+                                        setShowCameras(!showCameras);
+                                    }}
+                                    showNestSites={showNestSites}
+                                    onToggleNestSites={function toggleNestSites()
+                                    {
+                                        setShowNestSites(!showNestSites);
+                                    }}
+                                />
                             </div>
-
-                            <MapControls
-                                selectedTimeRange={selectedTimeRange}
-                                onTimeRangeChange={setSelectedTimeRange}
+    
+                            <BeachMap
+                                zones={snapshot.zones}
+                                cameraPairs={snapshot.cameraPairs}
+                                nestSites={nestSites}
+                                selectedPairIdentifier={selectedPairIdentifier}
+                                onSelectPair={setSelectedPairIdentifier}
+                                onSelectNest={openNestSite}
                                 showZones={showZones}
-                                onToggleZones={function toggleZones()
-                                {
-                                    setShowZones(!showZones);
-                                }}
                                 showCameras={showCameras}
-                                onToggleCameras={function toggleCameras()
-                                {
-                                    setShowCameras(!showCameras);
-                                }}
                                 showNestSites={showNestSites}
-                                onToggleNestSites={function toggleNestSites()
-                                {
-                                    setShowNestSites(!showNestSites);
-                                }}
                             />
-                        </div>
-
-                        <BeachMap
-                            zones={snapshot.zones}
-                            cameraPairs={snapshot.cameraPairs}
-                            nestSites={nestSites}
-                            selectedPairIdentifier={selectedPairIdentifier}
-                            onSelectPair={setSelectedPairIdentifier}
-                            onSelectNest={openNestSite}
-                            showZones={showZones}
-                            showCameras={showCameras}
-                            showNestSites={showNestSites}
-                        />
-                    </section>
-
-                    <aside className="sidebar">
-                        <SelectedPairPanel cameraPair={selectedPair} zone={selectedZone} />
-                        <NestSummaryPanel nestSites={nestSites} onOpenNest={openNestSite} />
-                        <ZoneList zones={snapshot.zones} />
-                        <CameraPairList
-                            cameraPairs={snapshot.cameraPairs}
-                            selectedPairIdentifier={selectedPairIdentifier}
-                            onSelectPair={setSelectedPairIdentifier}
-                        />
-                    </aside>
-                </main>
+                        </section>
+    
+                        <aside className="sidebar">
+                            <SelectedPairPanel cameraPair={selectedPair} zone={selectedZone} />
+                            <NestSummaryPanel nestSites={nestSites} onOpenNest={openNestSite} />
+                            <ZoneList zones={snapshot.zones} />
+                            <CameraPairList
+                                cameraPairs={snapshot.cameraPairs}
+                                selectedPairIdentifier={selectedPairIdentifier}
+                                onSelectPair={setSelectedPairIdentifier}
+                            />
+                        </aside>
+                    </main>
+                </ErrorBoundary>
             )}
         </div>
     );
