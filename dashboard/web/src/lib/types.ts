@@ -1,6 +1,8 @@
 export type Role = 'ADMIN' | 'VIEWER';
 export type ActivityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type CameraStatus = 'ONLINE' | 'OFFLINE';
+export type VideoSource = 'UPLOAD' | 'SIMULATION';
+export type EvidenceTier = 'TWO_CAMERA' | 'SINGLE_CAMERA';
 export type LngLat = [number, number];
 
 export const ALERT_MESSAGES = {
@@ -21,6 +23,15 @@ export interface ZoneView
     ring: LngLat[];          // closed ring, first point repeated last
 }
 
+export interface CameraVideo
+{
+    id: string;
+    source: VideoSource;
+    durationS: number | null;
+    hasMotion: boolean;
+    simRunId: string | null;
+}
+
 export interface CameraView
 {
     id: string;
@@ -32,7 +43,7 @@ export interface CameraView
     rangeM: number;
     status: CameraStatus;
     calibrated: boolean;
-    latestVideoId: string | null;
+    video: CameraVideo | null;
 }
 
 export interface AlertView
@@ -47,6 +58,12 @@ export interface AlertView
     radiusM: number;
     score: number | null;
     createdAt: string;       // ISO
+    videoId: string;
+    simRunId: string | null;
+    startT: number;
+    endT: number;
+    evidenceTier: EvidenceTier | null;
+    simulated: boolean;
 }
 
 export interface MapSnapshot

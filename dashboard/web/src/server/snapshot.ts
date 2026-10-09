@@ -1,6 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
-import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, LngLat, MapSnapshot } from '@/lib/types';
+import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
 {
@@ -12,7 +12,7 @@ export interface CameraRow
 {
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
-    status: CameraStatus; calibration: unknown; videos: { id: string }[];
+    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null }[];
 }
 
 export interface AlertRow
@@ -20,6 +20,8 @@ export interface AlertRow
     id: string; kind: AlertKind; message: string; status: AlertStatus;
     zone: { code: string }; camera: { code: string };
     lng: number | null; lat: number | null; radiusM: number; score: number | null; createdAt: Date;
+    videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
+    evidenceTier: EvidenceTier | null; simulated: boolean;
 }
 
 export interface SnapshotRows
@@ -47,7 +49,15 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         rangeM: camera.rangeM,
         status: camera.status,
         calibrated: camera.calibration !== null,
-        latestVideoId: camera.videos[0]?.id ?? null,
+        video: camera.videos[0]
+            ? {
+                id: camera.videos[0].id,
+                source: camera.videos[0].source,
+                durationS: camera.videos[0].durationS,
+                hasMotion: camera.videos[0].pureMotionPath !== null,
+                simRunId: camera.videos[0].simRunId,
+            }
+            : null,
     }));
 
     const alerts = rows.alerts.map(alert => ({
@@ -61,6 +71,12 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         radiusM: alert.radiusM,
         score: alert.score,
         createdAt: alert.createdAt.toISOString(),
+        videoId: alert.videoId,
+        simRunId: alert.video.simRunId,
+        startT: alert.startT,
+        endT: alert.endT,
+        evidenceTier: alert.evidenceTier,
+        simulated: alert.simulated,
     }));
 
     return {
@@ -81,13 +97,18 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
             orderBy: { code: 'asc' },
             include: {
                 zone: { select: { code: true } },
-                videos: { where: { jobs: { some: { status: 'DONE' } } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+                videos: {
+                    where: { OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] },
+                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
             },
         }),
         prisma.alert.findMany({
             orderBy: { createdAt: 'desc' },
             take: 100,
-            include: { zone: { select: { code: true } }, camera: { select: { code: true } } },
+            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } } },
         }),
     ]);
 

@@ -97,21 +97,40 @@ model Camera {
 }
 
 model Video {
-  id           String   @id @default(cuid())
-  cameraId     String
-  camera       Camera   @relation(fields: [cameraId], references: [id])
-  path         String
-  originalName String
-  durationS    Float?
-  fps          Float?
-  width        Int?
-  height       Int?
-  uploadedById String
-  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
-  createdAt    DateTime @default(now())
-  jobs         Job[]
-  tracks       Track[]
-  alerts       Alert[]
+  id             String      @id @default(cuid())
+  cameraId       String
+  camera         Camera      @relation(fields: [cameraId], references: [id])
+  source         VideoSource @default(UPLOAD)
+  /// Path relative to MEDIA_ROOT.
+  path           String
+  /// Pure-motion variant, relative to MEDIA_ROOT (simulation imports).
+  pureMotionPath String?
+  /// Research run id for simulation imports.
+  simRunId       String?
+  originalName   String
+  durationS      Float?
+  fps            Float?
+  width          Int?
+  height         Int?
+  uploadedById   String?
+  uploadedBy     User?       @relation(fields: [uploadedById], references: [id])
+  createdAt      DateTime    @default(now())
+  jobs           Job[]
+  tracks         Track[]
+  alerts         Alert[]
+
+  @@index([cameraId, createdAt])
+  @@index([simRunId])
+}
+
+enum VideoSource {
+  UPLOAD
+  SIMULATION
+}
+
+enum EvidenceTier {
+  TWO_CAMERA
+  SINGLE_CAMERA
 }
 
 model Job {
@@ -160,6 +179,8 @@ model Alert {
   endT                  Float
   status                AlertStatus         @default(NEW)
   outsideCalibratedArea Boolean             @default(false)
+  evidenceTier          EvidenceTier?
+  simulated             Boolean             @default(false)
   createdAt             DateTime            @default(now())
   notes                 AlertNote[]
   statusChanges         AlertStatusChange[]

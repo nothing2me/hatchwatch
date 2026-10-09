@@ -21,7 +21,7 @@ const { MapScreen } = await import('@/features/map/MapScreen');
 
 const snapshot: MapSnapshot = {
     zones: [{ id: 'z', code: 'B', name: 'Holiday', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]] }],
-    cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, latestVideoId: null }],
+    cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null }],
     alerts: [],
     camerasOnline: 1, camerasTotal: 1, activeAlertCount: 0,
 };

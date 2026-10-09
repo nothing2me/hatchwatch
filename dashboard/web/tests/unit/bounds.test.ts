@@ -23,7 +23,7 @@ describe('initialBounds', () =>
         const snapshot: MapSnapshot = {
             ...empty,
             zones: [{ id: 'a', code: 'A', name: 'A', activityLevel: 'LOW', ring: [[-97.07, 27.81], [-97.06, 27.81], [-97.06, 27.82], [-97.07, 27.81]] }],
-            cameras: [{ id: 'c', code: 'A1', zoneCode: 'A', position: [-97.075, 27.825], headingDeg: 0, fovDeg: 40, rangeM: 100, status: 'ONLINE', calibrated: false, latestVideoId: null }],
+            cameras: [{ id: 'c', code: 'A1', zoneCode: 'A', position: [-97.075, 27.825], headingDeg: 0, fovDeg: 40, rangeM: 100, status: 'ONLINE', calibrated: false, video: null }],
         };
         expect(initialBounds(snapshot)).toEqual([[-97.075, 27.81], [-97.06, 27.825]]);
     });
