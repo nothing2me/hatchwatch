@@ -35,6 +35,7 @@
     "tests/**/*.ts",
     "tests/**/*.tsx",
     "prisma/**/*.ts",
+    "scripts/**/*.ts",
     ".next/types/**/*.ts",
     "*.ts",
     ".next/dev/types/**/*.ts"
