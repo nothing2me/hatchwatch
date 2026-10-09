@@ -12,7 +12,8 @@
     "lint:types": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:test:prepare": "tsx tests/integration/prepare-db.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

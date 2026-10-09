@@ -3,13 +3,19 @@ import { verify } from '@node-rs/argon2';
 import { createPrismaClient } from '@/lib/db';
 import { seedDatabase } from '../../prisma/seed';
 
-// Requires `docker compose up -d db` and a migrated database (Task 2 Step 2).
-const prisma = createPrismaClient(process.env.DATABASE_URL);
+// Requires `docker compose up -d db` and `npm run db:test:prepare`.
+// Uses a separate *_test database: this suite TRUNCATEs every table.
+const prisma = createPrismaClient(process.env.TEST_DATABASE_URL);
 
 describe('seedDatabase', () =>
 {
     beforeAll(async () =>
     {
+        const [{ current_database: dbName }] = await prisma.$queryRaw<{ current_database: string }[]>`SELECT current_database()`;
+        if (!dbName.endsWith('_test'))
+        {
+            throw new Error(`Refusing to truncate non-test database "${dbName}"`);
+        }
         await prisma.$executeRawUnsafe('TRUNCATE "AuditLog","AlertStatusChange","AlertNote","Alert","Track","Job","Video","Camera","Zone","User" CASCADE');
     });
 

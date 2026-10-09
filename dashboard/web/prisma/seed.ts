@@ -56,7 +56,7 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         await prisma.user.create({
             data: { email: DEMO_VIEWER.email, name: DEMO_VIEWER.name, role: 'VIEWER', passwordHash: await hash(viewerPassword) },
         });
-        if (process.env.NODE_ENV !== 'test')
+        if (process.env.NODE_ENV !== 'production')
         {
             console.log(`Seeded viewer ${DEMO_VIEWER.email} with password: ${viewerPassword}`);
         }
