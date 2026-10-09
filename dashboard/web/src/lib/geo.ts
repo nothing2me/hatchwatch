@@ -34,3 +34,12 @@ export function boundsOf(points: LngLat[]): [LngLat, LngLat]
     const lats = points.map(point => point[1]);
     return [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]];
 }
+
+const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+
+// Nearest 16-point compass name for a bearing in degrees.
+export function compassPoint(bearingDeg: number): string
+{
+    const normalised = ((bearingDeg % 360) + 360) % 360;
+    return COMPASS[Math.round(normalised / 22.5) % 16];
+}

@@ -24,3 +24,7 @@ body { background: var(--color-night-950); color: var(--color-ink); }
 /* MapLibre's attribution control, restyled for the dark theme. */
 .maplibregl-ctrl-attrib { background: rgba(8, 14, 20, 0.7) !important; color: var(--color-ink-muted); }
 .maplibregl-ctrl-attrib a { color: var(--color-ink-muted); }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { margin: 0 12px 8px 0; border-radius: 999px; font-size: 10px; }
+.maplibregl-ctrl-attrib.maplibregl-compact { min-height: 22px; }
+.maplibregl-ctrl.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner { color: var(--color-ink-muted); }
+.maplibregl-ctrl-attrib-button { filter: invert(0.85); opacity: 0.7; background-color: transparent !important; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
+import { boundsOf, compassPoint, destinationPoint, viewCone } from '@/lib/geo';
 
 const origin: [number, number] = [-97.0628, 27.8182];
 
@@ -35,5 +35,14 @@ describe('geo', () =>
     it('boundsOf returns min/max corners', () =>
     {
         expect(boundsOf([[1, 5], [-2, 7], [3, 4]])).toEqual([[-2, 4], [3, 7]]);
+    });
+
+    it('compassPoint names the nearest of 16 bearings', () =>
+    {
+        expect(compassPoint(0)).toBe('N');
+        expect(compassPoint(203)).toBe('SSW');
+        expect(compassPoint(56)).toBe('NE');
+        expect(compassPoint(359)).toBe('N');
+        expect(compassPoint(-90)).toBe('W');
     });
 });
