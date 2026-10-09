@@ -1,6 +1,7 @@
 'use client';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
+import * as maplibre from 'maplibre-gl';
 import { ImageOff } from 'lucide-react';
 import { forwardRef, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
@@ -14,6 +15,11 @@ import type { LayerKey } from './MapControls';
 
 export { initialBounds } from './bounds';
 
+// Pass the library in so Turbopack does not dynamic-import it, and point MapLibre
+// at the worker chunk. Its default worker URL is resolved from the library module,
+// which 404s once the bundler moves that module.
+maplibre.setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href);
+
 interface MapViewProps
 {
     snapshot: MapSnapshot;
@@ -21,10 +27,6 @@ interface MapViewProps
     selectedCameraId: string | null;
     onSelectCamera: (cameraId: string) => void;
 }
-
-// maplibre-gl 6 finds its worker relative to its own module URL, which breaks once
-// the bundler moves it into a chunk. Let the bundler emit the worker and point at it.
-const WORKER_URL = new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href;
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
 
@@ -70,8 +72,8 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
         <div className="absolute inset-0 isolate">
             <Map
                 ref={ref}
+                mapLib={maplibre}
                 mapStyle={style}
-                workerUrl={WORKER_URL}
                 initialViewState={{ bounds: [west, south, east, north], fitBoundsOptions: { padding } }}
                 maxZoom={20}
                 dragRotate
