@@ -19,3 +19,21 @@ Open **http://localhost:5180**. All numbers are sample data from
 `src/data/sampleData.js`. The UI reads data only through `subscribe()` on a
 data source (`src/data/dataSource.js`), so the future pipeline adapter can be
 swapped in by changing one line in `src/App.jsx`.
+
+## Nest log
+
+The **Nest log** tab tracks every nest site in its own log: when activity
+arrived and left (camera entries), where the site is, and every patrol
+update. Each new site is flagged **Unprotected** automatically; the flag
+clears only when a patrol logs "Protection set up" (or "No nest found").
+Statuses are always worked out from the log (`src/utils/nestStatus.js`),
+and patrol entries are append-only.
+
+Camera entries never confirm a nest. They use the required wording
+"Digging activity detected; nesting unresolved." Only a patrol entry can
+mark a nest as confirmed.
+
+Patrol entries are currently saved in the browser's localStorage
+(`src/data/nestLogStore.js`), so each browser keeps its own copy. Replace
+that store with a backend that has the same `subscribe` / `addPatrolEntry`
+methods so all patrols share one log.
