@@ -15,6 +15,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:reset-viewer": "tsx prisma/reset-viewer.ts",
     "db:test:prepare": "tsx tests/integration/prepare-db.ts"
   },
   "dependencies": {

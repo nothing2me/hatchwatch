@@ -8,11 +8,13 @@ Requires Docker Desktop (running) and, for development outside Docker, Node 24.
 
 ```bash
 cd dashboard
-cp .env.example .env            # then set AUTH_SECRET (openssl rand -base64 32) and SEED_ADMIN_PASSWORD
+cp .env.example .env            # then set AUTH_SECRET (openssl rand -base64 32), SEED_ADMIN_PASSWORD and optionally SEED_VIEWER_PASSWORD
 docker compose up --build
 ```
 
-Open http://localhost:3000 and sign in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. The first start creates zones A–D, cameras A1–D2 and a read-only `viewer@nesttrace.local` account whose password is printed in the `web` logs (`docker compose logs web | grep viewer`).
+Open http://localhost:3000 and sign in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. The first start creates zones A–D, cameras A1–D2 and a read-only `viewer@nesttrace.local` account. Under Docker the viewer password is never printed: set `SEED_VIEWER_PASSWORD` in `.env` before the first start and it is used when the viewer is created (an existing viewer is never overwritten). To set or change it later, put the new value in `SEED_VIEWER_PASSWORD` and run `npm run db:reset-viewer` from `web/` (it updates the dev database named by `DATABASE_URL` and refuses if the variable is unset). The app refuses to start with `change-me` placeholder secrets.
+
+The Compose file binds web (3000) and Postgres (5433) to 127.0.0.1 and sets `INSECURE_COOKIES=1` so the session cookie works over plain HTTP. That setup is for localhost-only use; put TLS in front and drop `INSECURE_COOKIES` before exposing it to a network.
 
 ## Develop
 

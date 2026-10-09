@@ -8,9 +8,9 @@ const scannedExtensions = /\.(ts|tsx|js|mjs|cjs|py|json|ya?ml|Dockerfile)$|Docke
 
 // agent.md: the dashboard must not depend on the simulator, the research API, or evaluator truth.
 const forbidden: { pattern: RegExp; reason: string }[] = [
-    { pattern: /from ['"](\.\.\/)+web\//, reason: 'imports the research simulator' },
+    { pattern: /(from\s*|import\s*\(?\s*|require\s*\(\s*)['"](\.\.\/)+web\//, reason: 'imports the research simulator' },
     { pattern: /scripts\/server\.mjs/, reason: 'references the research API' },
-    { pattern: /(localhost|127\.0\.0\.1):5174/, reason: 'calls the research API port' },
+    { pattern: /(localhost|127\.0\.0\.1|\[::1\]):5174/, reason: 'calls the research API port' },
     { pattern: /artifacts\/private|examples\/[^/]+\/private/, reason: 'reads private evaluator truth' },
 ];
 

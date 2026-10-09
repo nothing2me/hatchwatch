@@ -18,6 +18,10 @@ function authSecret(): string
     {
         throw new Error('AUTH_SECRET must be set to at least 32 characters');
     }
+    if (secret.startsWith('change-me'))
+    {
+        throw new Error('AUTH_SECRET is still the .env.example placeholder; generate a real one');
+    }
     return secret;
 }
 

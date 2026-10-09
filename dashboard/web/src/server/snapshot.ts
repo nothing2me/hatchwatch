@@ -81,7 +81,7 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
             orderBy: { code: 'asc' },
             include: {
                 zone: { select: { code: true } },
-                videos: { select: { id: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+                videos: { where: { jobs: { some: { status: 'DONE' } } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 1 },
             },
         }),
         prisma.alert.findMany({

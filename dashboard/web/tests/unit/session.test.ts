@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SignJWT } from 'jose';
 import { createSessionToken, readSessionToken, type SessionUser } from '@/lib/auth/session';
 
 const secret = 'test-secret-that-is-long-enough-0123456789';
@@ -21,7 +22,10 @@ describe('session tokens', () =>
     it('rejects a tampered token', async () =>
     {
         const token = await createSessionToken(user, secret);
-        const tampered = token.slice(0, -2) + (token.endsWith('aa') ? 'bb' : 'aa');
+        const [header, body, signature] = token.split('.');
+        const middle = Math.floor(signature.length / 2);
+        const flipped = signature[middle] === 'A' ? 'B' : 'A';
+        const tampered = [header, body, signature.slice(0, middle) + flipped + signature.slice(middle + 1)].join('.');
         expect(await readSessionToken(tampered, secret)).toBeNull();
     });
 
@@ -36,6 +40,16 @@ describe('session tokens', () =>
     {
         expect(await readSessionToken(undefined, secret)).toBeNull();
         expect(await readSessionToken('not-a-jwt', secret)).toBeNull();
+    });
+
+    it('rejects a token without an expiry', async () =>
+    {
+        const token = await new SignJWT({ email: user.email, name: user.name, role: user.role })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setSubject(user.id)
+            .setIssuedAt()
+            .sign(new TextEncoder().encode(secret));
+        expect(await readSessionToken(token, secret)).toBeNull();
     });
 
     it('rejects a payload with an unknown role', async () =>

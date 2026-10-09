@@ -7,7 +7,7 @@ import { compassPoint } from '@/lib/geo';
 import type { CameraView } from '@/lib/types';
 
 // Selected camera details. Plan 2 replaces the placeholder with the video player
-// when latestVideoId is set; cameras without footage keep the status card.
+// when latestVideoId is set (latest video with a DONE job); cameras without footage keep the status card.
 export function CameraPanel({ camera, onClose }: { camera: CameraView; onClose: () => void })
 {
     const online = camera.status === 'ONLINE';

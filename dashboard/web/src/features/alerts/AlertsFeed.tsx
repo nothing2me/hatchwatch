@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 import type { AlertView } from '@/lib/types';
 import { useStoredBoolean } from '@/features/map/useStoredBoolean';
 
-const timeFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
 
 export function AlertsFeed({ alerts, onSelect }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void })
 {

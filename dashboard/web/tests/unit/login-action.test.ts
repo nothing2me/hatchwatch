@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { authenticate } from '@/app/(auth)/login/actions';
+import { authenticate } from '@/lib/auth/authenticate';
 
 const row = { id: 'u1', email: 'admin@x.y', name: 'Admin', role: 'ADMIN' as const, passwordHash: 'h' };
 

@@ -46,7 +46,7 @@ export async function readSessionToken(token: string | undefined, secret: string
 
     try
     {
-        const { payload } = await jwtVerify(token, key(secret), { algorithms: ['HS256'] });
+        const { payload } = await jwtVerify(token, key(secret), { algorithms: ['HS256'], requiredClaims: ['exp', 'iat'] });
         const parsed = payloadSchema.safeParse(payload);
         if (!parsed.success)
         {

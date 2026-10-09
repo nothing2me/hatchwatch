@@ -9,6 +9,15 @@ export interface SeedOptions
 {
     adminEmail: string;
     adminPassword: string;
+    viewerPassword?: string;
+}
+
+export function assertNotPlaceholder(name: string, value: string): void
+{
+    if (value.startsWith('change-me'))
+    {
+        throw new Error(`${name} is still the .env.example placeholder; set a real value`);
+    }
 }
 
 // Safe to run on every container start: creates what is missing and leaves
@@ -43,20 +52,21 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         });
     }
 
+    const adminEmail = options.adminEmail.trim().toLowerCase();
     await prisma.user.upsert({
-        where: { email: options.adminEmail },
+        where: { email: adminEmail },
         update: {},
-        create: { email: options.adminEmail, name: 'Admin', role: 'ADMIN', passwordHash: await hash(options.adminPassword) },
+        create: { email: adminEmail, name: 'Admin', role: 'ADMIN', passwordHash: await hash(options.adminPassword) },
     });
 
     const viewerExists = await prisma.user.findUnique({ where: { email: DEMO_VIEWER.email } });
     if (!viewerExists)
     {
-        const viewerPassword = randomBytes(9).toString('base64url');
+        const viewerPassword = options.viewerPassword || randomBytes(9).toString('base64url');
         await prisma.user.create({
             data: { email: DEMO_VIEWER.email, name: DEMO_VIEWER.name, role: 'VIEWER', passwordHash: await hash(viewerPassword) },
         });
-        if (process.env.NODE_ENV !== 'production')
+        if (!options.viewerPassword && process.env.NODE_ENV !== 'production')
         {
             console.log(`Seeded viewer ${DEMO_VIEWER.email} with password: ${viewerPassword}`);
         }
@@ -73,8 +83,14 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url)
     {
         throw new Error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set');
     }
+    assertNotPlaceholder('SEED_ADMIN_PASSWORD', adminPassword);
+    const viewerPassword = process.env.SEED_VIEWER_PASSWORD || undefined;
+    if (viewerPassword)
+    {
+        assertNotPlaceholder('SEED_VIEWER_PASSWORD', viewerPassword);
+    }
     const prisma = createPrismaClient();
-    await seedDatabase(prisma, { adminEmail, adminPassword });
+    await seedDatabase(prisma, { adminEmail, adminPassword, viewerPassword });
     await prisma.$disconnect();
     console.log('Seed complete');
 }
