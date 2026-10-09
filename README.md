@@ -2,6 +2,8 @@
 
 A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 960 × 540 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 60 × 24 m beach is a two-layer bed of about 42,000 physical grains. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s.
 
+The team’s future **real dashboard** belongs in [`dashboard/`](dashboard/README.md) as a separate application. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
+
 ## Run locally
 
 Requires Node 22+, Python 3.10+, and Chrome/Edge (or Playwright Chromium). The checked-in lockfiles pin dependencies.
