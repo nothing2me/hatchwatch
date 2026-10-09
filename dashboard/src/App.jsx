@@ -15,6 +15,7 @@ import NestSummaryPanel from './components/NestSummaryPanel.jsx';
 import ZoneList from './components/ZoneList.jsx';
 import CameraPairList from './components/CameraPairList.jsx';
 import NestLogView from './components/NestLogView.jsx';
+import CamerasView from './components/CamerasView.jsx';
 
 // Swap this line for the pipeline adapter data source once it exists
 // (see data/dataSource.js and agent.md for the boundary rules).
@@ -32,7 +33,7 @@ export default function App()
     // Which camera pair the user is looking at. Starts on pair B (Holiday Beach).
     const [selectedPairIdentifier, setSelectedPairIdentifier] = useState('B');
 
-    // Which page is showing ("map" or "nest-log"), and which nest site is open.
+    // Which page is showing ("map", "nest-log", or "cameras"), and which nest site is open.
     const [currentView, setCurrentView] = useState('map');
     const [nestSites, setNestSites] = useState([]);
     const [selectedNestIdentifier, setSelectedNestIdentifier] = useState(null);
@@ -131,6 +132,10 @@ export default function App()
                     onAddPatrolEntry={nestLogStore.addPatrolEntry}
                     onClearPatrolEntries={nestLogStore.clearPatrolEntries}
                 />
+            )}
+
+            {currentView === 'cameras' && (
+                <CamerasView cameraPairs={snapshot.cameraPairs} />
             )}
 
             {currentView === 'map' && (

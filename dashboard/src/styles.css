@@ -1155,3 +1155,178 @@ button.app-bar__link--active:hover
     clip: rect(0 0 0 0);
     white-space: nowrap;
 }
+
+/* ---- Cameras page ---- */
+.cameras-view
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+    align-items: start;
+    gap: 16px;
+    padding: 24px;
+}
+
+.cameras-view__header
+{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    grid-column: 1 / -1;
+}
+
+.cameras-view__key-form
+{
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, 420px);
+}
+
+.cameras-view > .text-button
+{
+    grid-column: 1 / -1;
+}
+
+/* A live <img> fills the same 4:3 box as the "No signal" placeholder */
+.camera-feed__video
+{
+    display: block;
+    width: 100%;
+    object-fit: cover;
+}
+
+/* ---- Phone camera page (/camera) ---- */
+.camera-sender
+{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.camera-sender__header
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.camera-sender__preview
+{
+    width: 100%;
+    border-radius: var(--radius-card);
+    background: #16323F;
+}
+
+.camera-sender__form
+{
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+
+.camera-sender__message
+{
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.camera-sender__message--bad
+{
+    color: var(--color-bad);
+}
+
+.camera-sender__message--warning
+{
+    color: #6B4A00;
+}
+
+/* Live tile wrapper, so the REC badge can sit on top of the feed */
+.camera-feed__live
+{
+    position: relative;
+}
+
+.camera-feed__recording
+{
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-bad);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+/* ---- Recordings ---- */
+.recordings-panel
+{
+    grid-column: 1 / -1;
+}
+
+.recordings-panel__filter
+{
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+}
+
+.recordings-panel__player
+{
+    width: 100%;
+    max-height: 70vh;
+    border-radius: var(--radius-control);
+    background: #000000;
+}
+
+.recordings-panel__list
+{
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.recordings-panel__row
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.recordings-panel__row--playing
+{
+    background: var(--color-selected-tint);
+}
+
+.recordings-panel__camera
+{
+    min-width: 28px;
+    font-weight: 600;
+}
+
+.recordings-panel__meta
+{
+    flex: 1 1 200px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.recordings-panel__actions
+{
+    display: flex;
+    gap: 16px;
+}

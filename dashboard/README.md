@@ -37,3 +37,85 @@ Patrol entries are currently saved in the browser's localStorage
 (`src/data/nestLogStore.js`), so each browser keeps its own copy. Replace
 that store with a backend that has the same `subscribe` / `addPatrolEntry`
 methods so all patrols share one log.
+
+## Live cameras (phones as cameras)
+
+Any phone with a browser can be a beach camera, no app needed. The phone
+opens `/camera`, picks a camera position (A1–D2), and sends JPEG frames
+to the camera relay in `server/server.mjs`. The **Cameras** tab shows every
+position, with a live feed for each one that is sending.
+
+- Every camera is also recorded to disk (see **Recordings** below). The
+  server never runs the detector.
+- Everyone needs the team access key (`NESTTRACE_ACCESS_KEY`) to send or
+  watch. It is remembered in each device's localStorage.
+- Phone browsers only allow the camera on **HTTPS** pages.
+- The map, the app bar's camera count, and the nest log still use sample data.
+
+### Try it on your local network
+
+```powershell
+cd dashboard
+$env:NESTTRACE_ACCESS_KEY = 'pick-a-long-secret'
+npm start              # camera relay on port 5182 (terminal 1)
+npm run dev:phone      # dashboard over self-signed HTTPS (terminal 2)
+```
+
+On the phone (same Wi-Fi), open `https://<your PC's IP>:5180/camera`, accept
+the certificate warning, enter the key, and tap **Start camera**. Watch on
+`https://localhost:5180` → **Cameras**. Allow Node through Windows Firewall
+if the phone can't connect.
+
+### Deploy
+
+One Node process serves the built dashboard and the relay:
+
+```powershell
+npm run build
+$env:NESTTRACE_ACCESS_KEY = 'pick-a-long-secret'
+npm start              # http://localhost:5182, phone page at /camera
+```
+
+Or use the `Dockerfile` (`docker build -t nesttrace-dashboard .`). Put it
+behind HTTPS: a host such as Render, Fly.io or Railway, a reverse proxy
+like Caddy, or a Cloudflare tunnel. To serve HTTPS directly, set `TLS_CERT`
+and `TLS_KEY` to PEM file paths. Run a single instance, since frames live
+in that process's memory.
+
+### Recordings
+
+The server records every camera that is sending, in 10-minute video files
+under `dashboard/recordings/<camera>/<date>/` (git-ignored). The Cameras tab
+lists them with **Play** and **Download**; a **REC** badge marks cameras
+being recorded.
+
+- Video runs at a fixed 5 frames per second on the real clock: if a phone
+  sends fewer frames, the last one is repeated, so one video second is one
+  real second. A gap over 10 seconds starts a new file instead.
+- Each video has a `.json` file next to it with the camera, the real start
+  time, the frame rate and the frame count.
+- Files are MJPEG `.avi`, which OpenCV reads. If
+  [ffmpeg](https://ffmpeg.org/download.html) is installed
+  (`winget install Gyan.FFmpeg`), finished files are converted to H.264
+  `.mp4`: much smaller and playable in the browser. Leftover `.avi` files
+  are converted the next time the server starts.
+- Recordings older than 72 hours are deleted automatically.
+- Stop the server with Ctrl+C so it can finish the open files.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `NESTTRACE_RECORDING` | on | `off` disables recording |
+| `NESTTRACE_RECORDINGS_DIR` | `dashboard/recordings` | Where videos are saved |
+| `NESTTRACE_RECORDING_FPS` | `5` | Frames per second in recordings |
+| `NESTTRACE_SEGMENT_MINUTES` | `10` | Length of each video file |
+| `NESTTRACE_RETENTION_HOURS` | `72` | Delete recordings older than this |
+| `FFMPEG_PATH` | `ffmpeg` | ffmpeg to use for .mp4 conversion |
+
+Storage: without ffmpeg, roughly 1–1.5 GB per camera per hour at the Standard
+phone setting; with ffmpeg,
+roughly a tenth of that. The Docker image includes ffmpeg; mount a volume
+at `/app/recordings` to keep footage across restarts.
+
+Recordings are real footage of a nesting beach: keep them off public
+storage. Feeding them to the detector still needs the reviewed adapter and
+per-camera calibration described in [`agent.md`](../agent.md).

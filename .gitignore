@@ -9,3 +9,6 @@ artifacts/
 
 # Local Claude Code session data
 .claude/
+
+# Camera recordings (real footage; never commit)
+dashboard/recordings/

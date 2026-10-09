@@ -1,11 +1,12 @@
 // The dark bar across the top of the page: logo, navigation, live status,
 // and account controls.
 
-// The pages that exist so far. Cameras and Reports are still placeholders.
+// The pages that exist so far. Reports is still a placeholder.
 const views =
 [
     { value: 'map', label: 'Map' },
     { value: 'nest-log', label: 'Nest log' },
+    { value: 'cameras', label: 'Cameras' },
 ];
 
 export default function AppBar(
@@ -59,7 +60,6 @@ export default function AppBar(
                         </button>
                     );
                 })}
-                <a href="#" className="app-bar__link">Cameras</a>
                 <a href="#" className="app-bar__link">Reports</a>
             </nav>
 
