@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+enum ActivityLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum CameraStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum JobStage {
+  probe
+  calibrate
+  extract
+  detect
+  track
+  render
+  persist
+}
+
+enum AlertKind {
+  DIGGING
+  TRACK_ONLY
+  NO_TURTLE
+}
+
+enum AlertStatus {
+  NEW
+  REVIEWED
+  DISMISSED
+  FIELD_CONFIRMED
+}
+
+model User {
+  id            String              @id @default(cuid())
+  email         String              @unique
+  passwordHash  String
+  name          String
+  role          Role                @default(VIEWER)
+  createdAt     DateTime            @default(now())
+  videos        Video[]
+  notes         AlertNote[]
+  statusChanges AlertStatusChange[]
+  auditLogs     AuditLog[]
+}
+
+model Zone {
+  id            String        @id @default(cuid())
+  code          String        @unique
+  name          String
+  /// GeoJSON Polygon: { type: "Polygon", coordinates: [[[lng, lat], ...]] }
+  outline       Json
+  activityLevel ActivityLevel @default(LOW)
+  cameras       Camera[]
+  alerts        Alert[]
+}
+
+model Camera {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  zoneId      String
+  zone        Zone         @relation(fields: [zoneId], references: [id])
+  lng         Float
+  lat         Float
+  /// Compass bearing in degrees, 0 = north, clockwise.
+  headingDeg  Float
+  fovDeg      Float        @default(44)
+  /// Length of the drawn view cone in metres.
+  rangeM      Float        @default(250)
+  status      CameraStatus @default(ONLINE)
+  /// { pairs: [{ px: [x, y], lngLat: [lng, lat] }] (4), frameWidth, frameHeight, rmseM }
+  calibration Json?
+  videos      Video[]
+  alerts      Alert[]
+}
+
+model Video {
+  id           String   @id @default(cuid())
+  cameraId     String
+  camera       Camera   @relation(fields: [cameraId], references: [id])
+  path         String
+  originalName String
+  durationS    Float?
+  fps          Float?
+  width        Int?
+  height       Int?
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+  jobs         Job[]
+  tracks       Track[]
+  alerts       Alert[]
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  videoId     String
+  video       Video     @relation(fields: [videoId], references: [id])
+  status      JobStatus @default(QUEUED)
+  stage       JobStage?
+  progress    Float     @default(0)
+  attempts    Int       @default(0)
+  error       String?
+  heartbeatAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Track {
+  id            String  @id @default(cuid())
+  videoId       String
+  video         Video   @relation(fields: [videoId], references: [id])
+  /// [{ t, px, py, lng?, lat? }]
+  points        Json
+  startT        Float
+  endT          Float
+  geoReferenced Boolean @default(false)
+  label         String
+}
+
+model Alert {
+  id                    String              @id @default(cuid())
+  videoId               String
+  video                 Video               @relation(fields: [videoId], references: [id])
+  cameraId              String
+  camera                Camera              @relation(fields: [cameraId], references: [id])
+  zoneId                String
+  zone                  Zone                @relation(fields: [zoneId], references: [id])
+  kind                  AlertKind
+  message               String
+  score                 Float?
+  lng                   Float?
+  lat                   Float?
+  radiusM               Float               @default(0.9)
+  startT                Float
+  endT                  Float
+  status                AlertStatus         @default(NEW)
+  outsideCalibratedArea Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  notes                 AlertNote[]
+  statusChanges         AlertStatusChange[]
+
+  @@index([status, createdAt])
+}
+
+model AlertNote {
+  id        String   @id @default(cuid())
+  alertId   String
+  alert     Alert    @relation(fields: [alertId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model AlertStatusChange {
+  id        String      @id @default(cuid())
+  alertId   String
+  alert     Alert       @relation(fields: [alertId], references: [id])
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  from      AlertStatus
+  to        AlertStatus
+  createdAt DateTime    @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  targetType String
+  targetId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+}

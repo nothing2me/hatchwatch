@@ -4,3 +4,4 @@ web/.next/
 web/next-env.d.ts
 web/src/generated/
 web/tsconfig.tsbuildinfo
+web/.env
