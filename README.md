@@ -1,6 +1,6 @@
 # NestTrace
 
-A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 960 × 540 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 60 × 24 m beach is a two-layer bed of about 42,000 physical grains. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s.
+A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 960 × 540 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 60 × 24 m beach is a two-layer bed of **72,000 physical grains**. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s. The `multi` scenario sends three turtles to separate sites at staggered times.
 
 The team’s **real dashboard scaffold** lives in [`dashboard/`](dashboard/README.md) as a separate application with sample data and its own runtime on port 5180. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
 
@@ -21,15 +21,26 @@ In a second terminal:
 npm start
 ```
 
-Open **http://127.0.0.1:5173**. Use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, shows method heatmaps, and overlays each camera's calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a two-camera recording took about 30 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
+Open **http://127.0.0.1:5173**. Choose **Three turtles · staggered dig sites**, use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a dense three-turtle recording took about 70 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 
 `NESTTRACE_BROWSER` can specify a Chrome-compatible executable. On systems without Chrome/Edge, run `npx playwright install chromium`; the recording CLI then uses Playwright's browser. FFmpeg is provided by `imageio-ffmpeg`.
 
-## Reproduce the experiment
+## Reproduce the current stress experiment
 
-Keep the Vite server running. On macOS/Linux replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
+The high-density, three-turtle simulator is a **new version** of the synthetic experiment. Its five stress seeds and unchanged detector settings are recorded in `config/stress-registration.json`. Run the batch with Vite serving port 5173:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/stress_batch.py
+node scripts/multi-check.mjs
+```
+
+The earlier one-turtle results in `RESULTS.md` belong to Git revision `f50d04c`, before the beach density and turtle count changed. Do not treat them as validation of this version. The current stress findings are in `STRESS_RESULTS.md`.
+
+## Reproduce the original one-turtle experiment
+
+Check out revision `f50d04c` in a separate worktree to reproduce its frozen validation; its freeze hashes intentionally reject the current simulator. Keep the Vite server running. On macOS/Linux replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
 
 ```powershell
 node scripts/record.mjs --seed 11 --scenario clean --model A

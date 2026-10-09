@@ -1,5 +1,7 @@
 # NestTrace results — synthetic daylight prototype
 
+**Historical one-turtle result:** these measurements used the simulator at Git revision `f50d04c`. The current higher-density, three-turtle simulator changes the footage distribution and requires its own stress evaluation in `STRESS_RESULTS.md`. The results below must not be read as validation of the current simulator.
+
 The detector identifies **observable digging activity**, not buried eggs. These are results from rendered videos of a particle beach, not field footage. The source, settings, inspection budget, and ten clean validation seeds were frozen before the reserved batch; hashes are in `config/frozen.json`. The same contributor authored simulator, challenges, and detector, so challenge design was not independent.
 
 ## Registered clean validation

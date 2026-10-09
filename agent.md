@@ -22,4 +22,4 @@ Coordinate any shared JSON contract in a small versioned schema before wiring th
 
 ## Current experiment status
 
-The simulator and detector are an explicitly synthetic daylight prototype. `config/registration.json` defines the seed splits and geometric success rule. `config/frozen.json` records the source and settings hashes used for reserved validation. Do not tune detector settings or simulator behavior against those reserved results; substantial experimental changes need new registered seeds. See `README.md` and `RESULTS.md` for execution and measured limits.
+The simulator and detector are an explicitly synthetic daylight prototype. `config/registration.json` and `config/frozen.json` document the original one-turtle validation at revision `f50d04c`; their source hashes intentionally differ from the current high-density simulator. `config/stress-registration.json` separately registers the current three-turtle stress seeds and unchanged detector settings. Keep the two result sets distinct. See `README.md`, `RESULTS.md`, and `STRESS_RESULTS.md` for execution and measured limits.
