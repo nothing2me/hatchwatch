@@ -1,0 +1,79 @@
+{
+  "seed": 11,
+  "scenario": "clean",
+  "model": "A",
+  "methods": {
+    "frozen": {
+      "tp": 1,
+      "fp": 2,
+      "fn": 0,
+      "sites": 1,
+      "predictions": 3,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "localization_errors_m": [
+        0.184332057209792
+      ],
+      "inspection_area_m2": 7.6340701482231985,
+      "location_coverage": 1,
+      "eggs_covered": 1,
+      "eggs": 1,
+      "nonproductive_inspections": 2,
+      "duplicate_predictions": 0
+    },
+    "motion": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "sites": 1,
+      "predictions": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "localization_errors_m": [
+        0.5875143700859302
+      ],
+      "inspection_area_m2": 2.5446900494077327,
+      "location_coverage": 1,
+      "eggs_covered": 1,
+      "eggs": 1,
+      "nonproductive_inspections": 0,
+      "duplicate_predictions": 0
+    },
+    "tracker": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "sites": 1,
+      "predictions": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "localization_errors_m": [
+        0.5764854291997236
+      ],
+      "inspection_area_m2": 2.5446900494077327,
+      "location_coverage": 1,
+      "eggs_covered": 1,
+      "eggs": 1,
+      "nonproductive_inspections": 0,
+      "duplicate_predictions": 0
+    },
+    "full": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "sites": 1,
+      "predictions": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "localization_errors_m": [
+        0.5252821966666771
+      ],
+      "inspection_area_m2": 2.5446900494077327,
+      "location_coverage": 1,
+      "eggs_covered": 1,
+      "eggs": 1,
+      "nonproductive_inspections": 0,
+      "duplicate_predictions": 0
+    }
+  }
+}

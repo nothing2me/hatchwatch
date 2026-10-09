@@ -1,0 +1,81 @@
+{
+  "camera": 0,
+  "width": 960,
+  "height": 540,
+  "ground_bounds": [
+    -8,
+    8,
+    -6,
+    6
+  ],
+  "beach_bounds": [
+    -30,
+    30,
+    -12,
+    12
+  ],
+  "plane_slope": 0.018,
+  "reference_points": [
+    {
+      "world": [
+        -6,
+        -4
+      ],
+      "pixel": [
+        280.6253745967755,
+        431.7783765850846
+      ]
+    },
+    {
+      "world": [
+        0,
+        -4
+      ],
+      "pixel": [
+        346.42485713378545,
+        368.935719589332
+      ]
+    },
+    {
+      "world": [
+        6,
+        -4
+      ],
+      "pixel": [
+        379.56977972323006,
+        337.2802274619028
+      ]
+    },
+    {
+      "world": [
+        -6,
+        4
+      ],
+      "pixel": [
+        679.4859950659932,
+        424.6952431294668
+      ]
+    },
+    {
+      "world": [
+        0,
+        4
+      ],
+      "pixel": [
+        613.6251231105001,
+        364.16758886661705
+      ]
+    },
+    {
+      "world": [
+        6,
+        4
+      ],
+      "pixel": [
+        580.4584713915447,
+        333.6866740427456
+      ]
+    }
+  ],
+  "note": "Down-beach side camera at 4.4m mounting height with about 5 degree downward pitch. Planar initial particle surface; particle relief and elevated turtle motion add parallax."
+}

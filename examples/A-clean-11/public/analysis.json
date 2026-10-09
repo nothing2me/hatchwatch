@@ -1,0 +1,9 @@
+{
+  "cameras": [
+    0,
+    1
+  ],
+  "runtime_seconds": 31.299079299991718,
+  "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+  "inference_complete": true
+}

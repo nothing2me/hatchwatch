@@ -1,0 +1,19 @@
+{
+  "source_sha256": "21c4c40eae0c6cf09fefac15a77d02fac958cc2bde753a7e999565912efbe2ef",
+  "calibration_sha256": "a8807ee16b1fd963d85eb7d4393069b419dac52e468303a7b80c3e09c058a73e",
+  "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+  "frames": 320,
+  "fps": 8.0,
+  "runtime_seconds": 10.905969599989476,
+  "registration_failures": 0,
+  "mean_gain": 0.9834094223508162,
+  "mean_absolute_difference_suppressed": -0.9626529586226852,
+  "calibration_fit_rmse_m": 1.0405523790146113e-06,
+  "pure_motion_sha256": "7bc098bfb6265d11fd06861ee77920ed7de99ca26dcd278f7d3895d63ed4a859",
+  "pure_motion_resolution": [
+    960,
+    540
+  ],
+  "motion_map_sha256": "aadfbf6a1ad49e5036c526d29919b09b34347e83c8896d62c6fddb5d5930ffe4",
+  "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+}

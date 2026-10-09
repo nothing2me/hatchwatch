@@ -1,0 +1,8 @@
+{
+  "files": {
+    "signals.npz": "f61b369c86d22603cab55f71cd96cccd02f655698a262764290c859c367d9ae9",
+    "calibration.json": "a8807ee16b1fd963d85eb7d4393069b419dac52e468303a7b80c3e09c058a73e",
+    "settings.json": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f"
+  },
+  "process": "Independent Python subprocess in minimal staging directory. Not an OS access-control sandbox."
+}

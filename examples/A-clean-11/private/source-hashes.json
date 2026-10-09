@@ -1,0 +1,9 @@
+{
+  "web/simulation.ts": "81ccc2d5eea792b1abe8dc09f6452a7528ffa0db89db152e4c32897a6719ef66",
+  "web/sand.ts": "1013a413041de1d467acc341465212c71ec4a2ef51ea16b7a40ed655fc5d5fb9",
+  "pipeline/extract.py": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+  "pipeline/detect.py": "fe21ec1a602fe8dae0ef21737a3d1c0287d9b3fdcdccabb1e600aae79b8aa269",
+  "pipeline/evaluate.py": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+  "config/settings.json": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+  "config/registration.json": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608"
+}

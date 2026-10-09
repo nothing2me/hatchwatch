@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "input_sha256": "47a081d37c88dbbecf061b664d979001f1431a9a9f88a9a045dcb4a30dfa9703",
+  "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+  "calibration_sha256": "1efcd0532a98143cdbde058a670e9ca3cd6a86f20f86e9311d24bb2bc0804603",
+  "runtime_seconds": 0.2283381000161171,
+  "methods": {
+    "frozen": [
+      {
+        "id": "frozen-1",
+        "point": [
+          0.2515723270440251,
+          0.5546218487394956
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.0,
+          27.5
+        ],
+        "score": 0.7283049821853638,
+        "label": "Localized activity; insufficient evidence to classify.",
+        "evidence": {
+          "activity": 0.2148,
+          "persistent": 0.7283,
+          "dwell": 0.3988,
+          "travel_continuity": 0.5065
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      },
+      {
+        "id": "frozen-2",
+        "point": [
+          -0.15094339622641506,
+          -2.8739495798319323
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.0,
+          29.25
+        ],
+        "score": 0.6521843671798706,
+        "label": "Localized activity; insufficient evidence to classify.",
+        "evidence": {
+          "activity": 0.0429,
+          "persistent": 0.6522,
+          "dwell": 0.169,
+          "travel_continuity": 0.0
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      },
+      {
+        "id": "frozen-3",
+        "point": [
+          0.7547169811320753,
+          -6.0
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          6.125,
+          29.75
+        ],
+        "score": 0.6251466870307922,
+        "label": "Localized activity; insufficient evidence to classify.",
+        "evidence": {
+          "activity": 0.0566,
+          "persistent": 0.6251,
+          "dwell": 0.1563,
+          "travel_continuity": 0.0
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      }
+    ],
+    "motion": [
+      {
+        "id": "motion-1",
+        "point": [
+          0.05031446540880502,
+          0.15126050420168013
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.0,
+          27.5
+        ],
+        "score": 1.3464163541793823,
+        "label": "Localized activity; insufficient evidence to classify.",
+        "evidence": {
+          "activity": 0.2693,
+          "persistent": 0.6164,
+          "dwell": 0.4588,
+          "travel_continuity": 0.7396
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      }
+    ],
+    "tracker": [
+      {
+        "id": "tracker-1",
+        "point": [
+          -0.15094339622641506,
+          0.25210084033613533
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.0,
+          27.5
+        ],
+        "score": 2.0231387615203857,
+        "label": "Localized activity; insufficient evidence to classify.",
+        "evidence": {
+          "activity": 0.2671,
+          "persistent": 0.6885,
+          "dwell": 0.4426,
+          "travel_continuity": 0.8131
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      }
+    ],
+    "full": [
+      {
+        "id": "full-1",
+        "point": [
+          -0.05031446540880502,
+          0.25210084033613533
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.0,
+          27.5
+        ],
+        "score": 0.7464585900306702,
+        "label": "Digging activity detected; nesting unresolved.",
+        "evidence": {
+          "activity": 0.2684,
+          "persistent": 0.6755,
+          "dwell": 0.4488,
+          "travel_continuity": 0.7952
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.",
+        "supporting_clip": "extraction.mp4"
+      }
+    ]
+  },
+  "status": "Digging activity detected; nesting unresolved.",
+  "input_contract": "Difference arrays and timestamps only; no RGB, seed, scenario, simulator state, or truth."
+}
