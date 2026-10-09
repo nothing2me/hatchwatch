@@ -26,4 +26,11 @@ describe('authenticate', () =>
         expect(await authenticate('admin@x.y', 'bad', { findUser: vi.fn().mockResolvedValue(row), verify: vi.fn().mockResolvedValue(false) })).toBeNull();
         expect(await authenticate('nobody@x.y', 'pw', { findUser: vi.fn().mockResolvedValue(null), verify: vi.fn() })).toBeNull();
     });
+
+    it('still runs a password verification against the dummy hash for an unknown user', async () =>
+    {
+        const verify = vi.fn().mockResolvedValue(false);
+        expect(await authenticate('nobody@x.y', 'pw', { findUser: vi.fn().mockResolvedValue(null), verify })).toBeNull();
+        expect(verify).toHaveBeenCalledWith(expect.stringMatching(/^\$argon2id\$/), 'pw');
+    });
 });

@@ -24,10 +24,19 @@ const defaultDeps: AuthDeps = {
     verify: verifyPassword,
 };
 
+// Argon2id hash of a throwaway password. Verified against when the email is unknown
+// so unknown users and wrong passwords take comparable time.
+const DUMMY_HASH = '$argon2id$v=19$m=19456,t=2,p=1$SV5OmXRofAjK1xmMGd+5KQ$+IBmQTEVBZj59IVOuPv6ZKvcoUVUt7ZtDRUCWacUQRE';
+
 export async function authenticate(email: string, password: string, deps: AuthDeps = defaultDeps): Promise<SessionUser | null>
 {
     const row = await deps.findUser(email.trim().toLowerCase());
-    if (!row || !(await deps.verify(row.passwordHash, password)))
+    if (!row)
+    {
+        await deps.verify(DUMMY_HASH, password);
+        return null;
+    }
+    if (!(await deps.verify(row.passwordHash, password)))
     {
         return null;
     }
