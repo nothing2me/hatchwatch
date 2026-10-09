@@ -24,7 +24,8 @@ export const protectionStatuses =
     {
         label: 'No protection needed',
         tone: 'neutral',
-        pinFill: '#7D8A92',
+        // Darkened from #7D8A92 so it stays distinct from the green (validated with the dataviz palette checks).
+        pinFill: '#56626A',
     },
 };
 
@@ -36,15 +37,18 @@ export const nestingStatuses =
     {
         label: 'Nesting unresolved',
         tone: 'warning',
+        chartFill: '#8A5A00',
     },
     confirmed:
     {
         label: 'Nest confirmed by patrol',
         tone: 'good',
+        chartFill: '#2E9E5B',
     },
     noNest:
     {
         label: 'No nest found',
         tone: 'neutral',
+        chartFill: '#56626A',
     },
 };

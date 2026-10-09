@@ -1309,3 +1309,271 @@ button.app-bar__link--active:hover
 {
     min-width: 0;
 }
+
+/* ---- Nest log: scrolling list ---- */
+/* The list scrolls inside its own panel instead of stretching the page. */
+.nest-list__rows
+{
+    position: relative;
+    max-height: max(320px, calc(100vh - 300px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 1000px)
+{
+    .nest-list__rows
+    {
+        max-height: 60vh;
+    }
+}
+
+/* ---- Nest log: charts header ---- */
+.nest-charts
+{
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: 16px;
+}
+
+.nest-charts__header
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stat-tiles
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.stat-tile
+{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    background: #F3F5F4;
+}
+
+.stat-tile__label,
+.stat-tile__detail
+{
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.stat-tile__value
+{
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.stat-tile__value--bad
+{
+    color: var(--color-bad);
+}
+
+.nest-charts__grid
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.chart-card
+{
+    position: relative;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+}
+
+.chart-card__title
+{
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.donut
+{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.donut__svg
+{
+    flex: 0 0 120px;
+    width: 120px;
+    height: 120px;
+}
+
+.donut__slice
+{
+    cursor: default;
+    outline: none;
+}
+
+.donut__slice:hover,
+.donut__slice:focus-visible
+{
+    opacity: 0.85;
+}
+
+.donut__total
+{
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    text-anchor: middle;
+    fill: var(--color-text);
+}
+
+.donut__total-label
+{
+    font-size: 10px;
+    text-anchor: middle;
+    fill: var(--color-text-muted);
+}
+
+.chart-legend
+{
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.chart-legend__row
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-legend__swatch
+{
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.chart-legend__label
+{
+    flex-grow: 1;
+}
+
+.chart-legend__value
+{
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.zone-bars
+{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.zone-bars__row
+{
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr) 28px;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    border-radius: 4px;
+    outline: none;
+}
+
+.zone-bars__row:hover,
+.zone-bars__row:focus-visible
+{
+    background: #F1F5F7;
+}
+
+.zone-bars__label
+{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zone-bars__track
+{
+    height: 12px;
+}
+
+.zone-bars__bar
+{
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+}
+
+.zone-bars__value
+{
+    text-align: right;
+    color: var(--color-text-muted);
+}
+
+.chart-tooltip
+{
+    position: absolute;
+    z-index: 2;
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: var(--color-navy);
+    color: #FFFFFF;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 10px));
+}
+
+.nest-charts__table
+{
+    width: 100%;
+    margin-top: 8px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.nest-charts__table caption
+{
+    margin-bottom: 6px;
+    color: var(--color-text-muted);
+    text-align: left;
+}
+
+.nest-charts__table th,
+.nest-charts__table td
+{
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}

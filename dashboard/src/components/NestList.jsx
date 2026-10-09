@@ -2,7 +2,7 @@
 // cares about most: sites that are still unprotected or never visited.
 // Sites that have faded off the live map stay here under "Archived".
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { protectionStatuses } from '../config/nestStatuses.js';
 import { summarizeNestSite } from '../utils/nestStatus.js';
 import { formatDateTime } from '../utils/formatTime.js';
@@ -63,6 +63,24 @@ export default function NestList(
 })
 {
     const [selectedFilter, setSelectedFilter] = useState('active');
+    const rowsContainer = useRef(null);
+
+    // The list scrolls on its own; keep the selected site in view, for
+    // example after opening it from an alert or a map pin.
+    useEffect(function scrollSelectedIntoView()
+    {
+        const container = rowsContainer.current;
+        const row = container?.querySelector('[aria-pressed="true"]');
+        if (!container || !row)
+        {
+            return;
+        }
+        const rowTop = row.offsetTop; // the container is position: relative, so this is measured from its top
+        if (rowTop < container.scrollTop || rowTop + row.offsetHeight > container.scrollTop + container.clientHeight)
+        {
+            container.scrollTop = rowTop - container.clientHeight / 2 + row.offsetHeight / 2;
+        }
+    }, [selectedNestIdentifier, selectedFilter]);
 
     const activeFilter = filterOptions.find(function isSelectedFilter(option)
     {
@@ -115,7 +133,7 @@ export default function NestList(
 
             {rows.length === 0 && <p className="panel__empty">No sites match this filter.</p>}
 
-            <div className="nest-list__rows">
+            <div className="nest-list__rows" ref={rowsContainer} tabIndex={0} aria-label={`${rows.length} nest sites`}>
                 {rows.map(function renderNestRow({ nestSite, summary })
                 {
                     const isSelected = nestSite.nestIdentifier === selectedNestIdentifier;

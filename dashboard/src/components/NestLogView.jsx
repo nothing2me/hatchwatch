@@ -3,6 +3,7 @@
 
 import NestList from './NestList.jsx';
 import NestDetail from './NestDetail.jsx';
+import NestCharts from './NestCharts.jsx';
 
 export default function NestLogView(
 {
@@ -37,6 +38,8 @@ export default function NestLogView(
 
     return (
         <main className="nest-log">
+            <NestCharts nestSites={nestSites} zones={zones} />
+
             <NestList
                 nestSites={nestSites}
                 zones={zones}
