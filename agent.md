@@ -2,11 +2,11 @@
 
 This repository has two separate products with different data and trust boundaries.
 
-## Real dashboard (future team-owned application)
+## Real dashboard (team-owned application)
 
-Place the real monitoring dashboard under `dashboard/`. It will own real camera integrations, users, access control, persistent records, and production deployment. Give it its own dependency manifest, build output, configuration, tests, and runtime port. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
+The real monitoring dashboard lives under `dashboard/` as a separate React/Vite application on port 5180. It currently renders sample data through `dashboard/src/data/dataSource.js`. As the team adds real camera integrations, users, access control, persistent records, and production deployment, keep its dependency manifest, build output, configuration, tests, and runtime separate. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
 
-The real dashboard does not exist yet. `dashboard/README.md` reserves its location and documents the handoff. Do not describe the current simulation UI as the real dashboard.
+`dashboard/README.md` documents the dashboard scaffold and its independent launch. The current simulation UI is a separate research tool.
 
 ## Synthetic experiment (current application)
 
