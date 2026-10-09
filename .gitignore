@@ -6,3 +6,6 @@ __pycache__/
 dist/
 artifacts/
 *.log
+
+# Local Claude Code session data
+.claude/
