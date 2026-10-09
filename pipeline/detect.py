@@ -19,16 +19,16 @@ def candidates(score, threshold, cfg, timestamps, activity, evidence, method):
     for _ in range(cfg['max_candidates']):
         _,peak,_,loc=cv2.minMaxLoc(work);x,y=loc
         if peak<threshold:break
-        point=[x/(w-1)*16-8,y/(h-1)*12-6]
+        x0,x1,z0,z1=cfg.get('ground_bounds',[-8,8,-6,6]);point=[x0+x/(w-1)*(x1-x0),z0+y/(h-1)*(z1-z0)]
         curve=activity[:,max(0,y-5):y+6,max(0,x-5):x+6].mean(axis=(1,2));active=np.flatnonzero(curve>.025)
         interval=[float(timestamps[active[0]]),float(timestamps[active[-1]])] if len(active) else [float(timestamps[0]),float(timestamps[-1])]
         summary={k:round(float(v[y,x]),4) for k,v in evidence.items()}
         found.append({'id':f'{method}-{len(found)+1}','point':point,'radius_m':cfg['radius_m'],'area_m2':float(np.pi*cfg['radius_m']**2),'interval':interval,'score':float(peak),'label':LABEL if method=='full' and summary['persistent']>.04 else UNCERTAIN,'evidence':summary,'observation_quality':'limited' if summary['persistent']<.04 else 'usable','uncertainty_note':'Fixed registered inspection radius; elevated-motion parallax and surface visibility remain uncalibrated.','supporting_clip':'extraction.mp4'})
-        cv2.circle(work,loc,round(cfg['min_separation_m']*w/16),0,-1)
+        cv2.circle(work,loc,round(cfg['min_separation_m']*w/(x1-x0)),0,-1)
     return found
 
 def detect(signals,calibration,settings,output):
-    begin=time.perf_counter();cfg=read_json(settings);read_json(calibration)
+    begin=time.perf_counter();cfg=read_json(settings);cal=read_json(calibration);cfg['ground_bounds']=cal.get('ground_bounds',[-8,8,-6,6])
     with np.load(signals,allow_pickle=False) as z:
         if set(z.files)!={'background','motion','timestamps','valid'}:raise ValueError('Unexpected signal fields')
         bg=z['background']; motion=z['motion'];ts=z['timestamps'];valid=z['valid']

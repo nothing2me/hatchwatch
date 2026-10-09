@@ -1,0 +1,8 @@
+{
+  "version": "pin-fusion-v4-development",
+  "pair_max_distance_m": 1.5,
+  "pair_min_temporal_overlap_seconds": 1.0,
+  "same_site_distance_m": 2.4,
+  "same_site_overlap_seconds": 1.0,
+  "note": "Post-hoc development choice on previously reported six-turtle stress videos; fresh seeds required for evaluation."
+}

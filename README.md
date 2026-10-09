@@ -1,8 +1,8 @@
 # NestTrace
 
-A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 960 × 540 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 60 × 24 m beach is a two-layer bed of about 42,000 physical grains. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s.
+A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 1280 × 720 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 84 × 32 m beach is a two-layer bed of **134,400 physical grains**. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times.
 
-The team’s future **real dashboard** belongs in [`dashboard/`](dashboard/README.md) as a separate application. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
+The team’s **real dashboard** lives in [`dashboard/`](dashboard/README.md): a Docker Compose app (Next.js on port 3000, Postgres) with logins, a satellite map, and camera feeds. It imports reviewed simulation outputs through a separate adapter and never reads simulator state or private truth.
 
 ## Run locally
 
@@ -21,15 +21,39 @@ In a second terminal:
 npm start
 ```
 
-Open **http://127.0.0.1:5173**. Use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips and overlays each camera's calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a two-camera recording took about 30 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
+Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress** or **Six turtles · very dark and noisy**, use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. For `swarm` and `swarm-night` runs it also groups calibrated **digging activity pins** and marks each on the map: green pins have detections from both cameras, amber pins have one view and need review. A pin is an inspection region, never a confirmed nest. The API binds to loopback only. Keep both terminals running. On the development machine a six-turtle two-camera recording took about 100 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 
 `NESTTRACE_BROWSER` can specify a Chrome-compatible executable. On systems without Chrome/Edge, run `npx playwright install chromium`; the recording CLI then uses Playwright's browser. FFmpeg is provided by `imageio-ffmpeg`.
 
-## Reproduce the experiment
+## Reproduce the current paired stress experiment
 
-Keep the Vite server running. On macOS/Linux replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
+The current six-turtle simulator compares paired daylight and very-dark synthetic videos on five registered seeds. The registration and fixed settings are in `config/swarm-registration.json` and `config/settings-swarm.json`. Run the batch with Vite serving port 5173:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/swarm_batch.py
+node scripts/swarm-check.mjs
+```
+
+The three-turtle result in `STRESS_RESULTS.md` belongs to revision `5ff15ae`, and the original one-turtle result in `RESULTS.md` belongs to `f50d04c`. Neither validates the current six-turtle beach. Current paired results are in `SWARM_RESULTS.md`.
+
+## Reproduce the two-camera pin validation
+
+Pins group calibrated predictions from both cameras into one inspection region per site. The rules and the fresh ten-seed registration are in [`config/pin-settings.json`](config/pin-settings.json) and [`config/pin-registration.json`](config/pin-registration.json); the measured result is in [`PIN_RESULTS.md`](PIN_RESULTS.md) and [`results/pin-v4.json`](results/pin-v4.json). Run the registered batch with both servers up:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/pin_batch.py
+node scripts/pin-browser-check.mjs
+```
+
+Across ten untouched daylight seeds the grouped pins matched **59/60** sites with **1** extra pin and a 0.58 m mean center error. The single miss was a 0.93 m center error against the registered 0.90 m radius; the target of 60/60 with zero extras therefore failed. Pins mark digging activity, not eggs: a negative audit shows travel and rest produce no pins, but unrelated sand movement, weak-motion misses, and dig-without-eggs cases remain. The very-dark condition still places no pins.
+
+An optional exploratory low-light preprocessing probe uses the separate development recording, not the registered stress seeds. After recording `A-swarm-night-dev-601`, run `python scripts/lowlight_probe.py --run A-swarm-night-dev-601 --view 1`. It compares brightness gain, spatial blur, local contrast, and a three-frame temporal median while leaving the main extractor and detector settings untouched. See `SWARM_RESULTS.md` for the measured tradeoff; this probe is not a nighttime accuracy claim.
+
+## Reproduce the original one-turtle experiment
+
+Check out revision `f50d04c` in a separate worktree to reproduce its frozen validation; its freeze hashes intentionally reject the current simulator. Keep the Vite server running. On macOS/Linux replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
 
 ```powershell
 node scripts/record.mjs --seed 11 --scenario clean --model A
@@ -89,7 +113,7 @@ The extractor alone sees RGB. Detection executes in a fresh process and temporar
 * Blob tracker: nearest-centroid motion tracks and local dwell.
 * Combined evidence: recent activity, dwell windows, persistent surface change, and travel continuity.
 
-Calibration maps the central 16 × 12 m observed section of the 60 × 24 m beach into a 160×120 analysis grid. The two cameras face along the beach from opposite ends, 4.4 m above the sand with approximately five degrees of downward pitch, giving side views of inland-moving turtles. Reference marker neighborhoods supply stable features for affine registration and robust brightness gain/offset. The map can show either or both cameras' projected motion. Moving turtle parts are above the sand, so their flattened positions have parallax error. The calibration fit residual does not measure independent accuracy, camera survey error, or this parallax. Inspection radii are fixed by registration; scores are **not probabilities**.
+Calibration maps the central 24 × 16 m observed section of the 84 × 32 m beach into a 160×120 analysis grid. The two cameras face along the beach from opposite ends, 5.6 m above the sand with approximately four degrees of downward pitch, giving side views of inland-moving turtles. Each public calibration records mount position, orientation, field of view, visible ground markers, and map bounds. Reference marker neighborhoods supply stable features for affine registration and robust brightness gain/offset. The map can show either or both cameras' projected motion. Moving turtle parts are above the sand, so their flattened positions have parallax error. The calibration fit residual does not measure independent accuracy, camera survey error, or this parallax. Inspection radii are fixed by registration; scores are **not probabilities**.
 
 The two sand generators differ structurally: A throws grains radially from rear-flipper strikes; B rakes alternating tangential strips. The grains receive velocity impulses, fly under gravity, collide, and settle. The model is coarse and bounded rather than real grain-scale sand. All visible effects are independent of hidden egg deposition. Unit/browser checks include identical rendered frames with only the hidden egg flag changed.
 
@@ -99,10 +123,11 @@ The two sand generators differ structurally: A throws grains radially from rear-
 npm test
 npm run build
 node scripts/browser-check.mjs
+node scripts/pin-browser-check.mjs
 ```
 
-Browser checks require the servers and a completed `A-clean-11` run. They exercise preview controls, method switching, truth reveal, mobile overflow, and hidden-egg render invariance. Tests check temporal/spatial matching, duplicate predictions, oversized-region rejection, stationary change versus new motion, and the native-resolution Pure motion export.
+Browser checks require the servers and a completed `A-clean-11` run. When the paired development recordings are present, they also exercise their Pure motion playback, larger map, and Camera 02 evaluation. The pin check exercises the mapped pins, evidence tiers, and the reveal-only pin evaluation on `A-swarm-dev-601`. Checks cover preview controls, method switching, truth reveal, mobile overflow, and hidden-egg render invariance. Tests check temporal/spatial matching, duplicate predictions, oversized-region rejection, stationary change versus new motion, and the native-resolution Pure motion export.
 
 ## Limits
 
-Read `RESULTS.md` for actual measured results and gate decisions. Synthetic daylight evidence does not establish nighttime, infrared, wild-turtle, or buried-egg capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not granular physics. Do not label an alert a confirmed nest.
+Read `SWARM_RESULTS.md` for the current paired stress measurements, `PIN_RESULTS.md` for the two-camera pin validation, and the earlier reports for historical versions. The very-dark mode uses reduced visible illumination and deterministic camera noise. It is **not an infrared model**, and synthetic performance does not establish nighttime field capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not grain-scale sand. Do not label an alert a confirmed nest.

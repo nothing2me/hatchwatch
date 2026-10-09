@@ -1,0 +1,56 @@
+{
+  "protocol": "Six-turtle 84x32m paired daylight / very-dark stress v3",
+  "registered_before_reserved": true,
+  "prior_development_seed": 601,
+  "scenarios": [
+    "swarm",
+    "swarm-night"
+  ],
+  "seeds": [
+    607,
+    613,
+    617,
+    619,
+    631
+  ],
+  "turtles_per_run": 6,
+  "source_video_resolution": [
+    1280,
+    720
+  ],
+  "cameras": 2,
+  "ground_bounds_m": [
+    -12,
+    12,
+    -8,
+    8
+  ],
+  "inspection_radius_m": 0.9,
+  "daylight_target_detected_sites": 24,
+  "daylight_max_extra_alerts": 5,
+  "nighttime_target": "Exploratory measurement; no preregistered success claim",
+  "darkness": "Synthetic visible-light illumination approximately tenfold darker than daylight in development frame, with deterministic low-amplitude sensor noise; not infrared",
+  "source_files": {
+    "recorder": "scripts/record.mjs",
+    "matching": "config/registration.json",
+    "extractor": "pipeline/extract.py",
+    "evaluator": "pipeline/evaluate.py",
+    "sand": "web/sand.ts",
+    "settings": "config/settings-swarm.json",
+    "detector": "pipeline/detect.py",
+    "common": "pipeline/common.py",
+    "simulator": "web/simulation.ts"
+  },
+  "source_sha256": {
+    "recorder": "cf8ca6987976e30fc55af5339789659e33c329ed8b5fd9d9053ac45ab820aa25",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "sand": "87bfd6d6dfbb06170076114bb723153ddfb739dbaf8633d9eb3f5e70389a9594",
+    "settings": "78dfccfbf764c3f329b0e3e6ff939440047abc8414dac21e043e2feec7af84f0",
+    "detector": "22f43981a1714eea15e4c6e5736d6c0a011cc5942b7c6175404336e292f91dae",
+    "common": "75d7bd1eb970d33cb7216c8b5950e1c7e4bbf58d36127e0ca4a262ffc8345e70",
+    "simulator": "ba815c37a8466ab9fc05c363d7d6e4de02a4763296589f34b658c311fa2225c5"
+  },
+  "note": "No reserved seed used for threshold changes. Same contributor authored simulator and detector."
+}

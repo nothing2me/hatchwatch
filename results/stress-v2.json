@@ -1,0 +1,924 @@
+{
+  "protocol": "High-density three-turtle stress v2",
+  "run_ids": [
+    "A-multi-stress-503",
+    "A-multi-stress-509",
+    "A-multi-stress-521",
+    "A-multi-stress-541",
+    "A-multi-stress-557"
+  ],
+  "site_count": 15,
+  "methods": {
+    "camera_0_frozen": {
+      "runs": 5,
+      "tp": 2,
+      "fp": 13,
+      "fn": 13,
+      "precision": 0.13333333333333333,
+      "recall": 0.13333333333333333,
+      "false_alerts_per_run": 2.6,
+      "mean_localization_error_m": 0.4506841472112277,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 13,
+      "eggs_covered": 2,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_0_motion": {
+      "runs": 5,
+      "tp": 10,
+      "fp": 0,
+      "fn": 5,
+      "precision": 1.0,
+      "recall": 0.6666666666666666,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5863254307019092,
+      "mean_inspection_area_m2": 5.089380098815466,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_0_tracker": {
+      "runs": 5,
+      "tp": 7,
+      "fp": 0,
+      "fn": 8,
+      "precision": 1.0,
+      "recall": 0.4666666666666667,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.6566557457424705,
+      "mean_inspection_area_m2": 3.5625660691708254,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 7,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_0_full": {
+      "runs": 5,
+      "tp": 13,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0.9285714285714286,
+      "recall": 0.8666666666666667,
+      "false_alerts_per_run": 0.2,
+      "mean_localization_error_m": 0.5959571124534875,
+      "mean_inspection_area_m2": 7.125132138341653,
+      "nonproductive_inspections": 1,
+      "eggs_covered": 13,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_1_frozen": {
+      "runs": 5,
+      "tp": 7,
+      "fp": 8,
+      "fn": 8,
+      "precision": 0.4666666666666667,
+      "recall": 0.4666666666666667,
+      "false_alerts_per_run": 1.6,
+      "mean_localization_error_m": 0.6319435097640501,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 8,
+      "eggs_covered": 7,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_1_motion": {
+      "runs": 5,
+      "tp": 14,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.9333333333333333,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.6244675510564001,
+      "mean_inspection_area_m2": 7.125132138341653,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 14,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_1_tracker": {
+      "runs": 5,
+      "tp": 4,
+      "fp": 0,
+      "fn": 11,
+      "precision": 1.0,
+      "recall": 0.26666666666666666,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.6574047142942219,
+      "mean_inspection_area_m2": 2.0357520395261863,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 4,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    },
+    "camera_1_full": {
+      "runs": 5,
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.6200240129765712,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 15,
+      "eggs": 15,
+      "duplicate_predictions": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "A-multi-stress-503",
+      "camera_0": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.32997489173406047
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.4266107190451071
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.4562265799946795
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 2,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.5071466449047127,
+            0.2648107327058517
+          ],
+          "inspection_area_m2": 5.089380098815465,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      },
+      "camera_1": {
+        "frozen": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.5915482749285872,
+            0.6409614923738484
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 1,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5051368186710091,
+            0.3762607241567524,
+            0.5468453413724172
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 0,
+          "precision": null,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 0,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6205666374220237,
+            0.461707669785863,
+            0.681063808236704
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "id": "A-multi-stress-509",
+      "camera_0": {
+        "frozen": {
+          "tp": 0,
+          "fp": 3,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 3,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.4253748851531006
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 0,
+          "precision": null,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 0,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.661167492109684,
+            0.587133454578,
+            0.7141067450343411
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      },
+      "camera_1": {
+        "frozen": {
+          "tp": 0,
+          "fp": 3,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 3,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 2,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.6143078987908541,
+            0.7891150844205191
+          ],
+          "inspection_area_m2": 5.089380098815465,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 0,
+          "precision": null,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 0,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.64840264217707,
+            0.5816123055526642,
+            0.5586219452358051
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "id": "A-multi-stress-521",
+      "camera_0": {
+        "frozen": {
+          "tp": 0,
+          "fp": 3,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 3,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 2,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.6334666606317412,
+            0.6180621900279202
+          ],
+          "inspection_area_m2": 5.089380098815465,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6774649247060711,
+            0.7781518555778685,
+            0.583397245133532
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6888129940943996,
+            0.7470947765335398,
+            0.6073325782037714
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      },
+      "camera_1": {
+        "frozen": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.5907229724690727,
+            0.8545669021270846
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 1,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7680908693324817,
+            0.5656792500952474,
+            0.7685910961773026
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7551204703935084,
+            0.47993764057823324,
+            0.8295085813704259
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6180621900279202,
+            0.7680908693324817,
+            0.7150655526536099
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "id": "A-multi-stress-541",
+      "camera_0": {
+        "frozen": {
+          "tp": 0,
+          "fp": 3,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 3,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7876875248852595,
+            0.5010674001580177,
+            0.4177954989005014
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.8232010359831501
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.8782454796322717,
+            0.5269103585654207,
+            0.26583642748646047
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      },
+      "camera_1": {
+        "frozen": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.5494390828834983,
+            0.8313750776982965
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 1,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7005305069514447,
+            0.5849126650973189,
+            0.6346999296619946
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 3,
+          "sites": 3,
+          "predictions": 0,
+          "precision": null,
+          "recall": 0.0,
+          "localization_errors_m": [],
+          "inspection_area_m2": 0,
+          "location_coverage": 0,
+          "eggs_covered": 0,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6985782009263936,
+            0.5918678807798152,
+            0.5353689413994668
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "id": "A-multi-stress-557",
+      "camera_0": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.5713934026883949
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7877795192565047,
+            0.629247155082205,
+            0.6361627538787352
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 2,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.4969323720038628,
+            0.7812162067981301
+          ],
+          "inspection_area_m2": 5.089380098815465,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 2,
+          "fp": 1,
+          "fn": 1,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "localization_errors_m": [
+            0.6896272934113866,
+            0.6092174846354973
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 2,
+          "eggs_covered": 2,
+          "eggs": 3,
+          "nonproductive_inspections": 1,
+          "duplicate_predictions": 0
+        }
+      },
+      "camera_1": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.3649907658679621
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5713934026883949,
+            0.7614227397783963,
+            0.5555593875954679
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 2,
+          "sites": 3,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
+          "localization_errors_m": [
+            0.5650521648347198
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "sites": 3,
+          "predictions": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6896272934113866,
+            0.5663914944109828,
+            0.5653327632963808
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 3,
+          "eggs_covered": 3,
+          "eggs": 3,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    }
+  ],
+  "source_sha256": {
+    "detector": "fe21ec1a602fe8dae0ef21737a3d1c0287d9b3fdcdccabb1e600aae79b8aa269",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "settings": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+    "simulator": "b6c205db0976abf16dc4171a36450615ba207fb0c6e81656116c04703b292d47",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "sand": "fa344b900d8bfc4ab0b254dd3773b85ebb7d28600bc9b000e453983094df7eb0"
+  },
+  "note": "Three digging turtles at staggered times and separate seeded locations in each run. Same frozen detector settings; no threshold tuning on stress seeds. Synthetic only."
+}

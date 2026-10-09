@@ -19,7 +19,10 @@ def run(run_id, cameras=(0,), settings=None, evaluate=True):
             subprocess.run([sys.executable,'detect.py','--signals','signals.npz','--calibration','calibration.json','--settings','settings.json','--output','output'],cwd=stage,check=True)
             shutil.copytree(stage/'output',prediction,dirs_exist_ok=True)
             write_json(prediction/'input-manifest.json',{'files':{name:sha(stage/name) for name in ['signals.npz','calibration.json','settings.json']},'process':'Independent Python subprocess in minimal staging directory. Not an OS access-control sandbox.'})
-        if evaluate:
+    if evaluate:
+        # Do not expose private truth until inference has finished for every requested view.
+        for view in cameras:
+            prediction=public/f'view-{view}'/'detection'
             subprocess.run([sys.executable,str(ROOT/'pipeline/evaluate.py'),'--predictions',str(prediction/'predictions.json'),'--truth',str(private/'truth.json'),'--registration',str(ROOT/'config/registration.json'),'--output',str(private/f'evaluation-{view}.json')],check=True)
     write_json(public/'analysis.json',{'cameras':list(cameras),'runtime_seconds':time.perf_counter()-start,'settings_sha256':sha(settings),'inference_complete':True})
 

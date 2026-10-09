@@ -1,0 +1,1921 @@
+{
+  "protocol": "Six-turtle 84x32m paired daylight / very-dark stress v3",
+  "seeds": [
+    607,
+    613,
+    617,
+    619,
+    631
+  ],
+  "scenarios": {
+    "swarm": {
+      "run_ids": [
+        "A-swarm-stress-607",
+        "A-swarm-stress-613",
+        "A-swarm-stress-617",
+        "A-swarm-stress-619",
+        "A-swarm-stress-631"
+      ],
+      "sites": 30,
+      "methods": {
+        "camera_0_frozen": {
+          "runs": 5,
+          "tp": 10,
+          "fp": 30,
+          "fn": 20,
+          "precision": 0.25,
+          "recall": 0.3333333333333333,
+          "false_alerts_per_run": 6.0,
+          "mean_localization_error_m": 0.5249679250036761,
+          "mean_inspection_area_m2": 20.35752039526186,
+          "nonproductive_inspections": 30,
+          "eggs_covered": 10,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_motion": {
+          "runs": 5,
+          "tp": 19,
+          "fp": 4,
+          "fn": 11,
+          "precision": 0.8260869565217391,
+          "recall": 0.6333333333333333,
+          "false_alerts_per_run": 0.8,
+          "mean_localization_error_m": 0.617989418599649,
+          "mean_inspection_area_m2": 11.70557422727557,
+          "nonproductive_inspections": 4,
+          "eggs_covered": 19,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_tracker": {
+          "runs": 5,
+          "tp": 2,
+          "fp": 4,
+          "fn": 28,
+          "precision": 0.3333333333333333,
+          "recall": 0.06666666666666667,
+          "false_alerts_per_run": 0.8,
+          "mean_localization_error_m": 0.5716641661576489,
+          "mean_inspection_area_m2": 3.053628059289279,
+          "nonproductive_inspections": 4,
+          "eggs_covered": 2,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_full": {
+          "runs": 5,
+          "tp": 21,
+          "fp": 5,
+          "fn": 9,
+          "precision": 0.8076923076923077,
+          "recall": 0.7,
+          "false_alerts_per_run": 1.0,
+          "mean_localization_error_m": 0.6271869768214953,
+          "mean_inspection_area_m2": 13.232388256920212,
+          "nonproductive_inspections": 5,
+          "eggs_covered": 21,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_frozen": {
+          "runs": 5,
+          "tp": 17,
+          "fp": 23,
+          "fn": 13,
+          "precision": 0.425,
+          "recall": 0.5666666666666667,
+          "false_alerts_per_run": 4.6,
+          "mean_localization_error_m": 0.49131245789211053,
+          "mean_inspection_area_m2": 20.35752039526186,
+          "nonproductive_inspections": 23,
+          "eggs_covered": 17,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_motion": {
+          "runs": 5,
+          "tp": 21,
+          "fp": 7,
+          "fn": 9,
+          "precision": 0.75,
+          "recall": 0.7,
+          "false_alerts_per_run": 1.4,
+          "mean_localization_error_m": 0.619702637903805,
+          "mean_inspection_area_m2": 14.250264276683302,
+          "nonproductive_inspections": 7,
+          "eggs_covered": 21,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_tracker": {
+          "runs": 5,
+          "tp": 3,
+          "fp": 2,
+          "fn": 27,
+          "precision": 0.6,
+          "recall": 0.1,
+          "false_alerts_per_run": 0.4,
+          "mean_localization_error_m": 0.4723329626871358,
+          "mean_inspection_area_m2": 2.5446900494077327,
+          "nonproductive_inspections": 2,
+          "eggs_covered": 3,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_full": {
+          "runs": 5,
+          "tp": 30,
+          "fp": 9,
+          "fn": 0,
+          "precision": 0.7692307692307693,
+          "recall": 1.0,
+          "false_alerts_per_run": 1.8,
+          "mean_localization_error_m": 0.5901451402535408,
+          "mean_inspection_area_m2": 19.848582385380315,
+          "nonproductive_inspections": 9,
+          "eggs_covered": 30,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        }
+      },
+      "seed_bootstrap_95ci": {
+        "camera_0_full": {
+          "recall": [
+            0.6666666666666666,
+            0.7666666666666667
+          ],
+          "mean_localization_error_m": [
+            0.5642574255839211,
+            0.6744131081618593
+          ]
+        },
+        "camera_1_full": {
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "mean_localization_error_m": [
+            0.5434097010460764,
+            0.6387647626254918
+          ]
+        }
+      },
+      "rows": [
+        {
+          "id": "A-swarm-stress-607",
+          "camera_0": {
+            "frozen": {
+              "tp": 2,
+              "fp": 6,
+              "fn": 4,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.25,
+              "recall": 0.3333333333333333,
+              "localization_errors_m": [
+                0.7311402924032229,
+                0.47935725006763646
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 2,
+              "eggs_covered": 2,
+              "eggs": 6,
+              "nonproductive_inspections": 6,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 4,
+              "fp": 1,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 0.8,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.6764482524187118,
+                0.6414568100312463,
+                0.733110580623543,
+                0.5634766803358096
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 1,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 4,
+              "fp": 1,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 0.8,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.7003548382198234,
+                0.5336836515179609,
+                0.733110580623543,
+                0.7197367527673677
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 4,
+              "fp": 4,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.5,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.19274416131930408,
+                0.352511849123999,
+                0.3996298164087678,
+                0.4473452758747329
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 4,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 4,
+              "fp": 4,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.5,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.6786248220343429,
+                0.6183104436562152,
+                0.4481349379361946,
+                0.6582549669146421
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 4,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 1,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 6,
+              "fp": 2,
+              "fn": 0,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.75,
+              "recall": 1.0,
+              "localization_errors_m": [
+                0.6728524098085441,
+                0.8614498253752544,
+                0.733110580623543,
+                0.7405145127399081,
+                0.2679142468881107,
+                0.7960793820805901
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 6,
+              "eggs_covered": 6,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-stress-613",
+          "camera_0": {
+            "frozen": {
+              "tp": 1,
+              "fp": 7,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.125,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.6463636461039874
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 7,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 3,
+              "fp": 2,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 0.6,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.6703199552521967,
+                0.7185436770715715,
+                0.6214487779648308
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 1,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 2,
+              "precision": 0.5,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.688651049084915
+              ],
+              "inspection_area_m2": 5.089380098815465,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 4,
+              "fp": 2,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 6,
+              "precision": 0.6666666666666666,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.4324788113651371,
+                0.8404178833196725,
+                0.6922386837734527,
+                0.12102687036241455
+              ],
+              "inspection_area_m2": 15.268140296446395,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 3,
+              "fp": 5,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.375,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.7644328134813231,
+                0.42878739095420876,
+                0.4371938846806392
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 5,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 3,
+              "fp": 1,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 0.75,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.661062001930496,
+                0.5949226767994065,
+                0.5166995135342025
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 6,
+              "fp": 1,
+              "fn": 0,
+              "sites": 6,
+              "predictions": 7,
+              "precision": 0.8571428571428571,
+              "recall": 1.0,
+              "localization_errors_m": [
+                0.6962765221130567,
+                0.5664939600193012,
+                0.6759693051099372,
+                0.6598945328465964,
+                0.2363646298183096,
+                0.7253926606266319
+              ],
+              "inspection_area_m2": 17.812830345854128,
+              "location_coverage": 6,
+              "eggs_covered": 6,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-stress-617",
+          "camera_0": {
+            "frozen": {
+              "tp": 2,
+              "fp": 6,
+              "fn": 4,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.25,
+              "recall": 0.3333333333333333,
+              "localization_errors_m": [
+                0.26509794165030987,
+                0.5075336304147211
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 2,
+              "eggs_covered": 2,
+              "eggs": 6,
+              "nonproductive_inspections": 6,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 3,
+              "fp": 1,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 0.75,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.8628345022095822,
+                0.534062739954022,
+                0.5508277111671852
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 1,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 2,
+              "precision": 0.5,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.4546772832303829
+              ],
+              "inspection_area_m2": 5.089380098815465,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 4,
+              "fp": 1,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 0.8,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.7733530288888592,
+                0.4445888892782379,
+                0.7831240954142565,
+                0.6518222515437949
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 3,
+              "fp": 5,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.375,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.8774436891008525,
+                0.7680081775018388,
+                0.2444393366063381
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 5,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 5,
+              "fp": 0,
+              "fn": 1,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 1.0,
+              "recall": 0.8333333333333334,
+              "localization_errors_m": [
+                0.7664054182109983,
+                0.8565727924311944,
+                0.5348367115220197,
+                0.6180139236198448,
+                0.5229719409688616
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 5,
+              "eggs_covered": 5,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 6,
+              "fp": 2,
+              "fn": 0,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.75,
+              "recall": 1.0,
+              "localization_errors_m": [
+                0.7664054182109983,
+                0.7464031198379818,
+                0.6518222515437949,
+                0.5229719409688616,
+                0.35232439601271287,
+                0.6611648025578599
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 6,
+              "eggs_covered": 6,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-stress-619",
+          "camera_0": {
+            "frozen": {
+              "tp": 3,
+              "fp": 5,
+              "fn": 3,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.375,
+              "recall": 0.5,
+              "localization_errors_m": [
+                0.7033485120910535,
+                0.2625245506849763,
+                0.7292716780643963
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 3,
+              "eggs_covered": 3,
+              "eggs": 6,
+              "nonproductive_inspections": 5,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 5,
+              "fp": 0,
+              "fn": 1,
+              "sites": 6,
+              "predictions": 5,
+              "precision": 1.0,
+              "recall": 0.8333333333333334,
+              "localization_errors_m": [
+                0.734542988338353,
+                0.5783593596707524,
+                0.6132695394076402,
+                0.49536661542905763,
+                0.3329596378771176
+              ],
+              "inspection_area_m2": 12.723450247038663,
+              "location_coverage": 5,
+              "eggs_covered": 5,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 1,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 1,
+              "sites": 6,
+              "predictions": 6,
+              "precision": 0.8333333333333334,
+              "recall": 0.8333333333333334,
+              "localization_errors_m": [
+                0.8790139897709981,
+                0.594403138663488,
+                0.42974129759115076,
+                0.7374269275136568,
+                0.7646288805498885
+              ],
+              "inspection_area_m2": 15.268140296446395,
+              "location_coverage": 5,
+              "eggs_covered": 5,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 2,
+              "fp": 6,
+              "fn": 4,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.25,
+              "recall": 0.3333333333333333,
+              "localization_errors_m": [
+                0.1624523600961373,
+                0.6156551274415506
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 2,
+              "eggs_covered": 2,
+              "eggs": 6,
+              "nonproductive_inspections": 6,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 4,
+              "fp": 0,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 1.0,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.4503215236885701,
+                0.5973230560611451,
+                0.8817699497317392,
+                0.8330183284913147
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 0,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 1.0,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.3509260623839243
+              ],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 6,
+              "fp": 2,
+              "fn": 0,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.75,
+              "recall": 1.0,
+              "localization_errors_m": [
+                0.3636044574944249,
+                0.5688188034605086,
+                0.42310037936151323,
+                0.4792666806522303,
+                0.41174615937217957,
+                0.8804834818105596
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 6,
+              "eggs_covered": 6,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-stress-631",
+          "camera_0": {
+            "frozen": {
+              "tp": 2,
+              "fp": 6,
+              "fn": 4,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.25,
+              "recall": 0.3333333333333333,
+              "localization_errors_m": [
+                0.4573317162055539,
+                0.4677100323509037
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 2,
+              "eggs_covered": 2,
+              "eggs": 6,
+              "nonproductive_inspections": 6,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 4,
+              "fp": 0,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 1.0,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.7713042193515696,
+                0.8870932534104488,
+                0.2695451591270344,
+                0.4868284937526572
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 4,
+              "fp": 0,
+              "fn": 2,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 1.0,
+              "recall": 0.6666666666666666,
+              "localization_errors_m": [
+                0.749708275409123,
+                0.29112321265899804,
+                0.6370661533982671,
+                0.6618783006213075
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 4,
+              "eggs_covered": 4,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 5,
+              "fp": 3,
+              "fn": 1,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.625,
+              "recall": 0.8333333333333334,
+              "localization_errors_m": [
+                0.44715629163118514,
+                0.650899661593219,
+                0.6009667109003592,
+                0.3977284700488113,
+                0.564916767402613
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 5,
+              "eggs_covered": 5,
+              "eggs": 6,
+              "nonproductive_inspections": 3,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 5,
+              "fp": 2,
+              "fn": 1,
+              "sites": 6,
+              "predictions": 7,
+              "precision": 0.7142857142857143,
+              "recall": 0.8333333333333334,
+              "localization_errors_m": [
+                0.7574151930849448,
+                0.6328471474764976,
+                0.5596857214556115,
+                0.36277394954044756,
+                0.4637903768912164
+              ],
+              "inspection_area_m2": 17.812830345854128,
+              "location_coverage": 5,
+              "eggs_covered": 5,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 2,
+              "fp": 1,
+              "fn": 4,
+              "sites": 6,
+              "predictions": 3,
+              "precision": 0.6666666666666666,
+              "recall": 0.3333333333333333,
+              "localization_errors_m": [
+                0.686493554694666,
+                0.3795792709828173
+              ],
+              "inspection_area_m2": 7.6340701482231985,
+              "location_coverage": 2,
+              "eggs_covered": 2,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 6,
+              "fp": 2,
+              "fn": 0,
+              "sites": 6,
+              "predictions": 8,
+              "precision": 0.75,
+              "recall": 1.0,
+              "localization_errors_m": [
+                0.7574151930849448,
+                0.6571866050605181,
+                0.6212618064193455,
+                0.43505274201409316,
+                0.4637903768912164,
+                0.30922302480269565
+              ],
+              "inspection_area_m2": 20.35752039526186,
+              "location_coverage": 6,
+              "eggs_covered": 6,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            }
+          }
+        }
+      ],
+      "resources": [
+        {
+          "id": "A-swarm-stress-607",
+          "recording_seconds": 105.487,
+          "analysis_seconds": 42.95738780000829,
+          "source_video_bytes": 13269972,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-stress-613",
+          "recording_seconds": 104.849,
+          "analysis_seconds": 48.11344650000683,
+          "source_video_bytes": 13184327,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-stress-617",
+          "recording_seconds": 115.638,
+          "analysis_seconds": 42.49995129997842,
+          "source_video_bytes": 13365319,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-stress-619",
+          "recording_seconds": 106.401,
+          "analysis_seconds": 39.37146590001066,
+          "source_video_bytes": 13356910,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-stress-631",
+          "recording_seconds": 121.455,
+          "analysis_seconds": 33.04449690002366,
+          "source_video_bytes": 13391734,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        }
+      ]
+    },
+    "swarm-night": {
+      "run_ids": [
+        "A-swarm-night-stress-607",
+        "A-swarm-night-stress-613",
+        "A-swarm-night-stress-617",
+        "A-swarm-night-stress-619",
+        "A-swarm-night-stress-631"
+      ],
+      "sites": 30,
+      "methods": {
+        "camera_0_frozen": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_motion": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_tracker": {
+          "runs": 5,
+          "tp": 3,
+          "fp": 9,
+          "fn": 27,
+          "precision": 0.25,
+          "recall": 0.1,
+          "false_alerts_per_run": 1.8,
+          "mean_localization_error_m": 0.7791050978475207,
+          "mean_inspection_area_m2": 6.107256118578558,
+          "nonproductive_inspections": 9,
+          "eggs_covered": 3,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_0_full": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_frozen": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_motion": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_tracker": {
+          "runs": 5,
+          "tp": 2,
+          "fp": 12,
+          "fn": 28,
+          "precision": 0.14285714285714285,
+          "recall": 0.06666666666666667,
+          "false_alerts_per_run": 2.4,
+          "mean_localization_error_m": 0.4345873998929398,
+          "mean_inspection_area_m2": 7.125132138341653,
+          "nonproductive_inspections": 12,
+          "eggs_covered": 2,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        },
+        "camera_1_full": {
+          "runs": 5,
+          "tp": 0,
+          "fp": 0,
+          "fn": 30,
+          "precision": null,
+          "recall": 0.0,
+          "false_alerts_per_run": 0.0,
+          "mean_localization_error_m": null,
+          "mean_inspection_area_m2": 0.0,
+          "nonproductive_inspections": 0,
+          "eggs_covered": 0,
+          "eggs": 30,
+          "duplicate_predictions": 0
+        }
+      },
+      "seed_bootstrap_95ci": {
+        "camera_0_full": {
+          "recall": [
+            0.0,
+            0.0
+          ],
+          "mean_localization_error_m": null
+        },
+        "camera_1_full": {
+          "recall": [
+            0.0,
+            0.0
+          ],
+          "mean_localization_error_m": null
+        }
+      },
+      "rows": [
+        {
+          "id": "A-swarm-night-stress-607",
+          "camera_0": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 0,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 1.0,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.7952862574990502
+              ],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 4,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 4,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-night-stress-613",
+          "camera_0": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 2,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 3,
+              "precision": 0.3333333333333333,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.6862422327441389
+              ],
+              "inspection_area_m2": 7.6340701482231985,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 3,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 0.25,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.7043041216451351
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 3,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-night-stress-617",
+          "camera_0": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 1,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 1,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 1,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 2.5446900494077327,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 1,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-night-stress-619",
+          "camera_0": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 3,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 4,
+              "precision": 0.25,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.8557868032993732
+              ],
+              "inspection_area_m2": 10.17876019763093,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 3,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 2,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 2,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 5.089380098815465,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          }
+        },
+        {
+          "id": "A-swarm-night-stress-631",
+          "camera_0": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 0,
+              "fp": 3,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 3,
+              "precision": 0.0,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 7.6340701482231985,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 3,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          },
+          "camera_1": {
+            "frozen": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "motion": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            },
+            "tracker": {
+              "tp": 1,
+              "fp": 2,
+              "fn": 5,
+              "sites": 6,
+              "predictions": 3,
+              "precision": 0.3333333333333333,
+              "recall": 0.16666666666666666,
+              "localization_errors_m": [
+                0.1648706781407445
+              ],
+              "inspection_area_m2": 7.6340701482231985,
+              "location_coverage": 1,
+              "eggs_covered": 1,
+              "eggs": 6,
+              "nonproductive_inspections": 2,
+              "duplicate_predictions": 0
+            },
+            "full": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 6,
+              "sites": 6,
+              "predictions": 0,
+              "precision": null,
+              "recall": 0.0,
+              "localization_errors_m": [],
+              "inspection_area_m2": 0,
+              "location_coverage": 0,
+              "eggs_covered": 0,
+              "eggs": 6,
+              "nonproductive_inspections": 0,
+              "duplicate_predictions": 0
+            }
+          }
+        }
+      ],
+      "resources": [
+        {
+          "id": "A-swarm-night-stress-607",
+          "recording_seconds": 105.083,
+          "analysis_seconds": 38.6385230999731,
+          "source_video_bytes": 77019748,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-night-stress-613",
+          "recording_seconds": 104.231,
+          "analysis_seconds": 38.42492749998928,
+          "source_video_bytes": 76926315,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-night-stress-617",
+          "recording_seconds": 111.496,
+          "analysis_seconds": 50.341508999990765,
+          "source_video_bytes": 77100906,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-night-stress-619",
+          "recording_seconds": 122.245,
+          "analysis_seconds": 66.13993010000559,
+          "source_video_bytes": 77222157,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        },
+        {
+          "id": "A-swarm-night-stress-631",
+          "recording_seconds": 124.353,
+          "analysis_seconds": 49.175757299992256,
+          "source_video_bytes": 77088121,
+          "gpu_renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+        }
+      ]
+    }
+  },
+  "source_sha256": {
+    "recorder": "cf8ca6987976e30fc55af5339789659e33c329ed8b5fd9d9053ac45ab820aa25",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "sand": "87bfd6d6dfbb06170076114bb723153ddfb739dbaf8633d9eb3f5e70389a9594",
+    "settings": "78dfccfbf764c3f329b0e3e6ff939440047abc8414dac21e043e2feec7af84f0",
+    "detector": "22f43981a1714eea15e4c6e5736d6c0a011cc5942b7c6175404336e292f91dae",
+    "common": "75d7bd1eb970d33cb7216c8b5950e1c7e4bbf58d36127e0ca4a262ffc8345e70",
+    "simulator": "ba815c37a8466ab9fc05c363d7d6e4de02a4763296589f34b658c311fa2225c5"
+  },
+  "note": "Paired seed-controlled daylight and very-dark synthetic videos. Six turtles, two opposed camera recordings per run. Very dark synthetic visible-light noise is not infrared or field validation. Settings fixed before these seeds; confidence intervals resample whole runs."
+}

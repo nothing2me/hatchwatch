@@ -2,11 +2,11 @@
 
 This repository has two separate products with different data and trust boundaries.
 
-## Real dashboard
+## Real dashboard (team-owned application)
 
-The real monitoring dashboard lives under `dashboard/`. It owns real camera integrations, users, access control, persistent records, and production deployment. Give it its own dependency manifest, build output, configuration, tests, and runtime port. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
+The real monitoring dashboard lives under `dashboard/` as a Docker Compose app: `web/` (Next.js, port 3000) and Postgres (host port 5433). It owns users, access control, persistent records, and camera feeds. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
 
-The real dashboard now exists in `dashboard/` as a Docker Compose app: `web/` (Next.js, port 3000) and Postgres (host port 5433). A Python worker that runs the turtle tracker and the detector through a versioned `adapter-v1` contract arrives in `dashboard/worker/`. The worker copies `pipeline/extract.py`, `pipeline/detect.py`, `pipeline/common.py` and `config/settings.json` at image build time and verifies their hashes; it never edits them. `dashboard/web/tests/boundary.test.ts` fails if dashboard code references the simulator, the research API, or private truth.
+Simulation footage reaches the dashboard only through the `sim-import-v1` adapter (`dashboard/web/scripts/sim-import.ts`), which reads public run outputs (`camera-*.mp4`, `view-*/pure-motion.mp4`, `calibration-*.json`, `timestamps.json`, `pins/predictions.json`) and refuses `private/` paths. `dashboard/web/tests/boundary.test.ts` fails if dashboard code references the simulator, the research API, or private truth.
 
 ## Synthetic experiment (current application)
 
@@ -22,4 +22,4 @@ Coordinate any shared JSON contract in a small versioned schema before wiring th
 
 ## Current experiment status
 
-The simulator and detector are an explicitly synthetic daylight prototype. `config/registration.json` defines the seed splits and geometric success rule. `config/frozen.json` records the source and settings hashes used for reserved validation. Do not tune detector settings or simulator behavior against those reserved results; substantial experimental changes need new registered seeds. See `README.md` and `RESULTS.md` for execution and measured limits.
+The simulator and detector are explicitly synthetic prototypes. `config/registration.json` and `config/frozen.json` document the original one-turtle validation at revision `f50d04c`; `config/stress-registration.json` documents the three-turtle result at `5ff15ae`. Their source hashes intentionally differ from the current larger simulator. `config/swarm-registration.json` separately registers paired six-turtle daylight and very-dark stress seeds. Keep all result sets distinct. The very-dark mode is visible-light noise, **not infrared**. See `README.md`, `RESULTS.md`, `STRESS_RESULTS.md`, and `SWARM_RESULTS.md` for measured limits.

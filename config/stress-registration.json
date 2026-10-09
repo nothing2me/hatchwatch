@@ -1,0 +1,38 @@
+{
+  "protocol": "High-density three-turtle stress v2",
+  "registered_before_stress": true,
+  "scenario": "multi",
+  "model": "A",
+  "turtles_per_run": 3,
+  "seeds": [
+    503,
+    509,
+    521,
+    541,
+    557
+  ],
+  "primary_method": "full",
+  "inspection_radius_m": 0.9,
+  "target_detected_sites": 12,
+  "maximum_extra_alerts": 3,
+  "detector_settings": "Unchanged from original frozen clean validation",
+  "source_files": {
+    "simulator": "web/simulation.ts",
+    "extractor": "pipeline/extract.py",
+    "settings": "config/settings.json",
+    "evaluator": "pipeline/evaluate.py",
+    "sand": "web/sand.ts",
+    "detector": "pipeline/detect.py",
+    "matching": "config/registration.json"
+  },
+  "source_sha256": {
+    "detector": "fe21ec1a602fe8dae0ef21737a3d1c0287d9b3fdcdccabb1e600aae79b8aa269",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "settings": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+    "simulator": "b6c205db0976abf16dc4171a36450615ba207fb0c6e81656116c04703b292d47",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "sand": "fa344b900d8bfc4ab0b254dd3773b85ebb7d28600bc9b000e453983094df7eb0"
+  },
+  "note": "Exploratory stress gate registered after one separate development recording (seed 11), before these five seeds. Same contributor authors simulator and detector."
+}

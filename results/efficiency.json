@@ -1,0 +1,658 @@
+{
+  "source_run": "A-clean-11",
+  "rows": [
+    {
+      "variant": "half-fps",
+      "video_bytes": 477440,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 11.969418299995596,
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "8e964603ffefba2bf57561baa61c5ad4ac1533842871d63c70220b369b40e1b2",
+        "calibration_sha256": "0794a7e2eb68c4256beea6c1d3bafd6b34fa614696e3eaaf11b60bd3abb8091b",
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "frames": 160,
+        "fps": 4.0,
+        "runtime_seconds": 6.57612589999917,
+        "registration_failures": 0,
+        "mean_gain": 0.9420884655723757,
+        "mean_absolute_difference_suppressed": -1.438959888599537,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "25e8273d0cbfe4b3a49e7f69347a9c5cf700af79e8dbad848765ed193748cd9b",
+        "pure_motion_resolution": [
+          960,
+          540
+        ],
+        "motion_map_sha256": "2470ff6ab06ca5602936bedc1a1902727677349aa99a42538ce0c0ce3490663b",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 1,
+            "fp": 2,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 3,
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.184332057209792
+            ],
+            "inspection_area_m2": 7.6340701482231985,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 2,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5875143700859302
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5764854291997236
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5252821966666771
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    },
+    {
+      "variant": "half-resolution",
+      "video_bytes": 72681,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 7.285810400004266,
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "e26de750479287d958cfa32f987a08449a1c1ab1040c620f8bd2c4ee1d9c2e3d",
+        "calibration_sha256": "4e6709975e10657a56ef409e37a720b01284c214e513cc4791728501d0787dbb",
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "frames": 320,
+        "fps": 8.0,
+        "runtime_seconds": 2.026198800012935,
+        "registration_failures": 0,
+        "mean_gain": 0.9982287449392713,
+        "mean_absolute_difference_suppressed": -0.14494189453125,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "5ff5c351d3f02764ab413db85f6b9481aaca9905afb104436ad6d554ad722990",
+        "pure_motion_resolution": [
+          240,
+          160
+        ],
+        "motion_map_sha256": "96599956b5821d25d28f2c34c599ce48aaae90188c6c02ea81120761dac47f8a",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "sites": 1,
+            "predictions": 0,
+            "precision": null,
+            "recall": 0.0,
+            "localization_errors_m": [],
+            "inspection_area_m2": 0,
+            "location_coverage": 0,
+            "eggs_covered": 0,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "sites": 1,
+            "predictions": 0,
+            "precision": null,
+            "recall": 0.0,
+            "localization_errors_m": [],
+            "inspection_area_m2": 0,
+            "location_coverage": 0,
+            "eggs_covered": 0,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "sites": 1,
+            "predictions": 0,
+            "precision": null,
+            "recall": 0.0,
+            "localization_errors_m": [],
+            "inspection_area_m2": 0,
+            "location_coverage": 0,
+            "eggs_covered": 0,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "sites": 1,
+            "predictions": 0,
+            "precision": null,
+            "recall": 0.0,
+            "localization_errors_m": [],
+            "inspection_area_m2": 0,
+            "location_coverage": 0,
+            "eggs_covered": 0,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    },
+    {
+      "variant": "compressed",
+      "video_bytes": 297563,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 23.045503900008043,
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "899f6b88ba4fecf0dff7988c2a187aba1c885abdc37684a45d9fa2f1b51a389d",
+        "calibration_sha256": "0794a7e2eb68c4256beea6c1d3bafd6b34fa614696e3eaaf11b60bd3abb8091b",
+        "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+        "frames": 320,
+        "fps": 8.0,
+        "runtime_seconds": 14.989261500013527,
+        "registration_failures": 0,
+        "mean_gain": 0.9274744881246569,
+        "mean_absolute_difference_suppressed": -1.0358489342206791,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "1c1c4c55ff8ad9fb9c2893e9d28052eb9727f995a6f7920ab95c181c76f24518",
+        "pure_motion_resolution": [
+          960,
+          540
+        ],
+        "motion_map_sha256": "e657d2fc1ee18e08625c2690df48baeb381eec25640fd1258e613c651ae42218",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 1,
+            "fp": 2,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 3,
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.2720957368955078
+            ],
+            "inspection_area_m2": 7.6340701482231985,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 2,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5875143700859302
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.497251995904374
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.4896526172965283
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    },
+    {
+      "variant": "no-preprocess",
+      "video_bytes": 740761,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 16.90069680000306,
+        "settings_sha256": "81825d07ab273d03749fad606c6c5ffa5e7a552bdd789025bb03772071da7d06",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "67606639e350aaebcf81b068b0827631754cbaab5ea9e10763024539d586dfa6",
+        "calibration_sha256": "0794a7e2eb68c4256beea6c1d3bafd6b34fa614696e3eaaf11b60bd3abb8091b",
+        "settings_sha256": "81825d07ab273d03749fad606c6c5ffa5e7a552bdd789025bb03772071da7d06",
+        "frames": 320,
+        "fps": 8.0,
+        "runtime_seconds": 8.972879699984333,
+        "registration_failures": 0,
+        "mean_gain": 1,
+        "mean_absolute_difference_suppressed": 0.0,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "f0cdbe272f77d2aaba003edfe8787ffe9a50ef6a74a66bc0f9cc9e31965995b5",
+        "pure_motion_resolution": [
+          960,
+          540
+        ],
+        "motion_map_sha256": "db71fc20df44f0eb33235b7d33abdc4c0a70fc39d878f7579d8cb4c1ce8bcd47",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 1,
+            "fp": 2,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 3,
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.172149007998425
+            ],
+            "inspection_area_m2": 7.6340701482231985,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 2,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5875143700859302
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5764854291997236
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5252821966666771
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    },
+    {
+      "variant": "short-delay",
+      "video_bytes": 740761,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 19.200542899983702,
+        "settings_sha256": "648810b3192589c03501055183ee7e70bbbc69aaa601c0e6ed71035268926bea",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "67606639e350aaebcf81b068b0827631754cbaab5ea9e10763024539d586dfa6",
+        "calibration_sha256": "0794a7e2eb68c4256beea6c1d3bafd6b34fa614696e3eaaf11b60bd3abb8091b",
+        "settings_sha256": "648810b3192589c03501055183ee7e70bbbc69aaa601c0e6ed71035268926bea",
+        "frames": 320,
+        "fps": 8.0,
+        "runtime_seconds": 13.103360399982193,
+        "registration_failures": 0,
+        "mean_gain": 0.9473959340343174,
+        "mean_absolute_difference_suppressed": -1.3852503677179784,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "d5364dda6e5705b19e592e7d1077e46cc013335dd6882762c3e5c50210ab8213",
+        "pure_motion_resolution": [
+          960,
+          540
+        ],
+        "motion_map_sha256": "c61138b79ab520976f61c2c0db6d4690b4a47ce5bc9ad399c6259042725284f2",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 1,
+            "fp": 2,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 3,
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.184332057209792
+            ],
+            "inspection_area_m2": 7.6340701482231985,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 2,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5252821966666771
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.497251995904374
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5252821966666771
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    },
+    {
+      "variant": "long-delay",
+      "video_bytes": 740761,
+      "analysis": {
+        "cameras": [
+          0
+        ],
+        "runtime_seconds": 21.39631159999408,
+        "settings_sha256": "77d62e99f47b0953728934b57d077e8e09f9e5ac432bc12a24c628de59bd7dbb",
+        "inference_complete": true
+      },
+      "extraction": {
+        "source_sha256": "67606639e350aaebcf81b068b0827631754cbaab5ea9e10763024539d586dfa6",
+        "calibration_sha256": "0794a7e2eb68c4256beea6c1d3bafd6b34fa614696e3eaaf11b60bd3abb8091b",
+        "settings_sha256": "77d62e99f47b0953728934b57d077e8e09f9e5ac432bc12a24c628de59bd7dbb",
+        "frames": 320,
+        "fps": 8.0,
+        "runtime_seconds": 12.956074899993837,
+        "registration_failures": 0,
+        "mean_gain": 0.9473959340343174,
+        "mean_absolute_difference_suppressed": -1.3852503677179784,
+        "calibration_fit_rmse_m": 1.1199217812775636e-06,
+        "pure_motion_sha256": "eb1a66e1294efef14933e63a5e760c33023f0b7e57e0049615eb472e6c4f1e73",
+        "pure_motion_resolution": [
+          960,
+          540
+        ],
+        "motion_map_sha256": "c87d45c523cfd5128f64896bf45ab386346bc10d4ba923d9dfae3ed699a95c72",
+        "note": "Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change."
+      },
+      "evaluation": {
+        "seed": 11,
+        "scenario": "clean",
+        "model": "A",
+        "methods": {
+          "frozen": {
+            "tp": 1,
+            "fp": 2,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 3,
+            "precision": 0.3333333333333333,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.184332057209792
+            ],
+            "inspection_area_m2": 7.6340701482231985,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 2,
+            "duplicate_predictions": 0
+          },
+          "motion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5875143700859302
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "tracker": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5764854291997236
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          },
+          "full": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 0,
+            "sites": 1,
+            "predictions": 1,
+            "precision": 1.0,
+            "recall": 1.0,
+            "localization_errors_m": [
+              0.5252821966666771
+            ],
+            "inspection_area_m2": 2.5446900494077327,
+            "location_coverage": 1,
+            "eggs_covered": 1,
+            "eggs": 1,
+            "nonproductive_inspections": 0,
+            "duplicate_predictions": 0
+          }
+        }
+      }
+    }
+  ],
+  "scope": "One development recording, exploratory paired comparison. Decode, preprocessing, extraction, diagnostic encoding and detection are included. No energy estimate or peak-memory claim."
+}
