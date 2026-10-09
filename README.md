@@ -21,7 +21,7 @@ In a second terminal:
 npm start
 ```
 
-Open **http://127.0.0.1:5173**. Use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips and overlays each camera's calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a two-camera recording took about 30 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
+Open **http://127.0.0.1:5173**. Use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, shows method heatmaps, and overlays each camera's calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a two-camera recording took about 30 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 

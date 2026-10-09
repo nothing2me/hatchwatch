@@ -1,0 +1,10 @@
+{
+  "version": "fusion-gate-b-1",
+  "pair_max_distance_m": 1.5,
+  "pair_min_temporal_overlap_seconds": 1.0,
+  "position_rule": "equal-weight midpoint of matched camera estimates",
+  "unmatched_rule": "preserve a single-camera candidate at the registered 0.90 m radius",
+  "selection_rule": "one-to-one greedy matching by smallest ground distance, then preserve unmatched candidates",
+  "comparison_rule": "Compare with the strongest camera/method at the same inspection-area and false-alert budgets; prioritize recall, then false alerts, then localization error.",
+  "status": "Frozen before fusion evaluation on reserved clean validation runs."
+}

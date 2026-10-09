@@ -1,0 +1,728 @@
+{
+  "split": "validation",
+  "ids": [
+    "A-clean-101",
+    "A-clean-103",
+    "A-clean-107",
+    "A-clean-109",
+    "A-clean-113",
+    "A-clean-127",
+    "A-clean-131",
+    "A-clean-137",
+    "A-clean-139",
+    "A-clean-149"
+  ],
+  "fusion_registration_sha256": "8ff028a4da56102c8b0177ef4bf9e0fdd7de174cc0ffde2ba2d07807f65731b9",
+  "fusion": {
+    "runs": 10,
+    "tp": 10,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_alerts_per_run": 0.0,
+    "mean_localization_error_m": 0.6054343131321802,
+    "mean_inspection_area_m2": 2.544690049407733,
+    "nonproductive_inspections": 0,
+    "eggs_covered": 10,
+    "eggs": 10,
+    "duplicate_predictions": 0
+  },
+  "single_camera_methods": {
+    "camera_0_frozen": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 20,
+      "fn": 0,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "false_alerts_per_run": 2.0,
+      "mean_localization_error_m": 0.4856089326195299,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 20,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_0_motion": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5915610288036708,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_0_tracker": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.613358588586701,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_0_full": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5740813294022971,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_1_frozen": {
+      "runs": 10,
+      "tp": 9,
+      "fp": 21,
+      "fn": 1,
+      "precision": 0.3,
+      "recall": 0.9,
+      "false_alerts_per_run": 2.1,
+      "mean_localization_error_m": 0.4708110617959739,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 21,
+      "eggs_covered": 9,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_1_motion": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.6776878119886873,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_1_tracker": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5849215448034076,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    },
+    "camera_1_full": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.705613226993224,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0
+    }
+  },
+  "strongest_single": "camera_0_full",
+  "gate_b_passed": false,
+  "rows": [
+    {
+      "id": "A-clean-101",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5226336476039248
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5246620556485031
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5975913545342432
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-103",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5360967333360812
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5492261954297976
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6674479402712465
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-107",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.596493718677444
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5473724482103153
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7057526168703556
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-109",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.4699514947954413
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.42572329457878255
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6843945864603953
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-113",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7168769485512911
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6957329246710545
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7709948253274245
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-127",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7484133665861816
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6861611624261063
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.8458367676126779
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-131",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7053262271579062
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6991099745593572
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7394628639246446
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-137",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.536140995018535
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.48332412451375895
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6537476303419811
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-139",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5058947280563797
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5131691792046156
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5740433772851148
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-clean-149",
+      "fusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7165152715386186
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_0_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6163319347806797
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "sites": 1,
+        "predictions": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.8168603073041584
+        ],
+        "inspection_area_m2": 2.5446900494077327,
+        "location_coverage": 1,
+        "eggs_covered": 1,
+        "eggs": 1,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    }
+  ],
+  "note": "No fusion thresholds tuned on these results. Demonstrations are one seed per condition and exploratory, not Gate B."
+}

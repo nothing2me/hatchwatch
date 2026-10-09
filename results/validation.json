@@ -1,0 +1,919 @@
+{
+  "batch": "validation",
+  "run_ids": [
+    "A-clean-101",
+    "A-clean-103",
+    "A-clean-107",
+    "A-clean-109",
+    "A-clean-113",
+    "A-clean-127",
+    "A-clean-131",
+    "A-clean-137",
+    "A-clean-139",
+    "A-clean-149"
+  ],
+  "settings_sha256": "74011b6b5cd0755beea259dac4890c22b405e533f116343f8abe3a97f5038d7f",
+  "methods": {
+    "frozen": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 20,
+      "fn": 0,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "false_alerts_per_run": 2.0,
+      "mean_localization_error_m": 0.4856089326195299,
+      "mean_inspection_area_m2": 7.634070148223199,
+      "nonproductive_inspections": 20,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0,
+      "recall_95ci": [
+        1.0,
+        1.0
+      ],
+      "precision_95ci": [
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "mean_localization_error_m_95ci": [
+        0.35433157371251706,
+        0.6365142671958001
+      ]
+    },
+    "motion": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5915610288036708,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0,
+      "recall_95ci": [
+        1.0,
+        1.0
+      ],
+      "precision_95ci": [
+        1.0,
+        1.0
+      ],
+      "mean_localization_error_m_95ci": [
+        0.5518326736466894,
+        0.6289378316291115
+      ]
+    },
+    "tracker": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.613358588586701,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0,
+      "recall_95ci": [
+        1.0,
+        1.0
+      ],
+      "precision_95ci": [
+        1.0,
+        1.0
+      ],
+      "mean_localization_error_m_95ci": [
+        0.553959193836066,
+        0.6679669288480006
+      ]
+    },
+    "full": {
+      "runs": 10,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_alerts_per_run": 0.0,
+      "mean_localization_error_m": 0.5740813294022971,
+      "mean_inspection_area_m2": 2.544690049407733,
+      "nonproductive_inspections": 0,
+      "eggs_covered": 10,
+      "eggs": 10,
+      "duplicate_predictions": 0,
+      "recall_95ci": [
+        1.0,
+        1.0
+      ],
+      "precision_95ci": [
+        1.0,
+        1.0
+      ],
+      "mean_localization_error_m_95ci": [
+        0.5217757129225075,
+        0.6301456259757954
+      ]
+    }
+  },
+  "gate_a_passed": true,
+  "rows": [
+    {
+      "seed": 101,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.1464580961198067
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6168567702383448
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7114013101786302
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5246620556485031
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 103,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.4178693715395624
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5574501176270629
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5492261954297976
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5492261954297976
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 107,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.33505115488941695
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5473724482103153
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5473724482103153
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5473724482103153
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 109,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.41768026257122903
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.48161694309661884
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.48161694309661884
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.42572329457878255
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 113,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.8245844072365454
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6002015146723079
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6957043365847916
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6957329246710545
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 127,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7972494327689569
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6578082827551712
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6861611624261063
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6861611624261063
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 131,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7701063736957203
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7053262271579058
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6274420412664169
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6991099745593572
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 137,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.42853293787696833
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5121061277777954
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6457689632417281
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.48332412451375895
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 139,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.3016405914078651
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6002929043075885
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.4548885052707399
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.5131691792046156
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    },
+    {
+      "seed": 149,
+      "scenario": "clean",
+      "model": "A",
+      "methods": {
+        "frozen": {
+          "tp": 1,
+          "fp": 2,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 3,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.41691669808922877
+          ],
+          "inspection_area_m2": 7.6340701482231985,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 2,
+          "duplicate_predictions": 0
+        },
+        "motion": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.636578952193596
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "tracker": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.7340039801618655
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        },
+        "full": {
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "sites": 1,
+          "predictions": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "localization_errors_m": [
+            0.6163319347806797
+          ],
+          "inspection_area_m2": 2.5446900494077327,
+          "location_coverage": 1,
+          "eggs_covered": 1,
+          "eggs": 1,
+          "nonproductive_inspections": 0,
+          "duplicate_predictions": 0
+        }
+      }
+    }
+  ]
+}
