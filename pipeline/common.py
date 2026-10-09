@@ -24,8 +24,9 @@ def writer(path, width, height, fps):
 
 def ground_homography(cal, w, h):
     points=cal['reference_points']; src=np.float32([p['pixel'] for p in points]); world=np.float32([p['world'] for p in points])
-    dst=(world+np.array([8,6],np.float32))*np.array([(w-1)/16,(h-1)/12],np.float32)
+    x0,x1,z0,z1=cal.get('ground_bounds',[-8,8,-6,6]);span_x=x1-x0;span_z=z1-z0
+    dst=(world-np.array([x0,z0],np.float32))*np.array([(w-1)/span_x,(h-1)/span_z],np.float32)
     H,_=cv2.findHomography(src,dst,0)
     mapped=cv2.perspectiveTransform(src[None],H)[0]
-    error=float(np.sqrt(np.mean(np.sum(((mapped-dst)*[16/(w-1),12/(h-1)])**2,axis=1))))
+    error=float(np.sqrt(np.mean(np.sum(((mapped-dst)*[span_x/(w-1),span_z/(h-1)])**2,axis=1))))
     return H,error

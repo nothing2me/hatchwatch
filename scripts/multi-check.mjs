@@ -17,7 +17,7 @@ try{
   const result={grains:sim.sand.count,travel_moved_grains:travelMoved,moved_grains:moved(),sites:truth.sites,eggs:truth.eggs.length};
   sim.dispose();return result;
  });
- assert.equal(result.grains,72000);
+ assert.equal(result.grains,134400);
  assert.equal(result.sites.length,3);
  assert.equal(result.eggs,3);
  assert(result.travel_moved_grains>100);

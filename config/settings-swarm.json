@@ -1,0 +1,18 @@
+{
+  "version": "swarm-v3",
+  "fps": 8,
+  "grid_width": 160,
+  "grid_height": 120,
+  "delay_seconds": 0.5,
+  "pixel_threshold": 14,
+  "motion_threshold": 7,
+  "window_seconds": 3,
+  "radius_m": 0.9,
+  "max_candidates": 8,
+  "min_separation_m": 1.8,
+  "full_threshold": 0.5,
+  "frozen_threshold": 0.16,
+  "motion_score_threshold": 0.8,
+  "tracker_threshold": 0.6,
+  "preprocess": true
+}

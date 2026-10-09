@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-export const BEACH_LENGTH=60, BEACH_WIDTH=24;
-export const sandFloor=(z:number)=>.018*(z+12);
+export const BEACH_LENGTH=84, BEACH_WIDTH=32;
+export const sandFloor=(z:number)=>.018*(z+BEACH_WIDTH/2);
 const STEP=1/32, SPACING=.20, CELL=.48;
 export type SandForcing={x:number;z:number;heading:number;mode:'travel'|'dig'|'cover'|'none';model:'A'|'B';strength:number;time:number};
 /** Two-layer granular bed: every grain has position, velocity and radius.

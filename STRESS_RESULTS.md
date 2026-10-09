@@ -1,5 +1,7 @@
 # Three-turtle density stress test (v2)
 
+**Historical checkpoint:** measured at Git revision `5ff15ae` before the beach expanded to 84 × 32 m and the six-turtle scenarios were added. See `SWARM_RESULTS.md` for the current paired daylight/very-dark stress test.
+
 This is an **intermediate synthetic result** for the 60 × 24 m, 72,000-grain beach with three turtles arriving at staggered times and digging at separated locations. The five stress seeds and source hashes were registered in `config/stress-registration.json` after one separate development recording and before these five recordings. Detection used the original frozen thresholds without retuning. It read only video-derived difference arrays, timestamps, and public calibration; evaluation read private truth afterward.
 
 | Method | Matched sites | Extra alerts | Missed sites | Mean center error |
