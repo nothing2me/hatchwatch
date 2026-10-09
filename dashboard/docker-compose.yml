@@ -1,0 +1,36 @@
+name: nesttrace-dashboard
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: nesttrace
+      POSTGRES_PASSWORD: nesttrace
+      POSTGRES_DB: nesttrace
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nesttrace -d nesttrace"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  web:
+    build: ./web
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://nesttrace:nesttrace@db:5432/nesttrace
+      MEDIA_ROOT: /media
+    ports:
+      - "3000:3000"
+    volumes:
+      - media:/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  media:
