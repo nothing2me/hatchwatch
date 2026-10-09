@@ -38,7 +38,7 @@ node scripts/record.mjs --seed 11 --scenario clean --model A
 .venv/bin/python scripts/batch.py --split development --reuse   # splits: development|validation|test|demonstrations; --model A|B
 ```
 
-Dashboard: `cd dashboard && docker compose up --build` (http://localhost:3000). Dev: `docker compose up -d db`, then in `dashboard/web`: `npm run dev`, `npm test`, single file `npx vitest run tests/unit/geo.test.ts`.
+Dashboard: `cd dashboard && docker compose up --build` (http://localhost:3000). Dev: `docker compose up -d db`, then in `dashboard/web`: `npm run dev`, `npm run db:test:prepare` (once, before `npm test`; integration tests use `TEST_DATABASE_URL`), `npm test`, single file `npx vitest run tests/unit/geo.test.ts`.
 
 ## Pipeline architecture and detector isolation
 

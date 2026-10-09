@@ -22,6 +22,7 @@ cd web && cp ../.env .env && npm install
 npx prisma migrate dev           # apply migrations, generate client
 npm run db:seed
 npm run dev                      # http://localhost:3000
+npm run db:test:prepare          # creates and migrates the nesttrace_test database named by TEST_DATABASE_URL
 npm test                         # unit + integration + boundary (needs the db container)
 npx vitest run tests/unit/geo.test.ts   # one file
 ```
