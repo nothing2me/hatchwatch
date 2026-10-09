@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bearingBetween, destinationPoint } from '@/lib/geo';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
-import { SEED_ZONES } from '../../prisma/seed-data';
+import { SEED_CAMERAS, SEED_ZONES } from '../../prisma/seed-data';
 
 function metres(a: [number, number], b: [number, number]): number
 {
@@ -34,11 +34,19 @@ describe('zone frame', () =>
         expect(simPointToLngLat(frame, [0, 0])).toEqual(frame.origin);
     });
 
-    it('runs +x from land-south toward land-north (roughly NNE along this beach)', () =>
+    it('runs +x from land-north toward land-south (roughly SW along this beach)', () =>
     {
-        expect(frame.alongBearing).toBeCloseTo(bearingBetween(ring[1], ring[0]), 6);
-        expect(frame.alongBearing).toBeGreaterThan(20);
-        expect(frame.alongBearing).toBeLessThan(60);
+        expect(frame.alongBearing).toBeCloseTo(bearingBetween(ring[0], ring[1]), 6);
+        expect(frame.alongBearing).toBeGreaterThan(200);
+        expect(frame.alongBearing).toBeLessThan(240);
+    });
+
+    it('places sim camera-0 (x = -28) nearer seed camera B1 than B2', () =>
+    {
+        const spot = simPointToLngLat(frame, [-28, 0]);
+        const cam = (code: string) => SEED_CAMERAS.find(camera => camera.code === code)!;
+        const dist = (code: string) => metres(spot, [cam(code).lng, cam(code).lat]);
+        expect(dist('B1')).toBeLessThan(dist('B2'));
     });
 
     it('keeps true scale and sends +y inland (away from the sea side)', () =>

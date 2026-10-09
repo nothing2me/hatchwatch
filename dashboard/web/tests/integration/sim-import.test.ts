@@ -103,7 +103,8 @@ describe('importSimRun', () =>
     it('refuses private paths and missing files before copying anything', async () =>
     {
         const media = join(work, 'media');
-        const privateDir = join(work, 'artifacts', ['pri', 'vate'].join(''), 'A-swarm-demo-907');
+        // Exercises the importer's runtime refusal of private run folders.
+        const privateDir = join(work, 'artifacts', 'private', 'A-swarm-demo-907');
         mkdirSync(privateDir, { recursive: true });
         await expect(importSimRun({ runDir: privateDir, pair: 'B', mediaRoot: media, prisma })).rejects.toThrow(/private/);
         const broken = makeRun('A-broken', null);
@@ -115,7 +116,30 @@ describe('importSimRun', () =>
     it('rejects a malformed pins file', async () =>
     {
         const runDir = makeRun('A-bad-pins', [{ id: 'x' }]);
-        await expect(importSimRun({ runDir, pair: 'B', mediaRoot: join(work, 'media'), prisma })).rejects.toThrow();
+        const media = join(work, 'media');
+        await expect(importSimRun({ runDir, pair: 'B', mediaRoot: media, prisma })).rejects.toThrow();
         expect(await prisma.video.count()).toBe(0);
+        expect(existsSync(join(media, 'sim'))).toBe(false);
+    });
+
+    it('rejects a pin whose interval runs backwards', async () =>
+    {
+        const runDir = makeRun('A-bad-interval', [{ ...pin('pin-1', 'two_camera'), interval: [9, 4] }]);
+        await expect(importSimRun({ runDir, pair: 'B', mediaRoot: join(work, 'media'), prisma })).rejects.toThrow();
+    });
+
+    it('re-imports after an alert gained notes and status changes', async () =>
+    {
+        const runDir = makeRun('A-swarm-demo-907', [pin('pin-1', 'two_camera')]);
+        const media = join(work, 'media');
+        await importSimRun({ runDir, pair: 'B', mediaRoot: media, prisma });
+        const alert = await prisma.alert.findFirstOrThrow();
+        const admin = await prisma.user.findFirstOrThrow();
+        await prisma.alertNote.create({ data: { alertId: alert.id, userId: admin.id, body: 'checked' } });
+        await prisma.alertStatusChange.create({ data: { alertId: alert.id, userId: admin.id, from: 'NEW', to: 'REVIEWED' } });
+        const result = await importSimRun({ runDir, pair: 'B', mediaRoot: media, prisma });
+        expect(result.alertCount).toBe(1);
+        expect(await prisma.alert.count()).toBe(1);
+        expect(await prisma.alertNote.count()).toBe(0);
     });
 });

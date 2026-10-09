@@ -78,6 +78,9 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
     return prisma.$transaction(async tx =>
     {
         const old = await tx.video.findMany({ where: { simRunId: runId }, select: { id: true } });
+        const oldAlerts = { alert: { videoId: { in: old.map(video => video.id) } } };
+        await tx.alertStatusChange.deleteMany({ where: oldAlerts });
+        await tx.alertNote.deleteMany({ where: oldAlerts });
         await tx.alert.deleteMany({ where: { videoId: { in: old.map(video => video.id) } } });
         await tx.video.deleteMany({ where: { simRunId: runId } });
 

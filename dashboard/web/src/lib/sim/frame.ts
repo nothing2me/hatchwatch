@@ -7,7 +7,7 @@ export interface ZoneFrame
     alongBearing: number;
 }
 
-// Simulator ground frame placed on a zone: x along the shore (land-south → land-north),
+// Simulator ground frame placed on a zone: x along the shore (land-north → land-south, so sim camera-0 at -x sits at the <pair>1 end),
 // y inland, true scale, origin at the corner centroid.
 export function zoneFrame(ring: LngLat[]): ZoneFrame
 {
@@ -16,7 +16,7 @@ export function zoneFrame(ring: LngLat[]): ZoneFrame
         corners.reduce((sum, point) => sum + point[0], 0) / corners.length,
         corners.reduce((sum, point) => sum + point[1], 0) / corners.length,
     ];
-    return { origin, alongBearing: bearingBetween(ring[1], ring[0]) };
+    return { origin, alongBearing: bearingBetween(ring[0], ring[1]) };
 }
 
 export function simPointToLngLat(frame: ZoneFrame, [x, y]: [number, number]): LngLat
@@ -26,5 +26,5 @@ export function simPointToLngLat(frame: ZoneFrame, [x, y]: [number, number]): Ln
         return frame.origin;
     }
     const along = x === 0 ? frame.origin : destinationPoint(frame.origin, x >= 0 ? frame.alongBearing : frame.alongBearing + 180, Math.abs(x));
-    return y === 0 ? along : destinationPoint(along, y >= 0 ? frame.alongBearing - 90 : frame.alongBearing + 90, Math.abs(y));
+    return y === 0 ? along : destinationPoint(along, y >= 0 ? frame.alongBearing + 90 : frame.alongBearing - 90, Math.abs(y));
 }
