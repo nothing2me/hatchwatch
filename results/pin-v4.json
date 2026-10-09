@@ -1,0 +1,562 @@
+{
+  "protocol": "Six-turtle daylight two-camera pin grouping v4, fresh 10-seed validation",
+  "run_ids": [
+    "A-swarm-pin-661",
+    "A-swarm-pin-673",
+    "A-swarm-pin-677",
+    "A-swarm-pin-683",
+    "A-swarm-pin-691",
+    "A-swarm-pin-701",
+    "A-swarm-pin-709",
+    "A-swarm-pin-719",
+    "A-swarm-pin-727",
+    "A-swarm-pin-733"
+  ],
+  "pins": {
+    "runs": 10,
+    "tp": 59,
+    "fp": 1,
+    "fn": 1,
+    "precision": 0.9833333333333333,
+    "recall": 0.9833333333333333,
+    "false_alerts_per_run": 0.1,
+    "mean_localization_error_m": 0.5805943618318015,
+    "mean_inspection_area_m2": 15.268140296446395,
+    "nonproductive_inspections": 1,
+    "eggs_covered": 59,
+    "eggs": 60,
+    "duplicate_predictions": 0
+  },
+  "camera_1_full": {
+    "runs": 10,
+    "tp": 60,
+    "fp": 10,
+    "fn": 0,
+    "precision": 0.8571428571428571,
+    "recall": 1.0,
+    "false_alerts_per_run": 1.0,
+    "mean_localization_error_m": 0.5849972324841101,
+    "mean_inspection_area_m2": 17.81283034585413,
+    "nonproductive_inspections": 10,
+    "eggs_covered": 60,
+    "eggs": 60,
+    "duplicate_predictions": 0
+  },
+  "gate_passed": false,
+  "whole_run_bootstrap_95ci": {
+    "recall": [
+      0.95,
+      1.0
+    ],
+    "false_alerts_per_run": [
+      0.0,
+      0.3
+    ]
+  },
+  "rows": [
+    {
+      "id": "A-swarm-pin-661",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7882898277573851,
+          0.6597389815029426,
+          0.6839394526394225,
+          0.593810400169977,
+          0.3273129220198297,
+          0.3237138757285154
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 1,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 7,
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6176554691698071,
+          0.8089384582015193,
+          0.34409165005149295,
+          0.6608385332363511,
+          0.2720884459822691,
+          0.09215904427999645
+        ],
+        "inspection_area_m2": 17.812830345854128,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 1,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-673",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.8385361070050251,
+          0.3334686206094762,
+          0.7282254488202927,
+          0.24909666564196717,
+          0.6600412307334815,
+          0.39679699147022685
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.8415535330965204,
+          0.336415283995213,
+          0.21543352517606387,
+          0.5358721711337779,
+          0.5257726827339411,
+          0.736857699696962
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-677",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6180428708231135,
+          0.7540407596021153,
+          0.6948395080377278,
+          0.7942865355888988,
+          0.4819912970325749,
+          0.4586091039630536
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 2,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 8,
+        "precision": 0.75,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6851650945813715,
+          0.818864255417601,
+          0.4586091039630536,
+          0.44184665572536874,
+          0.7886463291107401,
+          0.5813397068750411
+        ],
+        "inspection_area_m2": 20.35752039526186,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 2,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-683",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5176061227514465,
+          0.7407313374736259,
+          0.6323575301788731,
+          0.7056747665202247,
+          0.6328471641172015,
+          0.4856388457194874
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 2,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 8,
+        "precision": 0.75,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6003431383804375,
+          0.6426985785098945,
+          0.6752662168062036,
+          0.631816670138458,
+          0.6655808130445452,
+          0.46431601201647876
+        ],
+        "inspection_area_m2": 20.35752039526186,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 2,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-691",
+      "pins": {
+        "tp": 5,
+        "fp": 1,
+        "fn": 1,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 0.8333333333333334,
+        "recall": 0.8333333333333334,
+        "localization_errors_m": [
+          0.57796262354495,
+          0.2644642796961253,
+          0.614926189941662,
+          0.6439975830928402,
+          0.7578829255259928
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 5,
+        "eggs_covered": 5,
+        "eggs": 6,
+        "nonproductive_inspections": 1,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.701187804280725,
+          0.5519013346333481,
+          0.4289610765327956,
+          0.5109496049250244,
+          0.5816377046495124,
+          0.8253224875368101
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-701",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.44264573403274354,
+          0.6906807025545026,
+          0.06311876684416741,
+          0.721088558172038,
+          0.2897833968962937,
+          0.7365808286702917
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 1,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 7,
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6906807025545026,
+          0.47444830820300493,
+          0.721088558172038,
+          0.2897833968962937,
+          0.21699441222080512,
+          0.7365808286702917
+        ],
+        "inspection_area_m2": 17.812830345854128,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 1,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-709",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.808781010101163,
+          0.7334703328480271,
+          0.692359152338424,
+          0.37833326452617655,
+          0.5042959209125493,
+          0.42493542033729126
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7865374923555861,
+          0.8353089617276676,
+          0.37833326452617655,
+          0.7633562849539863,
+          0.5042959209125493,
+          0.42493542033729126
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-719",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5826290030309209,
+          0.8549496107166312,
+          0.622649048668703,
+          0.5227523379965163,
+          0.4967256574999378,
+          0.8180611938461365
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 1,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 7,
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.767844951002364,
+          0.7628445486350206,
+          0.6887091828833022,
+          0.727300627558559,
+          0.6412655725308014,
+          0.8180611938461365
+        ],
+        "inspection_area_m2": 17.812830345854128,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 1,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-727",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.6538071603280582,
+          0.44265272352489377,
+          0.5881018731159515,
+          0.4931440498284711,
+          0.16828692131552725,
+          0.6413691274363001
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 1,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 7,
+        "precision": 0.8571428571428571,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.5810573947004107,
+          0.3417189872973083,
+          0.7996141757997653,
+          0.7602315374047526,
+          0.6413691274363001,
+          0.07188069514933947
+        ],
+        "inspection_area_m2": 17.812830345854128,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 1,
+        "duplicate_predictions": 0
+      }
+    },
+    {
+      "id": "A-swarm-pin-733",
+      "pins": {
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 6,
+        "precision": 1.0,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7921060258304661,
+          0.7952191364258678,
+          0.8072672986760898,
+          0.5101204214959916,
+          0.5541259671549833,
+          0.4661567352427183
+        ],
+        "inspection_area_m2": 15.268140296446395,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 0,
+        "duplicate_predictions": 0
+      },
+      "camera_1_full": {
+        "tp": 6,
+        "fp": 2,
+        "fn": 0,
+        "sites": 6,
+        "predictions": 8,
+        "precision": 0.75,
+        "recall": 1.0,
+        "localization_errors_m": [
+          0.7952191364258678,
+          0.851011956424133,
+          0.8072672986760898,
+          0.3037413957669445,
+          0.34996859029859584,
+          0.5262549417994047
+        ],
+        "inspection_area_m2": 20.35752039526186,
+        "location_coverage": 6,
+        "eggs_covered": 6,
+        "eggs": 6,
+        "nonproductive_inspections": 2,
+        "duplicate_predictions": 0
+      }
+    }
+  ],
+  "source_sha256": {
+    "recorder": "cf8ca6987976e30fc55af5339789659e33c329ed8b5fd9d9053ac45ab820aa25",
+    "simulator": "ba815c37a8466ab9fc05c363d7d6e4de02a4763296589f34b658c311fa2225c5",
+    "sand": "87bfd6d6dfbb06170076114bb723153ddfb739dbaf8633d9eb3f5e70389a9594",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "detector": "22f43981a1714eea15e4c6e5736d6c0a011cc5942b7c6175404336e292f91dae",
+    "camera_fusion": "5975dc1876333e07662e4abdf9a2d9d0c1292116395a2f5f790f3065b6c70245",
+    "pin_fusion": "9786e53c46111899a18519046cec53c4b3bf07e9cbf86f05722675c4c5565908",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "settings": "78dfccfbf764c3f329b0e3e6ff939440047abc8414dac21e043e2feec7af84f0",
+    "pin_settings": "0a5060d341c9f9300e8d1cdba55532e2b705dc1f16a76c57a79887da68afd1d6",
+    "batch": "5e83525d4ef873bdb6a3bc8e3f42fccd64a23a10a6199f1ee6d795ad15448898"
+  },
+  "note": "Fresh synthetic daylight seeds; pin grouping was chosen after auditing earlier stress seeds. No nighttime or field claim."
+}

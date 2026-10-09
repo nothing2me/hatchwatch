@@ -1,0 +1,56 @@
+{
+  "protocol": "Six-turtle daylight two-camera pin grouping v4, fresh 10-seed validation",
+  "registered_before_reserved": true,
+  "development_runs": [
+    "A-swarm-stress-607",
+    "A-swarm-stress-613",
+    "A-swarm-stress-617",
+    "A-swarm-stress-619",
+    "A-swarm-stress-631"
+  ],
+  "seeds": [
+    661,
+    673,
+    677,
+    683,
+    691,
+    701,
+    709,
+    719,
+    727,
+    733
+  ],
+  "turtles_per_run": 6,
+  "cameras": 2,
+  "target": "One matched pin per each of 60 sites with zero extra pins",
+  "radius_m": 0.9,
+  "source_files": {
+    "recorder": "scripts/record.mjs",
+    "simulator": "web/simulation.ts",
+    "sand": "web/sand.ts",
+    "extractor": "pipeline/extract.py",
+    "detector": "pipeline/detect.py",
+    "camera_fusion": "pipeline/fuse.py",
+    "pin_fusion": "pipeline/pin_fuse.py",
+    "evaluator": "pipeline/evaluate.py",
+    "matching": "config/registration.json",
+    "settings": "config/settings-swarm.json",
+    "pin_settings": "config/pin-settings.json",
+    "batch": "scripts/pin_batch.py"
+  },
+  "source_sha256": {
+    "recorder": "cf8ca6987976e30fc55af5339789659e33c329ed8b5fd9d9053ac45ab820aa25",
+    "simulator": "ba815c37a8466ab9fc05c363d7d6e4de02a4763296589f34b658c311fa2225c5",
+    "sand": "87bfd6d6dfbb06170076114bb723153ddfb739dbaf8633d9eb3f5e70389a9594",
+    "extractor": "211c3471b014d3fc316bcf23992871db8165d67de3e9e1e8cdf4da188a1f4862",
+    "detector": "22f43981a1714eea15e4c6e5736d6c0a011cc5942b7c6175404336e292f91dae",
+    "camera_fusion": "5975dc1876333e07662e4abdf9a2d9d0c1292116395a2f5f790f3065b6c70245",
+    "pin_fusion": "9786e53c46111899a18519046cec53c4b3bf07e9cbf86f05722675c4c5565908",
+    "evaluator": "ddce764b57644a6a375740ef91e6b80a2bb9b0c2e7f01418cfa2f17faab41f74",
+    "matching": "8b0d68a36fbc1acea5b359bc9b69d9ecf02d85f1c9aa37bf09663640337cc608",
+    "settings": "78dfccfbf764c3f329b0e3e6ff939440047abc8414dac21e043e2feec7af84f0",
+    "pin_settings": "0a5060d341c9f9300e8d1cdba55532e2b705dc1f16a76c57a79887da68afd1d6",
+    "batch": "5e83525d4ef873bdb6a3bc8e3f42fccd64a23a10a6199f1ee6d795ad15448898"
+  },
+  "note": "The 2.4 m same-site grouping was chosen after post-hoc audit of previous stress seeds. No reserved seed has been evaluated or used to tune it."
+}

@@ -21,7 +21,7 @@ In a second terminal:
 npm start
 ```
 
-Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress** or **Six turtles · very dark and noisy**, use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. The API binds to loopback only. Keep both terminals running. On the development machine a six-turtle two-camera recording took about 100 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
+Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress** or **Six turtles · very dark and noisy**, use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. For `swarm` and `swarm-night` runs it also groups calibrated **digging activity pins** and marks each on the map: green pins have detections from both cameras, amber pins have one view and need review. A pin is an inspection region, never a confirmed nest. The API binds to loopback only. Keep both terminals running. On the development machine a six-turtle two-camera recording took about 100 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 
@@ -37,6 +37,17 @@ node scripts/swarm-check.mjs
 ```
 
 The three-turtle result in `STRESS_RESULTS.md` belongs to revision `5ff15ae`, and the original one-turtle result in `RESULTS.md` belongs to `f50d04c`. Neither validates the current six-turtle beach. Current paired results are in `SWARM_RESULTS.md`.
+
+## Reproduce the two-camera pin validation
+
+Pins group calibrated predictions from both cameras into one inspection region per site. The rules and the fresh ten-seed registration are in [`config/pin-settings.json`](config/pin-settings.json) and [`config/pin-registration.json`](config/pin-registration.json); the measured result is in [`PIN_RESULTS.md`](PIN_RESULTS.md) and [`results/pin-v4.json`](results/pin-v4.json). Run the registered batch with both servers up:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/pin_batch.py
+node scripts/pin-browser-check.mjs
+```
+
+Across ten untouched daylight seeds the grouped pins matched **59/60** sites with **1** extra pin and a 0.58 m mean center error. The single miss was a 0.93 m center error against the registered 0.90 m radius; the target of 60/60 with zero extras therefore failed. Pins mark digging activity, not eggs: a negative audit shows travel and rest produce no pins, but unrelated sand movement, weak-motion misses, and dig-without-eggs cases remain. The very-dark condition still places no pins.
 
 An optional exploratory low-light preprocessing probe uses the separate development recording, not the registered stress seeds. After recording `A-swarm-night-dev-601`, run `python scripts/lowlight_probe.py --run A-swarm-night-dev-601 --view 1`. It compares brightness gain, spatial blur, local contrast, and a three-frame temporal median while leaving the main extractor and detector settings untouched. See `SWARM_RESULTS.md` for the measured tradeoff; this probe is not a nighttime accuracy claim.
 
@@ -112,10 +123,11 @@ The two sand generators differ structurally: A throws grains radially from rear-
 npm test
 npm run build
 node scripts/browser-check.mjs
+node scripts/pin-browser-check.mjs
 ```
 
-Browser checks require the servers and a completed `A-clean-11` run. When the paired development recordings are present, they also exercise their Pure motion playback, larger map, and Camera 02 evaluation. Checks cover preview controls, method switching, truth reveal, mobile overflow, and hidden-egg render invariance. Tests check temporal/spatial matching, duplicate predictions, oversized-region rejection, stationary change versus new motion, and the native-resolution Pure motion export.
+Browser checks require the servers and a completed `A-clean-11` run. When the paired development recordings are present, they also exercise their Pure motion playback, larger map, and Camera 02 evaluation. The pin check exercises the mapped pins, evidence tiers, and the reveal-only pin evaluation on `A-swarm-dev-601`. Checks cover preview controls, method switching, truth reveal, mobile overflow, and hidden-egg render invariance. Tests check temporal/spatial matching, duplicate predictions, oversized-region rejection, stationary change versus new motion, and the native-resolution Pure motion export.
 
 ## Limits
 
-Read `SWARM_RESULTS.md` for the current paired stress measurements and the earlier reports for historical versions. The very-dark mode uses reduced visible illumination and deterministic camera noise. It is **not an infrared model**, and synthetic performance does not establish nighttime field capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not grain-scale sand. Do not label an alert a confirmed nest.
+Read `SWARM_RESULTS.md` for the current paired stress measurements, `PIN_RESULTS.md` for the two-camera pin validation, and the earlier reports for historical versions. The very-dark mode uses reduced visible illumination and deterministic camera noise. It is **not an infrared model**, and synthetic performance does not establish nighttime field capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not grain-scale sand. Do not label an alert a confirmed nest.
