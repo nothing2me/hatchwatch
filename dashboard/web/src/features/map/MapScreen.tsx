@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
 import type { AlertView, MapSnapshot } from '@/lib/types';
@@ -11,6 +11,7 @@ import { Legend } from './Legend';
 import { MapControls, type LayerKey } from './MapControls';
 import { fitPadding } from './bounds';
 import { initialBounds, MapView } from './MapView';
+import { type Playback, playbackKey } from './playback';
 
 export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: SessionUser })
 {
@@ -19,6 +20,22 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
     const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true });
 
     const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
+    const [playback, setPlayback] = useState<Playback | null>(null);
+    const selectedVideo = selectedCamera?.status === 'ONLINE' ? selectedCamera.video : null;
+
+    // The playing feed drives the map clock; pins outside its window stay hidden.
+    const handleTime = useCallback((t: number) =>
+    {
+        if (selectedVideo)
+        {
+            setPlayback({ key: playbackKey(selectedVideo), t });
+        }
+    }, [selectedVideo]);
+
+    useEffect(() =>
+    {
+        setPlayback(null);
+    }, [selectedVideo?.id]);
 
     const fitBeach = useCallback(() =>
     {
@@ -41,7 +58,7 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
 
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
-            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={setSelectedCameraId} />
+            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={setSelectedCameraId} playback={playback} />
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
@@ -49,13 +66,13 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
 
                 <div className="flex min-h-0 flex-1 gap-3">
                     <div className="flex min-h-0 flex-col items-start max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:max-h-[45%] md:w-72">
-                        <AlertsFeed alerts={snapshot.alerts} onSelect={flyToAlert} />
+                        <AlertsFeed alerts={snapshot.alerts} onSelect={flyToAlert} playback={playback} />
                     </div>
 
                     <div className="ml-auto flex items-start gap-3">
                         {selectedCamera && (
                             <div className="max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:z-10">
-                                <CameraPanel camera={selectedCamera} onClose={() => setSelectedCameraId(null)} />
+                                <CameraPanel camera={selectedCamera} onClose={() => setSelectedCameraId(null)} onTime={handleTime} />
                             </div>
                         )}
                         <MapControls

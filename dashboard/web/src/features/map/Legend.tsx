@@ -45,7 +45,8 @@ export function Legend({ className }: { className?: string })
                         </span>
                         Camera and view cone
                     </p>
-                    <p className="flex items-center gap-2"><span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-amber bg-amber/20" /></span>Alert region</p>
+                    <p className="flex items-center gap-2"><span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-[#4ADE80] bg-[#4ADE80]/25" /></span>Pin · both cameras</p>
+                    <p className="flex items-center gap-2"><span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-[#FFB547] bg-[#FFB547]/25" /></span>Pin · one camera</p>
                     <p className="flex items-center gap-2 text-ink-muted"><span className={symbol}><span className="h-0.5 w-4 rounded-full bg-amber" /></span>Turtle track (with footage)</p>
                 </Collapsible.Content>
             </Collapsible.Root>

@@ -11,6 +11,7 @@ import { boundsOf, viewCone } from '@/lib/geo';
 import type { MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
+import { type Playback, visibleAlerts } from './playback';
 import type { LayerKey } from './MapControls';
 
 export { initialBounds } from './bounds';
@@ -26,13 +27,18 @@ interface MapViewProps
     layers: Record<LayerKey, boolean>;
     selectedCameraId: string | null;
     onSelectCamera: (cameraId: string) => void;
+    playback: Playback | null;
 }
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
 
 const levelColor = ['match', ['get', 'level'], 'HIGH', '#E2581F', 'MEDIUM', '#FFB547', '#4C8DD6'] as unknown as string;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera }, ref)
+// Pins seen by both cameras of a pair are green; single-camera pins stay amber.
+const tierFill = ['match', ['get', 'tier'], 'TWO_CAMERA', 'rgba(74,222,128,0.25)', 'SINGLE_CAMERA', 'rgba(255,181,71,0.25)', 'rgba(255,181,71,0.2)'] as unknown as string;
+const tierStroke = ['match', ['get', 'tier'], 'TWO_CAMERA', '#4ADE80', '#FFB547'] as unknown as string;
+
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
     const style = useMemo(buildMapStyle, []);
@@ -57,12 +63,12 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
 
     const alertsGeoJson = useMemo<FeatureCollection>(() => ({
         type: 'FeatureCollection',
-        features: snapshot.alerts.filter(alert => alert.position).map(alert => ({
+        features: visibleAlerts(snapshot.alerts, playback).map(alert => ({
             type: 'Feature',
-            properties: { status: alert.status },
+            properties: { status: alert.status, tier: alert.evidenceTier ?? 'NONE' },
             geometry: { type: 'Point', coordinates: alert.position! },
         })),
-    }), [snapshot.alerts]);
+    }), [snapshot.alerts, playback]);
 
     const [[west, south], [east, north]] = initialBounds(snapshot);
     const padding = typeof window === 'undefined' ? 80 : fitPadding(window.innerWidth, window.innerHeight);
@@ -111,8 +117,8 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 {layers.alerts && (
                     <Source id="alerts" type="geojson" data={alertsGeoJson}>
                         <Layer id="alert-ring" type="circle" paint={{
-                            'circle-radius': 10, 'circle-color': 'rgba(255,181,71,0.2)',
-                            'circle-stroke-color': '#FFB547', 'circle-stroke-width': 2,
+                            'circle-radius': 10, 'circle-color': tierFill,
+                            'circle-stroke-color': tierStroke, 'circle-stroke-width': 2,
                         }} />
                     </Source>
                 )}
@@ -120,8 +126,9 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 {layers.zones && snapshot.zones.filter(zone => zone.ring.length > 0).map(zone =>
                 {
                     const [[w, s], [e, n]] = boundsOf(zone.ring);
+                    // Set beside the centre so digging pins near the middle of a zone are not covered.
                     return (
-                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} style={{ pointerEvents: 'none' }}>
+                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} anchor="right" offset={[-14, 0]} style={{ pointerEvents: 'none' }}>
                             <span className="flex items-center gap-1.5 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 ring-white/10 backdrop-blur-sm">
                                 <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', levelDot[zone.activityLevel])} />
                                 <span className="max-md:sr-only">ZONE </span>{zone.code}

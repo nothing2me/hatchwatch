@@ -8,7 +8,7 @@ vi.mock('@/features/map/MapView', async () =>
     const React = await import('react');
     return {
         initialBounds: () => [[0, 0], [1, 1]],
-        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void }, ref)
+        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback?: unknown }, ref)
         {
             React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn() }));
             return <div>{props.snapshot.cameras.map(camera => <button key={camera.id} onClick={() => props.onSelectCamera(camera.id)}>cam {camera.code}</button>)}</div>;
@@ -62,5 +62,17 @@ describe('MapScreen', () =>
         render(<MapScreen snapshot={snapshot} user={user} />);
         fireEvent.click(screen.getByLabelText('Collapse alerts'));
         expect(screen.queryByText('No alerts yet.')).toBeNull();
+    });
+
+    it('plays footage for a camera that has a video', () =>
+    {
+        const withVideo: MapSnapshot = {
+            ...snapshot,
+            cameras: [{ ...snapshot.cameras[0], video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } }],
+        };
+        render(<MapScreen snapshot={withVideo} user={user} />);
+        fireEvent.click(screen.getByText('cam B1'));
+        expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
+        expect(screen.queryByText('No footage yet')).toBeNull();
     });
 });

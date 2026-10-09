@@ -5,10 +5,10 @@ import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { compassPoint } from '@/lib/geo';
 import type { CameraView } from '@/lib/types';
+import { CameraVideo } from './CameraVideo';
 
-// Selected camera details. Plan 2 replaces the placeholder with the video player
-// when camera.video is set (latest simulation video or upload with a DONE job); cameras without footage keep the status card.
-export function CameraPanel({ camera, onClose }: { camera: CameraView; onClose: () => void })
+// Selected camera details. Online cameras with footage play it on a loop; the rest keep the status card.
+export function CameraPanel({ camera, onClose, onTime }: { camera: CameraView; onClose: () => void; onTime?: (t: number) => void })
 {
     const online = camera.status === 'ONLINE';
     const heading = Math.round(camera.headingDeg);
@@ -21,15 +21,19 @@ export function CameraPanel({ camera, onClose }: { camera: CameraView; onClose: 
                 <button type="button" onClick={onClose} aria-label="Close camera panel" className="ml-auto grid h-7 w-7 place-items-center rounded-md text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber"><X className="h-4 w-4" /></button>
             </div>
 
-            <div className="relative mt-2 grid aspect-video max-md:aspect-[5/2] place-items-center overflow-hidden rounded-lg border border-white/6 bg-night-950 text-center">
-                <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(135deg,transparent_0_10px,rgba(255,255,255,0.018)_10px_20px)]" />
-                <span className="relative flex flex-col items-center gap-2 text-sm text-ink-muted">
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-white/5 ring-1 ring-white/10">
-                        <VideoOff aria-hidden className="h-4 w-4" />
-                    </span>
-                    {online ? 'No footage yet' : 'Camera offline'}
-                </span>
-            </div>
+            {camera.video && online
+                ? <CameraVideo key={camera.video.id} video={camera.video} onTime={onTime} />
+                : (
+                    <div className="relative mt-2 grid aspect-video max-md:aspect-[5/2] place-items-center overflow-hidden rounded-lg border border-white/6 bg-night-950 text-center">
+                        <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(135deg,transparent_0_10px,rgba(255,255,255,0.018)_10px_20px)]" />
+                        <span className="relative flex flex-col items-center gap-2 text-sm text-ink-muted">
+                            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/5 ring-1 ring-white/10">
+                                <VideoOff aria-hidden className="h-4 w-4" />
+                            </span>
+                            {online ? 'No footage yet' : 'Camera offline'}
+                        </span>
+                    </div>
+                )}
 
             <dl className="mt-3 grid grid-cols-3 gap-x-2 gap-y-2.5 text-xs">
                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Zone</dt><dd className="mt-0.5 font-medium">{camera.zoneCode}</dd></div>

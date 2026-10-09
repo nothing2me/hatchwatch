@@ -5,10 +5,13 @@ import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import type { AlertView } from '@/lib/types';
 import { useStoredBoolean } from '@/features/map/useStoredBoolean';
+import { isActive, type Playback } from '@/features/map/playback';
 
 const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
 
-export function AlertsFeed({ alerts, onSelect }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void })
+const tierNote = { TWO_CAMERA: ' · both cameras', SINGLE_CAMERA: ' · one camera' } as const;
+
+export function AlertsFeed({ alerts, onSelect, playback = null }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null })
 {
     const [open, setOpen] = useStoredBoolean('nesttrace.alerts.open', true);
     const newCount = alerts.filter(alert => alert.status === 'NEW').length;
@@ -45,22 +48,32 @@ export function AlertsFeed({ alerts, onSelect }: { alerts: AlertView[]; onSelect
                         <p className="text-xs leading-relaxed text-ink-muted">Digging and crawl alerts appear here once camera footage is analysed.</p>
                     </li>
                 )}
-                {alerts.map(alert => (
-                    <li key={alert.id}>
-                        <button
-                            type="button"
-                            onClick={() => onSelect(alert)}
-                            className={cn('w-full rounded-lg border-l-[3px] px-3 py-2 text-left text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-amber',
-                                alert.kind === 'DIGGING' && alert.status === 'NEW' ? 'border-amber bg-amber/7' : 'border-white/15')}
-                        >
-                            <span className={cn('block font-medium', alert.kind === 'DIGGING' && 'text-amber')}>{alert.message}</span>
-                            <span className="mt-0.5 block font-mono text-xs text-ink-muted">
-                                Zone {alert.zoneCode} · {alert.cameraCode} · {timeFormat.format(new Date(alert.createdAt))}
-                                {alert.score !== null && ` · score ${alert.score.toFixed(2)}`}
-                            </span>
-                        </button>
-                    </li>
-                ))}
+                {alerts.map(alert =>
+                {
+                    const active = isActive(alert, playback);
+                    return (
+                        <li key={alert.id}>
+                            <button
+                                type="button"
+                                onClick={() => onSelect(alert)}
+                                className={cn('w-full rounded-lg border-l-[3px] px-3 py-2 text-left text-sm transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-amber',
+                                    alert.kind === 'DIGGING' && alert.status === 'NEW' ? 'border-amber bg-amber/7' : 'border-white/15',
+                                    active && 'bg-amber/10 ring-1 ring-amber/60')}
+                            >
+                                <span className={cn('block font-medium', alert.kind === 'DIGGING' && 'text-amber')}>{alert.message}</span>
+                                <span className="mt-0.5 block font-mono text-xs text-ink-muted">
+                                    Zone {alert.zoneCode} · {alert.cameraCode} · {timeFormat.format(new Date(alert.createdAt))}
+                                    {alert.score !== null && ` · score ${alert.score.toFixed(2)}`}
+                                </span>
+                                {alert.simulated && (
+                                    <span className="mt-0.5 block text-[11px] text-ink-muted">
+                                        Simulated · approximate position{alert.evidenceTier ? tierNote[alert.evidenceTier] : ''}
+                                    </span>
+                                )}
+                            </button>
+                        </li>
+                    );
+                })}
             </ul>
         </GlassPanel>
     );
