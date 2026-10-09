@@ -6,4 +6,4 @@ web/src/generated/
 web/tsconfig.tsbuildinfo
 web/.env
 web/AGENTS.md
-media/
+/media/
