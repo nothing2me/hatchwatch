@@ -6,7 +6,7 @@ This repository has two separate products with different data and trust boundari
 
 Place the real monitoring dashboard under `dashboard/`. It will own real camera integrations, users, access control, persistent records, and production deployment. Give it its own dependency manifest, build output, configuration, tests, and runtime port. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
 
-The real dashboard does not exist yet. `dashboard/README.md` reserves its location and documents the handoff. Do not describe the current simulation UI as the real dashboard.
+The real dashboard now exists in `dashboard/` as a Docker Compose app: `web/` (Next.js, port 3000) and Postgres (host port 5433). A Python worker that runs the turtle tracker and the detector through a versioned `adapter-v1` contract arrives in `dashboard/worker/`. The worker copies `pipeline/extract.py`, `pipeline/detect.py`, `pipeline/common.py` and `config/settings.json` at image build time and verifies their hashes; it never edits them. `dashboard/web/tests/boundary.test.ts` fails if dashboard code references the simulator, the research API, or private truth.
 
 ## Synthetic experiment (current application)
 

@@ -1,21 +1,31 @@
-# Real dashboard workspace
+# NestTrace dashboard
 
-This directory is reserved for the team’s real NestTrace dashboard. The current `web/` application is a synthetic research simulator and evidence viewer. Build the real dashboard here as a separate application with its own package, runtime, tests, deployment, credentials, and real-data storage.
+Monitoring app for sea turtle crawl and digging activity on the Holiday Beach stretch of Port Aransas. It is separate from the research simulator in the repository root and never reads simulator state, the research API, or private evaluator truth (see `../agent.md`).
 
-The dashboard can later consume a reviewed, versioned adapter for prediction JSON, public calibration, evidence videos, and projected motion maps. It must not depend on simulator objects, seeds, private evaluator truth, or the local research API. See the repository’s [`agent.md`](../agent.md) for the boundary and alert wording.
+## Run
 
-## Running the dashboard
+Requires Docker Desktop (running) and, for development outside Docker, Node 24.
 
-This is a standalone React + Vite app with its own `package.json`; it does not
-use the root package or the research simulator. Requires Node 18+.
-
-```powershell
+```bash
 cd dashboard
-npm install
-npm run dev
+cp .env.example .env            # then set AUTH_SECRET (openssl rand -base64 32) and SEED_ADMIN_PASSWORD
+docker compose up --build
 ```
 
-Open **http://localhost:5180**. All numbers are sample data from
-`src/data/sampleData.js`. The UI reads data only through `subscribe()` on a
-data source (`src/data/dataSource.js`), so the future pipeline adapter can be
-swapped in by changing one line in `src/App.jsx`.
+Open http://localhost:3000 and sign in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. The first start creates zones A–D, cameras A1–D2 and a read-only `viewer@nesttrace.local` account whose password is printed in the `web` logs (`docker compose logs web | grep viewer`).
+
+## Develop
+
+```bash
+docker compose up -d db          # Postgres on localhost:5433
+cd web && cp ../.env .env && npm install
+npx prisma migrate dev           # apply migrations, generate client
+npm run db:seed
+npm run dev                      # http://localhost:3000
+npm test                         # unit + integration + boundary (needs the db container)
+npx vitest run tests/unit/geo.test.ts   # one file
+```
+
+## Limits
+
+Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.
