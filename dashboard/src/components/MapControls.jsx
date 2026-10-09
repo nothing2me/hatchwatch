@@ -17,6 +17,8 @@ export default function MapControls(
     onToggleZones,
     showCameras,
     onToggleCameras,
+    showNestSites,
+    onToggleNestSites,
 })
 {
     return (
@@ -48,6 +50,9 @@ export default function MapControls(
             </button>
             <button type="button" aria-pressed={showCameras} className="toggle-button" onClick={onToggleCameras}>
                 Cameras
+            </button>
+            <button type="button" aria-pressed={showNestSites} className="toggle-button" onClick={onToggleNestSites}>
+                Nest sites
             </button>
         </div>
     );

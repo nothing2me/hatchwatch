@@ -6,17 +6,22 @@
 
 import { mapConfig } from '../config/mapConfig.js';
 import { activityLevels } from '../config/activityLevels.js';
+import { protectionStatuses } from '../config/nestStatuses.js';
 import { buildFieldOfViewPath, buildPolygonPointsText } from '../utils/geometry.js';
+import { summarizeNestSite } from '../utils/nestStatus.js';
 import MapLegend from './MapLegend.jsx';
 
 export default function BeachMap(
 {
     zones,
     cameraPairs,
+    nestSites,
     selectedPairIdentifier,
     onSelectPair,
+    onSelectNest,
     showZones,
     showCameras,
+    showNestSites,
 })
 {
     return (
@@ -38,6 +43,9 @@ export default function BeachMap(
                         onSelectPair={onSelectPair}
                     />
                 )}
+
+                {/* Drawn last so nest pins sit on top and stay clickable. */}
+                {showNestSites && <NestSiteLayer nestSites={nestSites} onSelectNest={onSelectNest} />}
             </svg>
 
             <MapLegend />
@@ -114,6 +122,51 @@ function CameraLayer({ cameraPairs, selectedPairIdentifier, onSelectPair })
                                 />
                             );
                         })}
+                    </g>
+                );
+            })}
+        </g>
+    );
+}
+
+// Draws a pin at every nest site, colored by its protection status. Sites
+// where activity is still going on get an extra ring. Clicking a pin opens
+// that site's log.
+function NestSiteLayer({ nestSites, onSelectNest })
+{
+    return (
+        <g>
+            {nestSites.map(function renderNestPin(nestSite)
+            {
+                const summary = summarizeNestSite(nestSite);
+                const protection = protectionStatuses[summary.protectionStatus];
+
+                function handleKeyDown(keyboardEvent)
+                {
+                    if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ')
+                    {
+                        keyboardEvent.preventDefault();
+                        onSelectNest(nestSite.nestIdentifier);
+                    }
+                }
+
+                return (
+                    <g
+                        key={nestSite.nestIdentifier}
+                        className="nest-pin"
+                        transform={`translate(${nestSite.position.x} ${nestSite.position.y})`}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Nest site ${nestSite.nestIdentifier}, ${protection.label}${summary.isOnSite ? ', activity on site now' : ''}`}
+                        onClick={function handleClick()
+                        {
+                            onSelectNest(nestSite.nestIdentifier);
+                        }}
+                        onKeyDown={handleKeyDown}
+                    >
+                        {summary.isOnSite && <circle r="17" className="nest-pin__on-site-ring" stroke={protection.pinFill} />}
+                        <circle r="9" fill={protection.pinFill} stroke="#FFFFFF" strokeWidth="2.5" />
+                        <text y="-15" className="nest-pin__label">{nestSite.nestIdentifier}</text>
                     </g>
                 );
             })}

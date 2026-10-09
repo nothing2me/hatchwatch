@@ -1,7 +1,21 @@
 // The dark bar across the top of the page: logo, navigation, live status,
 // and account controls.
 
-export default function AppBar({ onlineCameraCount, totalCameraCount })
+// The pages that exist so far. Cameras and Reports are still placeholders.
+const views =
+[
+    { value: 'map', label: 'Map' },
+    { value: 'nest-log', label: 'Nest log' },
+];
+
+export default function AppBar(
+{
+    currentView,
+    onChangeView,
+    unprotectedSiteCount,
+    onlineCameraCount,
+    totalCameraCount,
+})
 {
     return (
         <header className="app-bar">
@@ -18,11 +32,34 @@ export default function AppBar({ onlineCameraCount, totalCameraCount })
                 </div>
             </div>
 
-            {/* Only "Map" exists so far; the other tabs are placeholders. */}
             <nav aria-label="Main" className="app-bar__navigation">
-                <a href="#" aria-current="page" className="app-bar__link app-bar__link--active">Map</a>
+                {views.map(function renderViewLink(view)
+                {
+                    const isCurrent = view.value === currentView;
+
+                    return (
+                        <button
+                            key={view.value}
+                            type="button"
+                            aria-current={isCurrent ? 'page' : undefined}
+                            className={isCurrent ? 'app-bar__link app-bar__link--active' : 'app-bar__link'}
+                            onClick={function handleViewClick()
+                            {
+                                onChangeView(view.value);
+                            }}
+                        >
+                            {view.label}
+                            {/* Unprotected sites need the patrol, so count them on the tab. */}
+                            {view.value === 'nest-log' && unprotectedSiteCount > 0 && (
+                                <>
+                                    <span className="app-bar__count" aria-hidden="true">{unprotectedSiteCount}</span>
+                                    <span className="visually-hidden">, {unprotectedSiteCount} unprotected</span>
+                                </>
+                            )}
+                        </button>
+                    );
+                })}
                 <a href="#" className="app-bar__link">Cameras</a>
-                <a href="#" className="app-bar__link">Alerts</a>
                 <a href="#" className="app-bar__link">Reports</a>
             </nav>
 
