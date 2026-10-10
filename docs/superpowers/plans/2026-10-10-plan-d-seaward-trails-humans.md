@@ -129,7 +129,29 @@ Behaviour list (implement all):
 
 ---
 
-### Task 7: Import, end-to-end, docs
+### Task 7: Camera editing rework (pairs on existing zones, editable lat/lng, Setup → Cameras, remove Zone E)
+
+**Files:** `src/lib/cameras/placePair.ts` (pair planning without a zone), `src/lib/cameras/manage.ts` (add pair to zone, update camera, delete camera, merge-zone), `src/app/(app)/camera-actions.ts`, `src/app/(app)/setup/cameras/page.tsx` + `src/features/cameras/CamerasScreen.tsx`, `src/app/(app)/setup/page.tsx` (link), TopBar (no change unless needed), `MapScreen`/`MapView` edit mode (click adds pair to nearest zone; drag camera marker to move it), tests, a one-off `scripts/merge-zone.ts` (dashboard/web) or admin action used to remove Zone E.
+
+**Interfaces (produced):**
+```ts
+export function planPairOnZone(click: LngLat, zone: ZoneView, existingCodes: string[]): { cameras: { code: string; position: LngLat; headingDeg: number }[] }; // 40 m apart along shore centred on click; seaward ±20° toward each other; codes = zone code + next numbers
+export function nearestZone(click: LngLat, zones: ZoneView[]): ZoneView;            // throws if > 2000 m
+// server actions (ADMIN, DB-backed guard, AuditLog, publishChange('cameras')):
+addCameraPair(click: LngLat) -> { ok: true; codes: [string, string]; zoneCode: string } | { ok: false; error: string }
+addCameraPairToZone(zoneCode: string, lng: number, lat: number) -> same
+updateCamera(code: string, patch: { code?; lng?; lat?; headingDeg?; fovDeg?; rangeM?; status? }) -> { ok } | { ok: false; error }  // lat −90..90, lng −180..180, heading 0..360, fov 10..120, range 10..500, code unique ^[A-Z][0-9]{1,2}$
+deleteCamera(code: string) -> refuses when the camera has videos/alerts or a live device
+mergeZoneInto(sourceCode: string) -> moves cameras to nearest other zone with new codes, reassigns LiveChunk/Alert zone, deletes the source zone (one transaction, audited)
+```
+- [ ] Tests first: `planPairOnZone` geometry (cameras 40 m apart, centred on click, headings seaward ±20° toward each other, codes continue numbering), `nearestZone` incl. far-click refusal; integration: add pair to D gives D3/D4; `updateCamera` validation (bad lat/lng/code duplicate → error, good patch saved + AuditLog); `deleteCamera` refusal with data; `mergeZoneInto('E')` moves E1/E2 to the nearest zone with new codes, reassigns E's chunks/alerts, deletes E, and a failure rolls back.
+- [ ] Map edit mode: click → `addCameraPair` (no new zone); camera markers draggable in edit mode → `updateCamera` with new lng/lat (confirm toast "B3 moved"); zone delete × buttons removed (no admin-created zones any more).
+- [ ] Setup → Cameras: table grouped by zone (code, lat, lng, heading, fov, range, status, footage count), inline edit with validation messages, **Add pair** (zone select + lat/lng inputs, or click on a small map), delete with refusal message. Link from Setup hub.
+- [ ] Run `mergeZoneInto('E')` on the dev DB (via the admin action from the Setup page or the one-off script) and confirm Zone E is gone and its cameras appear under the nearest zone.
+- [ ] Remove `planCameraPair`/zone-creating code paths and their tests (keep `nextZoneCode` only if still used); `Zone.createdById` stays (nullable) for history.
+- [ ] Playwright check (map edit click adds pair to nearest zone; drag moves a camera; Setup → Cameras edit lat/lng persists). Commit `feat(dashboard): camera pairs on existing zones, editable camera locations, setup cameras`.
+
+### Task 8: Import, end-to-end, docs
 
 - [ ] Import `A-seaward-humans-demo-929` onto pair B and `A-seaward-demo-941` onto pair C (`npm run sim:import`), start `node scripts/live-runner.mjs --layout seaward --humans 2 --chunks 1` in the background; Playwright: B1 shows ocean ahead; trails grow with playback in distinct colours; a danger alert appears (red chip), volunteer resolves it; Analytics shows the danger tile; 941 shows no danger. Screenshots → scratchpad `plan-d/`.
 - [ ] Docs: root `README.md` (new `--layout`, `--humans` options; blind trails/people scripts and their limits; not a registered experiment), `dashboard/README.md` (trails, danger alerts, resolve flow), `agent.md` (new public outputs `tracks/`, `people/` and their schemas; people detection reads RGB but is separate from the digging detector), `CLAUDE.md` (commands).

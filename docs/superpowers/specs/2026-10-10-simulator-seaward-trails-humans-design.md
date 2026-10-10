@@ -78,6 +78,14 @@ Builds on: branch `feat/dashboard-fullstack` (head `5503a6c`), Plans 1, A, C.
 - UI: danger alerts sort first in the Active list with a red level-1 badge; their pins pulse red; the top bar shows a red "1 danger" chip when any are active; the site drawer shows the danger events in its log with a **Resolve danger** action (volunteer/admin).
 - Statistics: `Not saved` additionally counts sites with a `danger` event not followed by `protectionInstalled` within 30 min (spec C §5 rule, now active). `summarizeSite` gains `danger: 'none' | 'active' | 'resolved'`.
 
+## 4b. Camera editing rework (user correction to Plan C §7)
+
+Stated by the user: "I don't mean to add a new zone but add [cameras] in a new location, and in Setup for cameras too"; "both cameras but editable lat long, remove zone E and move its cameras".
+- Map **Edit cameras**: one click adds **both cameras of a pair** at the clicked dune-line spot, both facing the ocean (seaward ±20° toward each other, 40 m apart along the shore, centred on the click), attached to the **nearest existing zone** — no new zone. Codes continue that zone's numbering (`D3`, `D4`, …).
+- Every camera's **latitude/longitude is editable** (Setup form and drag-to-move in map edit mode), plus heading, field of view, range, status and code; deleting a camera is allowed when it has no videos/alerts.
+- **Setup → Cameras** page (admin): table of all cameras grouped by zone; **Add pair** (zone select + lat/lng inputs or click on a small map); edit row; delete.
+- Admin-created zones are no longer created by the UI. Data change: remove **Zone E**; move its two cameras to the nearest zone with new codes; reassign Zone E's `LiveChunk`, `Alert` and `Zone`-scoped references to that zone; then delete Zone E (one transaction, audited).
+
 ## 5. Testing
 
 - Simulator: unit test (Vitest in root `tsc` scope or a small node test) that the `seaward` cameras project all six markers inside the 1280×720 frame and both see the water plane ahead; `along` output byte-identical to before for a fixed seed (render-hash test on one frame).
