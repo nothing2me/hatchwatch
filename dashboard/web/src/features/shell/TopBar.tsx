@@ -5,7 +5,17 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'analytics' | 'setup' | 'users';
+export type Page = 'map' | 'analytics' | 'live' | 'setup' | 'users';
+
+// Counts a server page passes through to the bar.
+export interface TopBarCounts
+{
+    camerasOnline: number;
+    camerasTotal: number;
+    activeSites: number;
+    dangerCount?: number;
+    firstDangerId?: string | null;
+}
 
 interface TopBarProps
 {
@@ -20,12 +30,13 @@ interface TopBarProps
     onDanger?: (alertId: string) => void;
 }
 
-const chip = 'inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs';
+const chip = 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2 text-xs sm:gap-1.5 sm:px-2.5';
 
 // `wideOnly` items drop out on phones so the admin bar fits; Setup links to Users.
 const NAV: { page: Page; href: string; label: string; adminOnly?: boolean; wideOnly?: boolean }[] = [
     { page: 'map', href: '/', label: 'Map' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
+    { page: 'live', href: '/live', label: 'Live cameras' },
     { page: 'setup', href: '/setup', label: 'Setup', adminOnly: true },
     { page: 'users', href: '/setup/users', label: 'Users', adminOnly: true, wideOnly: true },
 ];
@@ -48,14 +59,16 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
     const links = NAV.filter(item => !item.adminOnly || user.role === 'ADMIN');
 
     return (
-        <GlassPanel className="pointer-events-auto flex h-12 shrink-0 items-center gap-2 pr-2 pl-3 sm:gap-3 sm:pl-4">
-            <Link href="/" className="flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-amber" aria-label="NestTrace home">
+        <GlassPanel className="pointer-events-auto flex h-12 shrink-0 items-center gap-1.5 pr-1.5 pl-3 sm:gap-3 sm:pr-2 sm:pl-4">
+            {/* Phones drop the mark for room; Map links home too. */}
+            <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md max-sm:hidden focus-visible:outline-2 focus-visible:outline-amber" aria-label="NestTrace home">
                 <Mark />
                 <span className="hidden text-[13px] font-bold tracking-[0.2em] sm:inline">NESTTRACE</span>
             </Link>
             <span aria-hidden className="hidden h-4 w-px bg-white/12 sm:block" />
 
-            <nav aria-label="Main" className="flex items-center gap-0.5 rounded-full bg-night-950/60 p-0.5 ring-1 ring-white/8">
+            {/* On the narrowest phones the nav scrolls inside itself, so the chips and Sign out stay on screen. */}
+            <nav aria-label="Main" className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-night-950/60 p-0.5 ring-1 ring-white/8 [scrollbar-width:none]">
                 {links.map(item =>
                 {
                     const here = item.page === current;
@@ -64,12 +77,14 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                             key={item.page}
                             href={item.href}
                             aria-current={here ? 'page' : undefined}
-                            className={cn('inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-amber sm:px-3',
+                            aria-label={item.page === 'live' ? item.label : undefined}
+                            className={cn('inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber sm:px-3',
                                 here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink',
                                 item.wideOnly && 'max-sm:hidden')}
                         >
-                            {here && <span aria-hidden className="mr-1.5 h-1 w-1 rounded-full bg-amber" />}
-                            {item.label}
+                            {here && <span aria-hidden className="mr-1.5 h-1 w-1 rounded-full bg-amber max-sm:hidden" />}
+                            {/* "Live" alone on phones so the admin bar still fits 360 px. */}
+                            {item.page === 'live' ? <>Live<span className="ml-[0.3em] max-sm:hidden">cameras</span></> : item.label}
                         </Link>
                     );
                 })}
@@ -77,7 +92,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
 
             <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas · Holiday Beach</span>
 
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
                 {dangerCount > 0 && firstDangerId && (
                     <Link
                         href={`/?alert=${firstDangerId}`}
@@ -107,7 +122,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                     <span className="font-mono tabular-nums">{activeSites}</span>
                     <span className="sr-only lg:not-sr-only lg:opacity-80">{activeSites === 1 ? 'active site' : 'active sites'}</span>
                 </span>
-                <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10 sm:mx-1" />
+                <span aria-hidden className="mx-1 h-5 w-px bg-white/10 max-sm:hidden" />
                 <form action={logoutAction}>
                     <button type="submit" title={`Sign out ${user.email}`} className="grid h-8 w-8 place-items-center rounded-full text-ink-muted transition-colors hover:bg-white/8 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">
                         <LogOut aria-hidden className="h-4 w-4" /><span className="sr-only">Sign out</span>

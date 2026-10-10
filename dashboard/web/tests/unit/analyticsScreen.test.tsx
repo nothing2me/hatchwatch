@@ -143,6 +143,17 @@ describe('TopBar', () =>
         expect(screen.getByText('active site')).toBeTruthy();
     });
 
+    it('shows Live cameras to every role, between Analytics and Setup', () =>
+    {
+        const { rerender } = render(<TopBar user={viewer} current="live" camerasOnline={1} camerasTotal={2} activeSites={0} />);
+        const nav = screen.getByRole('navigation', { name: 'Main' });
+        expect(within(nav).getAllByRole('link').map(link => link.getAttribute('aria-label') ?? link.textContent)).toEqual(['Map', 'Analytics', 'Live cameras']);
+        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('href')).toBe('/live');
+        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('aria-current')).toBe('page');
+        rerender(<TopBar user={{ ...viewer, role: 'ADMIN' }} current="map" camerasOnline={1} camerasTotal={2} activeSites={0} />);
+        expect(within(nav).getAllByRole('link').map(link => link.getAttribute('aria-label') ?? link.textContent)).toEqual(['Map', 'Analytics', 'Live cameras', 'Setup', 'Users']);
+    });
+
     it('drops the Users link on phones only (Setup links to it)', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
