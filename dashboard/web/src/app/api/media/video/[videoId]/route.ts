@@ -1,6 +1,6 @@
 import { createReadStream, statSync } from 'node:fs';
 import { Readable } from 'node:stream';
-import { getSession } from '@/lib/auth/guard';
+import { currentUserOrNull } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
 import { resolveMediaPath } from '@/lib/media';
 import { parseRange } from '@/lib/range';
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // Streams a stored video. The file path always comes from the database row, never the request.
 export async function GET(request: Request, context: { params: Promise<{ videoId: string }> }): Promise<Response>
 {
-    if (!(await getSession()))
+    if (!(await currentUserOrNull()))
     {
         return new Response('Unauthorized', { status: 401 });
     }

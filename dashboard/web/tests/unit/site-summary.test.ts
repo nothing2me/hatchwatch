@@ -49,4 +49,17 @@ describe('summarizeSite', () =>
             expect(statusFor(summarizeSite(events), events)).toBe(status);
         }
     });
+
+    it('breaks ties on at by createdAt, not input order', () =>
+    {
+        const at = new Date(Date.UTC(2026, 9, 9, 20, 5));
+        const archived = { type: 'archived' as const, at, createdAt: new Date(Date.UTC(2026, 9, 9, 20, 5, 1)) };
+        const visit = { type: 'patrolVisit' as const, at, createdAt: new Date(Date.UTC(2026, 9, 9, 20, 5, 2)) };
+        const detected = e('detected', 0);
+        expect(summarizeSite([detected, archived, visit]).active).toBe(true);
+        expect(summarizeSite([detected, visit, archived]).active).toBe(true);
+        const late = { ...archived, createdAt: new Date(Date.UTC(2026, 9, 9, 20, 5, 3)) };
+        expect(summarizeSite([detected, late, visit]).active).toBe(false);
+        expect(summarizeSite([detected, visit, late]).active).toBe(false);
+    });
 });

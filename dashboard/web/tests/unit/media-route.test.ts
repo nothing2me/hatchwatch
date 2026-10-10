@@ -3,9 +3,9 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const getSession = vi.fn();
+const currentUserOrNull = vi.fn();
 const findUnique = vi.fn();
-vi.mock('@/lib/auth/guard', () => ({ getSession }));
+vi.mock('@/lib/auth/guard', () => ({ currentUserOrNull }));
 vi.mock('@/lib/db', () => ({ prisma: { video: { findUnique } } }));
 
 const { GET } = await import('@/app/api/media/video/[videoId]/route');
@@ -36,7 +36,7 @@ afterAll(() =>
 });
 beforeEach(() =>
 {
-    getSession.mockResolvedValue({ id: 'u', email: 'a@b.cd', name: 'A', role: 'VIEWER' });
+    currentUserOrNull.mockResolvedValue({ id: 'u', email: 'a@b.cd', name: 'A', role: 'VIEWER' });
     findUnique.mockResolvedValue({ path: 'sim/R/camera-0.mp4', pureMotionPath: 'sim/R/motion-0.mp4' });
 });
 
@@ -47,7 +47,7 @@ describe('GET /api/media/video/:id', () =>
 {
     it('401 without a session', async () =>
     {
-        getSession.mockResolvedValue(null);
+        currentUserOrNull.mockResolvedValue(null);
         expect((await call()).status).toBe(401);
     });
 

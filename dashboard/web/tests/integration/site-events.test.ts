@@ -6,6 +6,7 @@ import { createPrismaClient } from '@/lib/db';
 import { onChange } from '@/lib/changes';
 import { importSimRun } from '@/lib/sim/importRun';
 import { addSiteEvent, SiteEventError } from '@/lib/sites/events';
+import { statusFor, summarizeSite } from '@/lib/sites/summary';
 import { seedDatabase } from '../../prisma/seed';
 
 const prisma = createPrismaClient(process.env.TEST_DATABASE_URL);
@@ -110,5 +111,21 @@ describe('addSiteEvent', () =>
         await addSiteEvent(prisma, { alertId, type: 'hatched', userId: null, author: 'Una' }).catch(() => undefined);
         off();
         expect(seen).toEqual(['site-event']);
+    });
+
+    it('serialises concurrent events so the cached status matches the log', async () =>
+    {
+        for (let round = 0; round < 5; round++)
+        {
+            const alertId = await freshSite();
+            await Promise.all([
+                addSiteEvent(prisma, { alertId, type: 'archived', userId: null, author: 'Camera', system: true }),
+                addSiteEvent(prisma, { alertId, type: 'patrolVisit', userId: null, author: 'Una' }),
+            ]);
+            const events = (await prisma.siteEvent.findMany({ where: { alertId }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] }))
+                .map(event => ({ type: event.type as never, at: event.at, createdAt: event.createdAt }));
+            const alert = await prisma.alert.findUniqueOrThrow({ where: { id: alertId } });
+            expect(alert.status).toBe(statusFor(summarizeSite(events), events));
+        }
     });
 });

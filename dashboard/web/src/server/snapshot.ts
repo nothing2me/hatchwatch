@@ -24,7 +24,7 @@ export interface AlertRow
     lng: number | null; lat: number | null; radiusM: number; score: number | null; createdAt: Date;
     videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
     evidenceTier: EvidenceTier | null; simulated: boolean;
-    events: { type: string; at: Date }[];
+    events: { type: string; at: Date; createdAt?: Date }[];
 }
 
 export interface SnapshotRows
@@ -33,10 +33,10 @@ export interface SnapshotRows
     cameras: CameraRow[];
     alerts: AlertRow[];
     inactiveCount?: number;
-    outcomeEvents?: { type: string; at: Date }[][];
+    outcomeEvents?: { type: string; at: Date; createdAt?: Date }[][];
 }
 
-const toEvents = (events: { type: string; at: Date }[]) => events as { type: SiteEventType; at: Date }[];
+const toEvents = (events: { type: string; at: Date; createdAt?: Date }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date }[];
 
 export function fadeMinutes(): number
 {
@@ -127,12 +127,12 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
         prisma.alert.findMany({
             where: { OR: [{ status: { in: ['NEW', 'REVIEWED', 'FIELD_CONFIRMED'] } }, { id: { in: recent.map(row => row.id) } }] },
             orderBy: { createdAt: 'desc' },
-            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true } } },
+            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
         }),
         prisma.alert.count({ where: { status: 'NEW' } }),
         prisma.alert.count({ where: { status: { in: ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'] } } }),
         // Outcome totals read every site's log; acceptable at demo scale.
-        prisma.alert.findMany({ select: { events: { select: { type: true, at: true } } } }),
+        prisma.alert.findMany({ select: { events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } } }),
     ]);
 
     const snapshot = toMapSnapshot({ zones, cameras, alerts, inactiveCount, outcomeEvents: everyAlert.map(alert => alert.events) });
