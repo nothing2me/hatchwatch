@@ -43,7 +43,7 @@ vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-te
 // Live device feeds: the status poll and the WebRTC player are replaced; tests set `liveStatus`.
 let liveStatus: Record<string, { deviceId: string; name: string; online: boolean }> = {};
 vi.mock('@/features/live/useLiveStatus', () => ({ useLiveStatus: () => liveStatus }));
-vi.mock('@/features/live/LiveVideo', () => ({ LiveVideo: ({ deviceId }: { deviceId: string }) => <div data-testid="live-player">live {deviceId}</div> }));
+vi.mock('@/features/live/LiveVideo', () => ({ LiveVideo: ({ deviceId, badge }: { deviceId: string; badge?: React.ReactNode }) => <div><span data-testid="live-player">live {deviceId}</span>{badge}</div> }));
 vi.mock('@/app/(app)/live-actions', () => ({ assignCameraSource: vi.fn() }));
 
 class FakeEventSource

@@ -4,7 +4,7 @@ import type { CameraView, LiveDeviceView } from '@/lib/types';
 
 const assignCameraSource = vi.fn();
 vi.mock('@/app/(app)/live-actions', () => ({ assignCameraSource: (...args: unknown[]) => assignCameraSource(...args) }));
-vi.mock('@/features/live/LiveVideo', () => ({ LiveVideo: ({ deviceId }: { deviceId: string }) => <div>live {deviceId}</div> }));
+vi.mock('@/features/live/LiveVideo', () => ({ LiveVideo: ({ deviceId, badge }: { deviceId: string; badge?: React.ReactNode }) => <div><span>live {deviceId}</span>{badge}</div> }));
 
 const { CameraPanel } = await import('@/features/cameras/CameraPanel');
 

@@ -152,20 +152,25 @@ export function CameraPanel({ camera, feed, isAdmin = false, devices = [], onClo
             <div className="flex items-center gap-2">
                 <p className="text-[10px] font-semibold tracking-[0.16em] text-ink uppercase">Camera {camera.code}</p>
                 <span className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">· facing {compassPoint(camera.headingDeg)}</span>
-                {live && (
-                    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-semibold text-danger ring-1 ring-danger/40">
-                        <span aria-hidden className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-danger" />
-                        <span className="truncate">LIVE · {live.deviceName}</span>
-                    </span>
-                )}
                 {playable && (
                     <button type="button" onClick={() => handOff(true)} aria-label="Expand camera view" className="ml-auto grid h-7 w-7 place-items-center rounded-md text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber"><Maximize2 className="h-3.5 w-3.5" /></button>
                 )}
-                <button type="button" onClick={onClose} aria-label="Close camera panel" className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-md text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber', !playable && 'ml-auto')}><X className="h-4 w-4" /></button>
+                <button type="button" onClick={onClose} aria-label="Close camera panel" className={cn('grid h-7 w-7 place-items-center rounded-md text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber', !playable && 'ml-auto')}><X className="h-4 w-4" /></button>
             </div>
 
             {live
-                ? <LiveVideo key={live.deviceId} deviceId={live.deviceId} />
+                ? (
+                    <LiveVideo
+                        key={live.deviceId}
+                        deviceId={live.deviceId}
+                        badge={(
+                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-danger/90 px-2 py-0.5 text-[11px] font-semibold text-white shadow shadow-black/40">
+                                <span aria-hidden className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-white" />
+                                <span className="truncate">LIVE · {live.deviceName}</span>
+                            </span>
+                        )}
+                    />
+                )
                 : playable && expanded
                 ? (
                     <div className="mt-2 grid aspect-video max-md:aspect-[5/2] place-items-center rounded-lg border border-white/6 bg-night-950 text-sm text-ink-muted">Playing in expanded view</div>
