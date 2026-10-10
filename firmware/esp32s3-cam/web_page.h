@@ -95,6 +95,7 @@ static const char WEB_PAGE[] = R"HTML(<!doctype html>
     <div><dt>Stream</dt><dd id="fps">-</dd></div>
     <div><dt>Wi-Fi</dt><dd id="rssi">-</dd></div>
     <div><dt>Up</dt><dd id="uptime">-</dd></div>
+    <div><dt>Dashboard</dt><dd id="uplink">-</dd></div>
   </dl>
 </main>
 <script>
@@ -164,6 +165,12 @@ static const char WEB_PAGE[] = R"HTML(<!doctype html>
       $('rssi').textContent = `${s.rssi} dBm`;
       const m = Math.floor(s.uptime / 60);
       $('uptime').textContent = m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
+      if (s.uplink) {
+        const u = s.uplink;
+        $('uplink').textContent = u.state === 'off' ? (u.lastError ? `off: ${u.lastError}` : 'off (standalone)')
+          : u.state === 'sending' ? `sending · ${u.sent} frames${u.lastError ? ` · last problem: ${u.lastError}` : ''}`
+          : `${u.state}${u.lastError ? `: ${u.lastError}` : ''}`;
+      }
     } catch (e) { /* camera busy or rebooting; try again next tick */ }
   }
   refreshStatus();

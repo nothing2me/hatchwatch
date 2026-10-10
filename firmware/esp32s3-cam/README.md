@@ -1,13 +1,13 @@
 # ESP32-S3 camera (Freenove ESP32-S3 WROOM)
 
-Standalone camera firmware for field tests. The board serves a camera page, a JPEG snapshot, a status JSON and an MJPEG stream on the local Wi-Fi. It is not connected to the dashboard and never talks to the research pipeline.
+Camera firmware for field tests. The board serves a camera page, a JPEG snapshot, a status JSON and an MJPEG stream on the local Wi-Fi, and can also send its picture and on-board motion to the NestTrace dashboard (optional). It never talks to the research pipeline.
 
 
 | URL                     | What                                                                          |
 | ----------------------- | ----------------------------------------------------------------------------- |
 | `http://<ip>/`          | Camera page: live view, snapshot, sensor and stream status                    |
 | `http://<ip>/capture`   | One JPEG (`?download=1` to save it)                                           |
-| `http://<ip>/status`    | JSON: sensor, mode, picture size, stream fps, Wi-Fi signal, uptime, free heap |
+| `http://<ip>/status`    | JSON: sensor, mode, picture size, stream fps, Wi-Fi signal, uptime, free heap, dashboard upload (`uplink.state`, `uplink.sent`, `uplink.lastError`) |
 | `http://<ip>:81/stream` | MJPEG stream (open it in a browser or VLC)                                    |
 | `http://<ip>/motion`    | Motion mask (80×60 grey JPEG, white = moving)                                  |
 | `POST http://<ip>/motion/settings?threshold=NN` | Motion threshold 5–100 (`?reset=1` relearns the background) |
@@ -18,6 +18,8 @@ Standalone camera firmware for field tests. The board serves a camera page, a JP
 ## Privacy
 
 The pages and the stream have no password: anyone on the same Wi-Fi can watch. Use the board only on a trusted network, and never share footage of a nesting beach publicly.
+
+The device token in `secrets.h` lets anyone who has it send pictures as this board. Keep `secrets.h` out of git (it is ignored) and rotate the token if it leaks.
 
 ## Build and upload
 
@@ -37,6 +39,19 @@ arduino-cli upload  -b "esp32:esp32:esp32s3:PSRAM=opi,FlashSize=8M,PartitionSche
 ```
 
 Close the IDE's Serial Monitor before uploading from the command line; it holds the port.
+
+## Send to the dashboard
+
+1. On the dashboard (admin): **Live cameras > Add board camera**, give it a name, and copy the `secrets.h` lines shown once into `secrets.h` below the Wi-Fi lines. If the token is lost, use **Rotate token** in the Devices list.
+2. Copy Caddy's root certificate (in `dashboard/`): `docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt`. Paste the printed lines, from `-----BEGIN CERTIFICATE-----` to `-----END CERTIFICATE-----`, between `R"PEM(` and `)PEM"` in `secrets.h`. The board checks the dashboard against this certificate; there is no way to skip the check. If the Caddy volume is recreated, copy the new certificate.
+3. Board, laptop and phones must be on the same 2.4 GHz-capable Wi-Fi, and `DASHBOARD_URL` must use the laptop's address on that network (`LAN_HOST` in `dashboard/.env`).
+4. Upload. The Serial Monitor prints `Dashboard upload: https://... as device ...`. The camera page's **Dashboard** row shows `sending · N frames`, and the board appears under **Live cameras**.
+5. What it sends: the newest JPEG at most 5 times a second, and the header `X-NestTrace-Motion` (`schemas/esp32-frame.v1.md`). On errors it waits 2 s, doubling to 30 s; on HTTP 429 it waits 1 s. If the dashboard refuses the token (401/403), it stops and logs `Dashboard refused the token`. Fix `DEVICE_ID`/`DEVICE_TOKEN` and press reset.
+6. **If the Dashboard row says `no-memory` or a TLS memory error.** TLS needs about 40 KB. The firmware already moves mbedTLS to PSRAM and keeps the uplink stack there; only about 21 KB of internal RAM is left after the camera and Wi-Fi. If it still fails, choose one:
+   - **A.** Remove `FRAMESIZE_QVGA` from `RAW_SIZES` in `camera.cpp`. The raw picture drops to 240×176 and frees about 66 KB of internal RAM.
+   - **B.** Leave `DASHBOARD_URL` empty and use a phone as the live camera.
+
+   There is no unencrypted or unchecked mode.
 
 ## How it picks a mode
 

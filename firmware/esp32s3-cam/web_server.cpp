@@ -5,6 +5,7 @@
 #include "console.h"
 #include "esp_http_server.h"
 #include "motion.h"
+#include "uplink.h"
 #include "web_page.h"
 
 namespace
@@ -51,17 +52,20 @@ namespace
         const bool streaming = millis() - lastStreamFrameMs < 2000;
         const motion::Snapshot moving = motion::snapshot();
         const long sinceMotion = moving.lastMotionMs ? static_cast<long>((millis() - moving.lastMotionMs) / 1000) : -1;
-        char body[512];
+        const uplink::Status up = uplink::status();
+        char body[768];
         snprintf(body, sizeof(body),
                  "{\"sensor\":\"%s\",\"pid\":%u,\"mode\":\"%s\",\"width\":%u,\"height\":%u,"
                  "\"psramBuffer\":%s,\"fps\":%.1f,\"rssi\":%d,\"uptime\":%lu,\"freeHeap\":%u,"
                  "\"motion\":{\"percent\":%.1f,\"active\":%s,\"box\":[%u,%u,%u,%u],"
-                 "\"secondsSince\":%ld,\"threshold\":%u}}",
+                 "\"secondsSince\":%ld,\"threshold\":%u},"
+                 "\"uplink\":{\"state\":\"%s\",\"sent\":%lu,\"lastError\":\"%s\"}}",
                  camera.sensorName, camera.sensorPid, captureModeName(camera.mode), camera.width, camera.height,
                  camera.frameBufferInPsram ? "true" : "false", streaming ? streamFps : 0.0f, WiFi.RSSI(),
                  static_cast<unsigned long>(millis() / 1000), static_cast<unsigned>(ESP.getFreeHeap()),
                  moving.percent, moving.active ? "true" : "false", moving.x, moving.y, moving.w, moving.h,
-                 sinceMotion, moving.threshold);
+                 sinceMotion, moving.threshold,
+                 up.state, static_cast<unsigned long>(up.sent), up.lastError);
         httpd_resp_set_type(req, "application/json");
         httpd_resp_set_hdr(req, "Cache-Control", "no-store");
         return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);

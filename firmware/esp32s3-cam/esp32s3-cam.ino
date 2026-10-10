@@ -7,12 +7,14 @@
 #include "camera.h"
 #include "console.h"
 #include "secrets.h"
+#include "uplink.h"
 #include "web_server.h"
 
 namespace
 {
     bool cameraReady = false;
     bool serversStarted = false;
+    bool uplinkStarted = false;
     volatile bool gotAddress = false;
 
     // Tells you up front whether the board can see the network at all (2.4 GHz only).
@@ -70,6 +72,7 @@ namespace
         CONSOLE("Snapshot:      http://%s/capture\n", ip.c_str());
         CONSOLE("Status (JSON): http://%s/status\n", ip.c_str());
         CONSOLE("MJPEG stream:  http://%s:81/stream\n", ip.c_str());
+        CONSOLE("Dashboard:     %s\n", uplink::status().state);
     }
 }
 
@@ -78,6 +81,7 @@ void setup()
     Serial.begin(115200);
     delay(1500);
     CONSOLE("\nNestTrace ESP32-S3 camera starting\n");
+    uplink::useTlsMemoryInPsram();  // before Wi-Fi: TLS must not take the internal RAM the camera and Wi-Fi need
 
     // Camera first: the raw-mode frame buffer needs a large block of internal RAM before Wi-Fi takes its share.
     cameraReady = cameraBegin() && cameraStartCapture();
@@ -105,6 +109,11 @@ void loop()
         }
         if (serversStarted)
         {
+            if (!uplinkStarted)
+            {
+                uplinkStarted = true;
+                uplink::begin();
+            }
             announce();
         }
     }
