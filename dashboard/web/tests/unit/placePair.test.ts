@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bearingBetween, destinationPoint } from '@/lib/geo';
-import { nextZoneCode, planCameraPair } from '@/lib/cameras/placePair';
+import { distanceToZone, nearestZone, nextCameraCodes, partnerCode, planPairOnZone, zoneOrientation } from '@/lib/cameras/placePair';
 import type { LngLat, ZoneView } from '@/lib/types';
 import { SEED_ZONES } from '../../prisma/seed-data';
 
@@ -15,110 +15,110 @@ function metres(a: LngLat, b: LngLat): number
 const angleGap = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 
 const zones: ZoneView[] = SEED_ZONES.map((zone, i) => ({
-    id: `z${i}`, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: zone.outline.coordinates[0], custom: false,
+    id: `z${i}`, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: zone.outline.coordinates[0],
 }));
-const codes = zones.map(zone => zone.code);
 const zoneD = zones[3];
-// A point on the dune line about 150 m north-east of zone D's land edge.
-const click = destinationPoint(zoneD.ring[0], bearingBetween(zoneD.ring[1], zoneD.ring[0]), 150);
+const landMid = (ring: LngLat[]): LngLat => [(ring[0][0] + ring[1][0]) / 2, (ring[0][1] + ring[1][1]) / 2];
 const seaMid = (ring: LngLat[]): LngLat => [(ring[2][0] + ring[3][0]) / 2, (ring[2][1] + ring[3][1]) / 2];
+const seedCodes = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'];
 
-describe('nextZoneCode', () =>
+describe('zoneOrientation', () =>
 {
-    it('continues after the highest letter', () =>
+    it('gives the along-shore bearing and a seaward bearing perpendicular to it, toward the sea edge', () =>
     {
-        expect(nextZoneCode(['A', 'B', 'C', 'D'])).toBe('E');
-        expect(nextZoneCode(['D', 'A', 'F'])).toBe('G');
-        expect(nextZoneCode([])).toBe('A');
-    });
-
-    it('ignores codes that are not single letters', () =>
-    {
-        expect(nextZoneCode(['A', 'TEST', 'B2'])).toBe('B');
-    });
-
-    it('throws once Z is taken', () =>
-    {
-        expect(() => nextZoneCode(['A', 'Z'])).toThrow();
+        const { along, seaward } = zoneOrientation(zoneD);
+        expect(angleGap(along, bearingBetween(zoneD.ring[1], zoneD.ring[0]))).toBeLessThan(0.01);
+        expect(angleGap(seaward, along)).toBeCloseTo(90, 5);
+        expect(angleGap(seaward, bearingBetween(landMid(zoneD.ring), seaMid(zoneD.ring)))).toBeLessThan(90);
+        // Holiday Beach: the Gulf lies to the south-east.
+        expect(angleGap(seaward, 129)).toBeLessThan(15);
     });
 });
 
-describe('planCameraPair', () =>
+describe('nearestZone', () =>
 {
-    const plan = planCameraPair(click, zones, codes);
-    const [landNorth, landSouth, seaSouth, seaNorth, closing] = plan.ring;
-
-    it('names the zone and its cameras after the highest code', () =>
+    it('picks the zone a click falls inside', () =>
     {
-        expect(plan.code).toBe('E');
-        expect(plan.cameras.map(camera => camera.code)).toEqual(['E1', 'E2']);
+        expect(distanceToZone(landMid(zoneD.ring), zoneD)).toBeLessThan(1);
+        const inside: LngLat = [(landMid(zoneD.ring)[0] + seaMid(zoneD.ring)[0]) / 2, (landMid(zoneD.ring)[1] + seaMid(zoneD.ring)[1]) / 2];
+        expect(distanceToZone(inside, zoneD)).toBe(0);
+        expect(nearestZone(inside, zones).code).toBe('D');
     });
 
-    it('builds a closed 120 m by 60 m ring in land-north, land-south, sea-south, sea-north order', () =>
+    it('picks the closest zone for a click outside every zone', () =>
     {
-        expect(plan.ring).toHaveLength(5);
-        expect(closing).toEqual(landNorth);
-        expect(metres(landNorth, landSouth)).toBeCloseTo(120, 0);
-        expect(metres(seaNorth, seaSouth)).toBeCloseTo(120, 0);
-        expect(metres(landSouth, seaSouth)).toBeCloseTo(60, 0);
-        expect(metres(landNorth, seaNorth)).toBeCloseTo(60, 0);
-        // Land edge is centred on the click.
-        expect(metres(click, landNorth)).toBeCloseTo(60, 0);
-        expect(metres(click, landSouth)).toBeCloseTo(60, 0);
-        // North really is the along-beach end matching zone D's ring order.
-        const along = bearingBetween(zoneD.ring[1], zoneD.ring[0]);
-        expect(angleGap(bearingBetween(landSouth, landNorth), along)).toBeLessThan(1);
-        // Sea corners lie towards zone D's sea edge.
-        expect(metres(seaNorth, seaMid(zoneD.ring))).toBeLessThan(metres(landNorth, seaMid(zoneD.ring)));
+        const northOfD = destinationPoint(zoneD.ring[0], bearingBetween(zoneD.ring[1], zoneD.ring[0]), 150);
+        expect(nearestZone(northOfD, zones).code).toBe('D');
+        const southOfA = destinationPoint(zones[0].ring[1], bearingBetween(zones[0].ring[0], zones[0].ring[1]), 150);
+        expect(nearestZone(southOfA, zones).code).toBe('A');
     });
 
-    it('puts cameras at the land-edge ends, facing the sea toed in 20° toward the zone', () =>
+    it('refuses a click more than 2 km from every zone', () =>
     {
-        const [north, south] = plan.cameras;
-        expect(north.position).toEqual(landNorth);
-        expect(south.position).toEqual(landSouth);
-        const seaward = bearingBetween(landNorth, seaNorth);
-        expect(angleGap(seaward, 129)).toBeLessThan(15);
-        const centre: LngLat = [(landNorth[0] + landSouth[0] + seaSouth[0] + seaNorth[0]) / 4, (landNorth[1] + landSouth[1] + seaSouth[1] + seaNorth[1]) / 4];
+        const far = destinationPoint(zoneD.ring[0], 300, 2500);
+        expect(() => nearestZone(far, zones)).toThrow('Click closer to the beach');
+        expect(() => nearestZone(landMid(zoneD.ring), [])).toThrow('Click closer to the beach');
+    });
+});
+
+describe('nextCameraCodes', () =>
+{
+    it('continues the zone\'s numbering and ignores other zones', () =>
+    {
+        expect(nextCameraCodes('D', seedCodes, 2)).toEqual(['D3', 'D4']);
+        expect(nextCameraCodes('D', [...seedCodes, 'D7', 'E9'], 2)).toEqual(['D8', 'D9']);
+        expect(nextCameraCodes('F', seedCodes, 2)).toEqual(['F1', 'F2']);
+    });
+
+    it('stops at 99', () =>
+    {
+        expect(() => nextCameraCodes('D', ['D98'], 2)).toThrow();
+    });
+});
+
+describe('partnerCode', () =>
+{
+    it('pairs odd numbers with the next even one', () =>
+    {
+        expect(partnerCode('B1')).toBe('B2');
+        expect(partnerCode('B2')).toBe('B1');
+        expect(partnerCode('D3')).toBe('D4');
+        expect(partnerCode('D4')).toBe('D3');
+        expect(partnerCode('xyz')).toBeNull();
+    });
+});
+
+describe('planPairOnZone', () =>
+{
+    const click = landMid(zoneD.ring);
+    const plan = planPairOnZone(click, zoneD, seedCodes);
+    const [north, south] = plan.cameras;
+    const { along, seaward } = zoneOrientation(zoneD);
+
+    it('names the cameras with the zone\'s next numbers', () =>
+    {
+        expect(plan.cameras.map(camera => camera.code)).toEqual(['D3', 'D4']);
+    });
+
+    it('places them 40 m apart along the shore, centred on the click', () =>
+    {
+        expect(metres(north.position, south.position)).toBeCloseTo(40, 1);
+        expect(metres(click, north.position)).toBeCloseTo(20, 1);
+        expect(metres(click, south.position)).toBeCloseTo(20, 1);
+        expect(angleGap(bearingBetween(south.position, north.position), along)).toBeLessThan(0.5);
+    });
+
+    it('faces both out to sea, each turned 20° toward the other', () =>
+    {
         for (const camera of plan.cameras)
         {
-            expect(Math.abs(angleGap(camera.headingDeg, seaward) - 20)).toBeLessThan(0.5);
-            // Turned toward the centre: closer to it than straight seaward is.
-            const toCentre = bearingBetween(camera.position, centre);
-            expect(angleGap(camera.headingDeg, toCentre)).toBeLessThan(angleGap(seaward, toCentre));
+            expect(angleGap(camera.headingDeg, seaward)).toBeCloseTo(20, 5);
         }
-        // North camera turns toward the south end and vice versa.
-        expect(angleGap(north.headingDeg, bearingBetween(landNorth, landSouth))).toBeLessThan(angleGap(seaward, bearingBetween(landNorth, landSouth)));
-        expect(angleGap(south.headingDeg, bearingBetween(landSouth, landNorth))).toBeLessThan(angleGap(seaward, bearingBetween(landSouth, landNorth)));
-    });
-
-    it('covers the middle of the zone\'s sea edge with each 60° / 90 m cone', () =>
-    {
-        // The centroid itself sits atan(60/30) ≈ 63.4° off seaward from a land corner, so a cone
-        // aimed seaward + 20° (half-width 30°) cannot contain it; the sea-edge midpoint (45° off, 85 m) is inside.
-        const target = seaMid(plan.ring);
-        for (const camera of plan.cameras)
-        {
-            expect(angleGap(bearingBetween(camera.position, target), camera.headingDeg)).toBeLessThan(30);
-            expect(metres(camera.position, target)).toBeLessThan(90);
-        }
-    });
-
-    it('refuses a click far from every zone', () =>
-    {
-        expect(() => planCameraPair(destinationPoint(click, 300, 2500), zones, codes)).toThrow('Click closer to the beach');
-    });
-
-    it('defaults to a 39° beach with the sea to the south-east when there are no zones', () =>
-    {
-        const lone = planCameraPair(click, [], []);
-        expect(lone.code).toBe('A');
-        expect(angleGap(bearingBetween(lone.ring[1], lone.ring[0]), 39)).toBeLessThan(0.5);
-        expect(angleGap(bearingBetween(lone.ring[0], lone.ring[3]), 129)).toBeLessThan(0.5);
-    });
-
-    it('propagates code overflow', () =>
-    {
-        expect(() => planCameraPair(click, zones, [...codes, 'Z'])).toThrow();
+        const toSouth = bearingBetween(north.position, south.position);
+        const toNorth = bearingBetween(south.position, north.position);
+        expect(angleGap(north.headingDeg, toSouth)).toBeLessThan(angleGap(seaward, toSouth));
+        expect(angleGap(south.headingDeg, toNorth)).toBeLessThan(angleGap(seaward, toNorth));
+        // Both cones look across the sea edge of the zone, not along the beach.
+        expect(angleGap(north.headingDeg, bearingBetween(north.position, seaMid(zoneD.ring)))).toBeLessThan(60);
     });
 });

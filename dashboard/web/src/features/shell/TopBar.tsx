@@ -83,14 +83,12 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                         href={`/?alert=${firstDangerId}`}
                         data-tone="danger"
                         aria-label={`${dangerCount} danger: person near a nest site`}
-                        onClick={event =>
+                        // Server-rendered pages (Setup) pass no handler; a function prop there would crash the render.
+                        onClick={onDanger ? event =>
                         {
-                            if (onDanger)
-                            {
-                                event.preventDefault();
-                                onDanger(firstDangerId);
-                            }
-                        }}
+                            event.preventDefault();
+                            onDanger(firstDangerId);
+                        } : undefined}
                         title={`${dangerCount} open level-1 ${dangerCount === 1 ? 'danger' : 'dangers'}: a person near a nest site`}
                         className={cn(chip, 'bg-alarm font-semibold text-white shadow-[0_0_18px_rgba(255,77,94,0.5)] transition-colors hover:bg-[#FF6674] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-alarm motion-safe:animate-[alarm-chip_1.8s_ease-out_infinite]')}
                     >

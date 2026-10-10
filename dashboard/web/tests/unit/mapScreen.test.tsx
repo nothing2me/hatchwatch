@@ -11,7 +11,7 @@ vi.mock('@/features/map/MapView', async () =>
     const { visibleAlerts } = await import('@/features/map/playback');
     return {
         initialBounds: () => [[0, 0], [1, 1]],
-        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onDeleteZone?: (code: string) => void }, ref)
+        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onMoveCamera?: (code: string, to: [number, number]) => void }, ref)
         {
             React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn(), flyTo: vi.fn() }));
             const visible = visibleAlerts(props.snapshot.alerts, props.playback).map(alert => alert.id).join(',');
@@ -22,7 +22,7 @@ vi.mock('@/features/map/MapView', async () =>
                     <span data-testid="editing">{String(Boolean(props.editing))}</span>
                     <button onClick={() => props.onMapClick?.([-97.05, 27.82])}>map click</button>
                     <button onClick={() => { props.onMapClick?.([-97.05, 27.82]); props.onMapClick?.([-97.05, 27.82]); }}>map double click</button>
-                    {props.editing && props.snapshot.zones.filter(zone => zone.custom).map(zone => <button key={zone.id} onClick={() => props.onDeleteZone?.(zone.code)}>remove {zone.code}</button>)}
+                    <button onClick={() => props.onMoveCamera?.('B1', [-97.06, 27.81])}>drag B1</button>
                 </div>
             );
         }),
@@ -30,8 +30,8 @@ vi.mock('@/features/map/MapView', async () =>
 });
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
 const addCameraPair = vi.fn();
-const deleteZone = vi.fn();
-vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPair: (...args: unknown[]) => addCameraPair(...args), deleteZone: (...args: unknown[]) => deleteZone(...args) }));
+const updateCamera = vi.fn();
+vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPair: (...args: unknown[]) => addCameraPair(...args), updateCamera: (...args: unknown[]) => updateCamera(...args) }));
 vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-testid="close-up" /> }));
 
 class FakeEventSource
@@ -68,7 +68,7 @@ beforeEach(() =>
     FakeEventSource.instances = [];
     fetchMock.mockClear();
     addCameraPair.mockReset();
-    deleteZone.mockReset();
+    updateCamera.mockReset();
     vi.stubGlobal('EventSource', FakeEventSource);
     vi.stubGlobal('fetch', fetchMock);
 });
@@ -214,7 +214,6 @@ describe('MapScreen', () =>
     describe('camera editing', () =>
     {
         const admin = { ...user, role: 'ADMIN' as const };
-        const withCustom: MapSnapshot = { ...snapshot, zones: [...snapshot.zones, { id: 'ze', code: 'E', name: 'Zone E', activityLevel: 'LOW', ring: [[0, 0], [1, 0], [1, 1], [0, 0]], custom: true }] };
 
         it('offers Edit cameras only to admins', () =>
         {
@@ -232,10 +231,10 @@ describe('MapScreen', () =>
         {
             render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
-            expect(screen.getByText('Click the dune line to add a camera pair · Esc to finish')).toBeTruthy();
+            expect(screen.getByText('Click near a zone to add a camera pair facing the sea · drag a camera to move it · Esc to finish')).toBeTruthy();
             expect(screen.getByTestId('editing').textContent).toBe('true');
             fireEvent.keyDown(window, { key: 'Escape' });
-            expect(screen.queryByText(/Click the dune line/)).toBeNull();
+            expect(screen.queryByText(/Click near a zone/)).toBeNull();
             expect(screen.getByTestId('editing').textContent).toBe('false');
         });
 
@@ -248,22 +247,22 @@ describe('MapScreen', () =>
 
         it('adds a camera pair where the map is clicked and confirms it', async () =>
         {
-            addCameraPair.mockResolvedValue({ ok: true, code: 'E' });
+            addCameraPair.mockResolvedValue({ ok: true, codes: ['B3', 'B4'], zoneCode: 'B' });
             render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
             fireEvent.click(screen.getByText('map click'));
             expect(addCameraPair).toHaveBeenCalledWith([-97.05, 27.82]);
-            expect(await screen.findByText('Zone E added')).toBeTruthy();
+            expect(await screen.findByText('B3 · B4 added to Zone B')).toBeTruthy();
         });
 
         it('places one pair for a double click while the first is still saving', async () =>
         {
-            addCameraPair.mockResolvedValue({ ok: true, code: 'E' });
+            addCameraPair.mockResolvedValue({ ok: true, codes: ['B3', 'B4'], zoneCode: 'B' });
             render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
             fireEvent.click(screen.getByText('map double click'));
             expect(addCameraPair).toHaveBeenCalledTimes(1);
-            expect(await screen.findByText('Zone E added')).toBeTruthy();
+            expect(await screen.findByText('B3 · B4 added to Zone B')).toBeTruthy();
             fireEvent.click(screen.getByText('map click'));
             expect(addCameraPair).toHaveBeenCalledTimes(2);
         });
@@ -277,34 +276,25 @@ describe('MapScreen', () =>
             expect(await screen.findByText('Click closer to the beach')).toBeTruthy();
         });
 
-        it('asks before removing an added zone, then removes it', async () =>
+        it('moves a dragged camera and confirms it', async () =>
         {
-            deleteZone.mockResolvedValue({ ok: true, code: 'E' });
-            render(<MapScreen snapshot={withCustom} user={admin} />);
-            expect(screen.queryByText('remove B')).toBeNull();
+            updateCamera.mockResolvedValue({ ok: true, code: 'B1' });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
+            fireEvent.click(screen.getByText('drag B1'));
+            expect(updateCamera).not.toHaveBeenCalled();
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
-            fireEvent.click(screen.getByText('remove E'));
-            expect(deleteZone).not.toHaveBeenCalled();
-            const dialog = screen.getByRole('alertdialog', { name: /Remove Zone E/ });
-            // A map click while the question is open does not place a pair.
-            fireEvent.click(screen.getByText('map click'));
-            expect(addCameraPair).not.toHaveBeenCalled();
-            fireEvent.click(within(dialog).getByRole('button', { name: 'Remove zone' }));
-            expect(deleteZone).toHaveBeenCalledWith('E');
-            expect(await screen.findByText('Zone E removed')).toBeTruthy();
+            fireEvent.click(screen.getByText('drag B1'));
+            expect(updateCamera).toHaveBeenCalledWith('B1', { lng: -97.06, lat: 27.81 });
+            expect(await screen.findByText('B1 moved')).toBeTruthy();
         });
 
-        it('keeps the zone when the removal is cancelled or refused', async () =>
+        it('shows why a move was refused', async () =>
         {
-            deleteZone.mockResolvedValue({ ok: false, error: 'This zone has footage or alerts; it cannot be removed.' });
-            render(<MapScreen snapshot={withCustom} user={admin} />);
+            updateCamera.mockResolvedValue({ ok: false, error: 'Latitude must be between -90 and 90.' });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
-            fireEvent.click(screen.getByText('remove E'));
-            fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
-            expect(screen.queryByRole('alertdialog')).toBeNull();
-            fireEvent.click(screen.getByText('remove E'));
-            fireEvent.click(screen.getByRole('button', { name: 'Remove zone' }));
-            expect(await screen.findByText('This zone has footage or alerts; it cannot be removed.')).toBeTruthy();
+            fireEvent.click(screen.getByText('drag B1'));
+            expect(await screen.findByText('Latitude must be between -90 and 90.')).toBeTruthy();
         });
     });
 
