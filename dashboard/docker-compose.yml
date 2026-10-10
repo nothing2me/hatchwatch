@@ -27,11 +27,13 @@ services:
       # The container is the one live watcher; host dev (`npm run dev`) stays off unless LIVE_FEED=1 there.
       LIVE_FEED: "1"
       LIVE_ROOT: /sim-public
+      RECORDINGS_ROOT: /recordings
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./media:/media
       - ../artifacts/public:/sim-public:ro
+      - ./recordings:/recordings
     depends_on:
       db:
         condition: service_healthy

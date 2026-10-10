@@ -8,4 +8,6 @@ COPY . .
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run build
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && npm run start"]
+# exec hands PID 1 to next start (not npm, which does not forward signals), so SIGTERM from `docker compose stop`
+# reaches the server and the phone recorder can close its open segments.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && exec ./node_modules/.bin/next start -p 3000"]

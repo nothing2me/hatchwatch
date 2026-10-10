@@ -145,3 +145,15 @@ export interface LiveDeviceView
     recording: boolean;
     lastSeenAt: string;
 }
+
+export interface RecordingView
+{
+    path: string;
+    deviceId: string;
+    deviceName: string;
+    cameraCode: string | null;
+    startedAt: string;
+    durationS: number;
+    sizeBytes: number;
+    playable: boolean;
+}
