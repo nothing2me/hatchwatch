@@ -65,6 +65,7 @@ The fix keeps the raw buffer in internal SRAM, uses one buffer (`CAMERA_GRAB_WHE
 
 - Check `/status`: `mode` and `psramBuffer` show which path is running.
 - Unplug the GPIO extension board and test the bare board. The camera uses GPIO 4–18, and anything wired to those rows corrupts the data lines.
+  Confirmed on our board: with the MPU-6050 module and the round buzzer plugged into the extension board's breadboard, frames came out striped or short (`FB-SIZE: 138240 != 153600`). Removing those two parts fixed it. The MPU-6050 sits on the same I2C lines the camera uses for control (SCCB on GPIO 4/5), and a buzzer on a camera row loads the data or clock pins.
 - Reseat the camera ribbon (lift the latch, insert straight and fully, close the latch).
 - Use a short, good USB cable or a powered port. Brown-outs during Wi-Fi transmit also cause tearing.
 
