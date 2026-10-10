@@ -9,6 +9,8 @@ import type { AlertView } from '@/lib/types';
 import { useStoredBoolean } from '@/features/map/useStoredBoolean';
 import { isActive, type Playback } from '@/features/map/playback';
 import { inactiveState, NESTING, PROTECTION, type Tone } from '@/features/sites/labels';
+import { DangerGroupCard, ResolvedDangerCard } from './DangerCards';
+import { groupDangers } from './dangerGroups';
 
 const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
 
@@ -43,15 +45,21 @@ export function PatrolledMark()
 const outcomeNote = { saved: 'Saved', notSaved: 'Not saved', pending: '', none: '' } as const;
 
 // `inactiveCount` is the server's whole-log count; the snapshot lists only the newest inactive sites.
-export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = null, inactiveCount }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null; selectedId?: string | null; inactiveCount?: number })
+// Open dangers come first in Active, one card per person passing; `canResolve` (volunteers, admins) adds Resolve buttons.
+export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = null, inactiveCount, canResolve = false }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null; selectedId?: string | null; inactiveCount?: number; canResolve?: boolean })
 {
     const [open, setOpen] = useStoredBoolean('nesttrace.alerts.open', true);
     const [tab, setTab] = useState<Tab>('active');
+    // Danger ids whose group card is expanded (a card stays open as its dangers are resolved one by one).
+    const [expanded, setExpanded] = useState<Set<string>>(() => new Set(selectedId ? [selectedId] : []));
     const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ active: null, inactive: null });
 
     const active = alerts.filter(alert => alert.site.active);
     const inactive = alerts.filter(alert => !alert.site.active);
-    const shown = tab === 'active' ? active : inactive;
+    const dangerGroups = groupDangers(active.filter(alert => alert.kind === 'DANGER'));
+    const sitesById = new Map(alerts.filter(alert => alert.kind !== 'DANGER').map(alert => [alert.id, alert]));
+    const shown = (tab === 'active' ? active : inactive).filter(alert => tab === 'inactive' || alert.kind !== 'DANGER');
+    const empty = tab === 'active' ? active.length === 0 : inactive.length === 0;
     const counts: Record<Tab, number> = { active: active.length, inactive: Math.max(inactive.length, inactiveCount ?? 0) };
 
     function onTabKey(event: KeyboardEvent<HTMLButtonElement>)
@@ -110,8 +118,27 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                 ))}
             </div>
 
-            <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 pb-2">
-                {shown.length === 0 && (
+            <ul aria-label={tab === 'active' ? 'Active sites' : 'Inactive sites'} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 pb-2">
+                {tab === 'active' && dangerGroups.map(group => (
+                    <DangerGroupCard
+                        key={group.key}
+                        group={group}
+                        sites={sitesById}
+                        canResolve={canResolve}
+                        onSelect={onSelect}
+                        selectedId={selectedId}
+                        open={group.dangers.some(danger => expanded.has(danger.id))}
+                        onToggle={() => setExpanded(current =>
+                        {
+                            const ids = group.dangers.map(danger => danger.id);
+                            const next = new Set(current);
+                            const isOpen = ids.some(id => next.has(id));
+                            ids.forEach(id => (isOpen ? next.delete(id) : next.add(id)));
+                            return next;
+                        })}
+                    />
+                ))}
+                {empty && (
                     <li className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-white/8 px-4 py-6 text-center max-md:py-4">
                         <span className="grid h-9 w-9 place-items-center rounded-full bg-white/5 ring-1 ring-white/10">
                             <BellOff aria-hidden className="h-4 w-4 text-ink-muted" />
@@ -125,6 +152,10 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                 )}
                 {shown.map(alert =>
                 {
+                    if (alert.kind === 'DANGER')
+                    {
+                        return <ResolvedDangerCard key={alert.id} danger={alert} site={alert.siteId ? sitesById.get(alert.siteId) : undefined} onSelect={onSelect} selected={alert.id === selectedId} />;
+                    }
                     const playing = isActive(alert, playback);
                     const selected = alert.id === selectedId;
                     const live = alert.site.active;

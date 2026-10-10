@@ -87,8 +87,44 @@ describe('AnalyticsScreen', () =>
     });
 });
 
+describe('AnalyticsScreen dangers', () =>
+{
+    it('shows a Danger alerts tile with open / total and explains danger in Not saved', () =>
+    {
+        render(<AnalyticsScreen snapshot={{ ...snapshot, dangerCount: 2, dangerTotal: 5 }} user={viewer} />);
+        expect(within(tile('Danger alerts')).getByTestId('value').textContent).toBe('2/5');
+        expect(tile('Danger alerts').getAttribute('data-tone')).toBe('danger');
+        expect(screen.getByRole('region', { name: 'Outcomes' }).textContent).toContain('no protection 30 min after a person came near');
+    });
+
+    it('keeps the danger tile calm when none are open', () =>
+    {
+        render(<AnalyticsScreen snapshot={{ ...snapshot, dangerCount: 0, dangerTotal: 3 }} user={viewer} />);
+        expect(within(tile('Danger alerts')).getByTestId('value').textContent).toBe('0/3');
+        expect(tile('Danger alerts').getAttribute('data-tone')).toBeNull();
+    });
+});
+
 describe('TopBar', () =>
 {
+    it('shows a red danger chip linking to the first danger only when one is open', () =>
+    {
+        const { rerender } = render(<TopBar user={viewer} current="analytics" camerasOnline={1} camerasTotal={2} activeSites={3} dangerCount={2} firstDangerId="d7" />);
+        const chip = screen.getByRole('link', { name: /2 danger/ });
+        expect(chip.getAttribute('href')).toBe('/?alert=d7');
+        expect(chip.getAttribute('data-tone')).toBe('danger');
+        rerender(<TopBar user={viewer} current="analytics" camerasOnline={1} camerasTotal={2} activeSites={3} dangerCount={0} firstDangerId={null} />);
+        expect(screen.queryByRole('link', { name: /danger/ })).toBeNull();
+    });
+
+    it('opens the danger in place on the map page', () =>
+    {
+        const onDanger = vi.fn();
+        render(<TopBar user={viewer} current="map" camerasOnline={1} camerasTotal={2} activeSites={3} dangerCount={1} firstDangerId="d7" onDanger={onDanger} />);
+        fireEvent.click(screen.getByRole('link', { name: /1 danger/ }));
+        expect(onDanger).toHaveBeenCalledWith('d7');
+    });
+
     it('counts active sites and highlights the current page', () =>
     {
         render(<TopBar user={viewer} current="analytics" camerasOnline={1} camerasTotal={2} activeSites={23} />);

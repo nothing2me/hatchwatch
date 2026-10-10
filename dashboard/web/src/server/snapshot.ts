@@ -27,7 +27,7 @@ export interface AlertRow
     videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
     evidenceTier: EvidenceTier | null; simulated: boolean;
     level?: number; siteId?: string | null;
-    events: { type: string; at: Date; createdAt?: Date }[];
+    events: { type: string; at: Date; createdAt?: Date; author?: string }[];
 }
 
 export interface TrackRow
@@ -106,6 +106,13 @@ function trackPoints(points: unknown): TrackView['points']
 
 const toEvents = (events: { type: string; at: Date; createdAt?: Date }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date }[];
 
+// Who resolved a danger alert: its latest `dangerResolved` entry (null for sites and open dangers).
+function resolution(alert: AlertRow): { resolvedBy: string | null; resolvedAt: string | null }
+{
+    const entry = alert.kind === 'DANGER' ? alert.events.findLast(event => event.type === 'dangerResolved') : undefined;
+    return { resolvedBy: entry?.author ?? null, resolvedAt: entry ? entry.at.toISOString() : null };
+}
+
 export function fadeMinutes(): number
 {
     const value = Number(process.env.LIVE_FADE_MINUTES);
@@ -177,6 +184,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         level: alert.level ?? 0,
         siteId: alert.siteId ?? null,
         colorIndex: colorBySite.get(alert.id) ?? null,
+        ...resolution(alert),
         site: summarizeSite(toEvents(alert.events), alert.kind),
     }));
     const sites = alerts.filter(alert => alert.kind !== 'DANGER');
@@ -194,6 +202,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         dangerCount: rows.dangerCount ?? dangers.filter(alert => alert.site.active).length,
         dangerTotal: rows.dangerTotal ?? dangers.length,
         fadeMinutes: fadeMinutes(),
+        generatedAt: (rows.now ?? new Date()).toISOString(),
     };
 }
 
@@ -225,7 +234,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
                 { events: { some: { type: { in: PERSON_EVENTS }, createdAt: { gte: since } } } },
             ] },
             orderBy: { createdAt: 'desc' },
-            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
+            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true, author: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
         }),
         client.alert.count({ where: INACTIVE_WHERE }),
         // Outcomes cover nest sites only; danger alerts are events about a site.

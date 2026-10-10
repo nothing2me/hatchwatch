@@ -16,7 +16,7 @@ export default async function UsersPage()
         <UsersScreen
             user={user}
             users={users.map(u => ({ ...u, disabledAt: u.disabledAt?.toISOString() ?? null, createdAt: u.createdAt.toISOString() }))}
-            bar={{ camerasOnline: snapshot.camerasOnline, camerasTotal: snapshot.camerasTotal, activeSites }}
+            bar={{ camerasOnline: snapshot.camerasOnline, camerasTotal: snapshot.camerasTotal, activeSites, dangerCount: snapshot.dangerCount, firstDangerId: snapshot.alerts.find(alert => alert.kind === 'DANGER' && alert.site.active)?.id ?? null }}
         />
     );
 }

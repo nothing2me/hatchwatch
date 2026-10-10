@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LogOut, TriangleAlert, Video } from 'lucide-react';
+import { LogOut, Siren, TriangleAlert, Video } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
@@ -13,7 +13,11 @@ interface TopBarProps
     current: Page;
     camerasOnline: number;
     camerasTotal: number;
-    activeSites: number;     // the map's Active tab count
+    activeSites: number;     // open nest sites (the Active tab also lists open dangers, counted by their own chip)
+    dangerCount?: number;    // open level-1 danger alerts
+    firstDangerId?: string | null;
+    // Map page: open the danger in place instead of navigating.
+    onDanger?: (alertId: string) => void;
 }
 
 const chip = 'inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs';
@@ -38,7 +42,7 @@ function Mark()
     );
 }
 
-export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites }: TopBarProps)
+export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites, dangerCount = 0, firstDangerId = null, onDanger }: TopBarProps)
 {
     const hasSites = activeSites > 0;
     const links = NAV.filter(item => !item.adminOnly || user.role === 'ADMIN');
@@ -74,6 +78,27 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
             <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas · Holiday Beach</span>
 
             <div className="ml-auto flex items-center gap-1.5">
+                {dangerCount > 0 && firstDangerId && (
+                    <Link
+                        href={`/?alert=${firstDangerId}`}
+                        data-tone="danger"
+                        aria-label={`${dangerCount} danger: person near a nest site`}
+                        onClick={event =>
+                        {
+                            if (onDanger)
+                            {
+                                event.preventDefault();
+                                onDanger(firstDangerId);
+                            }
+                        }}
+                        title={`${dangerCount} open level-1 ${dangerCount === 1 ? 'danger' : 'dangers'}: a person near a nest site`}
+                        className={cn(chip, 'bg-alarm font-semibold text-white shadow-[0_0_18px_rgba(255,77,94,0.5)] transition-colors hover:bg-[#FF6674] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-alarm motion-safe:animate-[alarm-chip_1.8s_ease-out_infinite]')}
+                    >
+                        <Siren aria-hidden className="h-3.5 w-3.5" strokeWidth={2.5} />
+                        <span className="font-mono tabular-nums">{dangerCount}</span>
+                        <span className="max-sm:sr-only">danger</span>
+                    </Link>
+                )}
                 <span className={cn(chip, 'hidden bg-white/5 md:inline-flex')}>
                     <Video aria-hidden className="h-3.5 w-3.5 text-ok" />
                     <span className="font-mono tabular-nums">{camerasOnline}/{camerasTotal}</span>

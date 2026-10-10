@@ -22,7 +22,7 @@ interface UsersScreenProps
 {
     user: SessionUser;
     users: UserRow[];
-    bar: { camerasOnline: number; camerasTotal: number; activeSites: number };
+    bar: { camerasOnline: number; camerasTotal: number; activeSites: number; dangerCount?: number; firstDangerId?: string | null };
 }
 
 const ROLES: { value: Role; label: string }[] = [
@@ -92,7 +92,7 @@ export function UsersScreen({ user, users, bar }: UsersScreenProps)
     return (
         <main className="min-h-full bg-night-950">
             <div className="sticky top-0 z-20 p-3">
-                <TopBar user={user} current="users" camerasOnline={bar.camerasOnline} camerasTotal={bar.camerasTotal} activeSites={bar.activeSites} />
+                <TopBar user={user} current="users" camerasOnline={bar.camerasOnline} camerasTotal={bar.camerasTotal} activeSites={bar.activeSites} dangerCount={bar.dangerCount} firstDangerId={bar.firstDangerId} />
             </div>
             <div className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-ink">Users</h1>

@@ -307,4 +307,41 @@ describe('MapScreen', () =>
             expect(await screen.findByText('This zone has footage or alerts; it cannot be removed.')).toBeTruthy();
         });
     });
+
+    describe('trails and dangers', () =>
+    {
+        const site = { id: 's1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1', position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: 'v', simRunId: 'R', startT: 8, endT: 20, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: 0,
+            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null } } as AlertView;
+        const danger = { ...site, id: 'd1', kind: 'DANGER', message: 'Danger · person near an active nest site — immediate action', level: 1, siteId: 's1', colorIndex: null, startT: 14, endT: 15 } as AlertView;
+        const withDanger: MapSnapshot = { ...snapshot, alerts: [site, danger], dangerCount: 1, dangerTotal: 1 };
+
+        it('offers a Trails layer, on by default', () =>
+        {
+            render(<MapScreen snapshot={snapshot} user={user} />);
+            fireEvent.click(screen.getByRole('button', { name: 'Map layers' }));
+            expect((screen.getByRole('checkbox', { name: 'Trails' }) as HTMLInputElement).checked).toBe(true);
+        });
+
+        it('opens the first danger from the top-bar chip', async () =>
+        {
+            render(<MapScreen snapshot={withDanger} user={user} />);
+            fireEvent.click(screen.getByRole('link', { name: /1 danger/ }));
+            expect(await screen.findByRole('dialog', { name: 'Danger in zone B' })).toBeTruthy();
+        });
+
+        it('opens the danger named in the address (?alert=)', async () =>
+        {
+            window.history.replaceState(null, '', '/?alert=d1');
+            try
+            {
+                render(<MapScreen snapshot={withDanger} user={user} />);
+                expect(await screen.findByRole('dialog', { name: 'Danger in zone B' })).toBeTruthy();
+            }
+            finally
+            {
+                window.history.replaceState(null, '', '/');
+            }
+        });
+    });
 });
+

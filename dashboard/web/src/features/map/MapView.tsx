@@ -12,7 +12,8 @@ import type { LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
 import type { Playback } from './playback';
-import { pinFeatures } from './pins';
+import { dangerPins, pinFeatures } from './pins';
+import { trailFeatures } from './trails';
 import type { LayerKey } from './MapControls';
 
 export { initialBounds } from './bounds';
@@ -53,6 +54,11 @@ const pinPaint = {
 // Pins a metre or two apart overlap at beach zoom; grow them only as the map zooms in.
 const alertRadius = ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10, 20, 16] as unknown as number;
 const selectedRadius = ['interpolate', ['linear'], ['zoom'], 14, 9, 18, 16, 20, 23] as unknown as number;
+// Red outer halo on a site whose danger is still open.
+const haloRadius = ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 15, 20, 22] as unknown as number;
+const trailWidth = ['interpolate', ['linear'], ['zoom'], 14, 1.5, 18, 2.75, 20, 4] as unknown as number;
+const casingWidth = ['interpolate', ['linear'], ['zoom'], 14, 3, 18, 5, 20, 7] as unknown as number;
+const ALARM = '#FF4D5E';
 
 export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onDeleteZone }, ref)
 {
@@ -81,6 +87,14 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
     // Rebuild (and so MapLibre setData) only when a pin's look changes, not on every clock tick.
     const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
     const alertsGeoJson = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(pinKey) }), [pinKey]);
+    const dangers = dangerPins(snapshot.alerts);
+
+    // Trails change only when the clock passes a recorded point; key on what is drawn, not on every tick.
+    const trailKey = JSON.stringify(trailFeatures(snapshot.tracks ?? [], snapshot.alerts, playback));
+    const trails = useMemo(() => JSON.parse(trailKey) as ReturnType<typeof trailFeatures>, [trailKey]);
+    const trailLines = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: trails.lines }), [trails]);
+    const trailHeads = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: trails.heads }), [trails]);
+    const trailVisibility = layers.trails ? 'visible' : 'none';
 
     const [[west, south], [east, north]] = initialBounds(snapshot);
     const padding = typeof window === 'undefined' ? 80 : fitPadding(window.innerWidth, window.innerHeight);
@@ -149,8 +163,21 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         <Layer id="zone-line" type="line" paint={{ 'line-color': levelColor, 'line-width': 2 }} />
                     </Source>
                 )}
+                {/* Trails sit under the pins; hidden by layout so toggling keeps them below. */}
+                <Source id="trails" type="geojson" data={trailLines}>
+                    <Layer id="trail-casing" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round', visibility: trailVisibility }} paint={{ 'line-color': '#04080C', 'line-width': casingWidth, 'line-opacity': ['*', 0.55, ['get', 'opacity']] as unknown as number }} />
+                    <Layer id="trail-line" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round', visibility: trailVisibility }} paint={{ 'line-color': ['get', 'color'] as unknown as string, 'line-width': trailWidth, 'line-opacity': ['get', 'opacity'] as unknown as number }} />
+                </Source>
+                <Source id="trail-heads" type="geojson" data={trailHeads}>
+                    <Layer id="trail-head-glow" type="circle" layout={{ visibility: trailVisibility }} paint={{ 'circle-radius': 9, 'circle-color': ['get', 'color'] as unknown as string, 'circle-opacity': 0.22, 'circle-blur': 0.6 }} />
+                    <Layer id="trail-head" type="circle" layout={{ visibility: trailVisibility }} paint={{ 'circle-radius': 4, 'circle-color': ['get', 'color'] as unknown as string, 'circle-stroke-color': '#04080C', 'circle-stroke-width': 1.25 }} />
+                </Source>
                 {layers.alerts && (
                     <Source id="alerts" type="geojson" data={alertsGeoJson}>
+                        <Layer id="alert-danger-halo" type="circle" filter={['==', ['get', 'danger'], true]} paint={{
+                            'circle-radius': haloRadius, 'circle-color': ALARM, 'circle-opacity': 0.14, 'circle-blur': 0.15,
+                            'circle-stroke-color': ALARM, 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.95,
+                        }} />
                         <Layer id="alert-selected" type="circle" filter={['==', ['get', 'selected'], true]} paint={{
                             'circle-radius': selectedRadius, 'circle-color': 'rgba(0,0,0,0)',
                             'circle-stroke-color': '#FFB547', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.9,
@@ -211,6 +238,25 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         </Marker>
                     );
                 })}
+                {/* Level-1 dangers: pulsing red rings at the person's approach point, above everything else. */}
+                {layers.alerts && dangers.map(pin => (
+                    <Marker key={pin.id} longitude={pin.position[0]} latitude={pin.position[1]} style={{ zIndex: 4 }}>
+                        <button
+                            type="button"
+                            onClick={event => { event.stopPropagation(); onSelectAlert?.(pin.id); }}
+                            aria-label="Danger: person near a nest site"
+                            title="Danger · person near a nest site"
+                            className={cn('relative grid h-7 w-7 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white',
+                                pin.id === selectedAlertId && 'ring-2 ring-amber ring-offset-2 ring-offset-transparent')}
+                        >
+                            <span aria-hidden className="danger-pin__wave absolute inset-0 rounded-full border-2 border-alarm" />
+                            <span aria-hidden className="danger-pin__wave danger-pin__wave--late absolute inset-0 rounded-full border-2 border-alarm" />
+                            <span aria-hidden className="relative grid h-4 w-4 place-items-center rounded-full bg-alarm shadow-[0_0_12px_rgba(255,77,94,0.9)] ring-2 ring-white">
+                                <span className="h-1 w-1 rounded-full bg-white" />
+                            </span>
+                        </button>
+                    </Marker>
+                ))}
             </Map>
 
             {imageryOffline && (

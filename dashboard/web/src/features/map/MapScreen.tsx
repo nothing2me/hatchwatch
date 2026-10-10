@@ -25,8 +25,9 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 {
     const snapshot = useLiveSnapshot(initialSnapshot);
     const now = useNow(30_000);
-    // Same definition as the feed's Active tab, so the top bar and the tab always agree.
+    // Open nest sites only. The Active tab also lists open dangers; those are counted by the top bar's red danger chip.
     const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
+    const openDangers = snapshot.alerts.filter(alert => alert.kind === 'DANGER' && alert.site.active);
     const mapRef = useRef<MapRef>(null);
     const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
     // The open drawer keeps the last version of its site it saw, so a site that drops out of the
@@ -40,7 +41,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const selectedAlert = liveSelected ?? (heldAlert?.id === selectedAlertId ? heldAlert : null);
     const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
-    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true });
+    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, trails: true });
 
     const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
     const [playback, setPlayback] = useState<Playback | null>(null);
@@ -211,6 +212,26 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         }
     }, [snapshot.alerts, openSite]);
 
+    // Other pages link the danger chip to /?alert=<id>; open it once the map is up, then tidy the address.
+    const linked = useRef(false);
+    useEffect(() =>
+    {
+        if (linked.current)
+        {
+            return;
+        }
+        linked.current = true;
+        const id = new URLSearchParams(window.location.search).get('alert');
+        if (id)
+        {
+            openSiteById(id);
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [openSiteById]);
+
+    const linkedSite = selectedAlert?.siteId ? snapshot.alerts.find(alert => alert.id === selectedAlert.siteId) ?? null : null;
+    const siteDangers = selectedAlert ? openDangers.filter(alert => alert.siteId === selectedAlert.id) : [];
+
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
             <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById}
@@ -229,11 +250,12 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
-                <TopBar user={user} current="map" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
+                <TopBar user={user} current="map" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites}
+                    dangerCount={snapshot.dangerCount} firstDangerId={openDangers[0]?.id ?? null} onDanger={openSiteById} />
 
                 <div className="flex min-h-0 flex-1 gap-3">
                     <div className="flex min-h-0 flex-col items-start max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:max-h-[45%] md:w-72">
-                        <AlertsFeed alerts={snapshot.alerts} inactiveCount={snapshot.inactiveCount} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} />
+                        <AlertsFeed alerts={snapshot.alerts} inactiveCount={snapshot.inactiveCount} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} canResolve={user.role !== 'VIEWER'} />
                     </div>
 
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
@@ -251,7 +273,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                             editing={editing}
                             onToggleEdit={isAdmin ? () => (editing ? finishEditing() : setEditing(true)) : undefined}
                         />
-                        {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} />}
+                        {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} linkedSite={linkedSite} dangers={siteDangers} onOpenAlert={openSiteById} />}
                     </div>
                 </div>
 

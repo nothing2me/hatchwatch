@@ -93,6 +93,9 @@ export interface AlertView
     siteId: string | null;
     /** Trail palette index of this site's matched trail; null when it has none. */
     colorIndex: number | null;
+    /** DANGER alerts: who resolved it and when (the latest `dangerResolved` entry); null while open. */
+    resolvedBy?: string | null;
+    resolvedAt?: string | null;
     site: SiteSummary;
 }
 
@@ -119,4 +122,6 @@ export interface MapSnapshot
     dangerTotal: number;      // every DANGER alert in the log
     outcomes: { saved: number; notSaved: number; pending: number };
     fadeMinutes: number;
+    /** ISO time the server built this snapshot; the client re-applies time rules (30-min Not saved) from here. */
+    generatedAt?: string;
 }

@@ -1,15 +1,16 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Archive, Cctv, Footprints, MapPin, Radar, ShieldAlert } from 'lucide-react';
+import { Archive, Cctv, Footprints, MapPin, Radar, ShieldAlert, Siren } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth/session';
 import type { MapSnapshot } from '@/lib/types';
 import { isNestSite } from '@/lib/danger';
 import { cn } from '@/lib/cn';
 import { TopBar } from '@/features/shell/TopBar';
 import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
+import { useNow } from '@/features/live/useNow';
 import { BarChart, StackedBar, type Segment } from './charts';
-import { analyticsMetrics, percentOf, type Bar, type Scope } from './metrics';
+import { analyticsMetrics, dangerStats, percentOf, type Bar, type Scope } from './metrics';
 
 const SCOPES: { key: Scope; label: string }[] = [
     { key: 'map', label: 'On the map now' },
@@ -62,10 +63,12 @@ interface TileProps
     icon: ReactNode;
     meter?: { pct: number; color: string };
     danger?: boolean;
+    /** Level-1 danger red instead of the orange "needs attention" tone. */
+    alarm?: boolean;
     className?: string;
 }
 
-function Tile({ label, value, caption, icon, meter, danger = false, className }: TileProps)
+function Tile({ label, value, caption, icon, meter, danger = false, alarm = false, className }: TileProps)
 {
     return (
         <div
@@ -73,16 +76,16 @@ function Tile({ label, value, caption, icon, meter, danger = false, className }:
             aria-label={label}
             data-tone={danger ? 'danger' : undefined}
             className={cn('relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-4 sm:p-5',
-                danger ? 'border-danger/35 bg-danger/[0.07]' : 'border-white/8 bg-night-900/70', className)}
+                danger ? (alarm ? 'border-alarm/45 bg-alarm/[0.09]' : 'border-danger/35 bg-danger/[0.07]') : 'border-white/8 bg-night-900/70', className)}
         >
-            {danger && <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-danger to-transparent" />}
+            {danger && <span aria-hidden className={cn('absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent', alarm ? 'via-alarm' : 'via-danger')} />}
             <div className="flex items-start justify-between gap-2">
-                <p className={cn('text-[11px] leading-[1.4] font-semibold tracking-[0.12em] uppercase', danger ? 'text-[#F2865A]' : 'text-ink-muted')}>{label}</p>
-                <span aria-hidden className={cn('shrink-0', danger ? 'text-danger' : 'text-ink-muted/70')}>{icon}</span>
+                <p className={cn('text-[11px] leading-[1.4] font-semibold tracking-[0.12em] uppercase', danger ? (alarm ? 'text-[#FF8A95]' : 'text-[#F2865A]') : 'text-ink-muted')}>{label}</p>
+                <span aria-hidden className={cn('shrink-0', danger ? (alarm ? 'text-alarm' : 'text-danger') : 'text-ink-muted/70')}>{icon}</span>
             </div>
             {/* Value block sits on the tile floor so tiles in a row line up even when a label wraps. */}
             <div className="mt-auto pt-3">
-                <p data-testid="value" className={cn('text-[34px] leading-none font-semibold tracking-tight sm:text-[40px]', danger ? 'text-[#F2865A]' : 'text-ink')}>{value}</p>
+                <p data-testid="value" className={cn('text-[34px] leading-none font-semibold tracking-tight sm:text-[40px]', danger ? (alarm ? 'text-[#FF8A95]' : 'text-[#F2865A]') : 'text-ink')}>{value}</p>
                 <p className="mt-2 text-xs leading-snug text-ink-muted tabular-nums">{caption}</p>
                 <span aria-hidden className={cn('mt-3 block h-1 overflow-hidden rounded-full', meter ? 'bg-white/8' : 'bg-transparent')}>
                     {meter && <span className="block h-full rounded-full" style={{ width: `${meter.pct}%`, backgroundColor: meter.color }} />}
@@ -150,7 +153,7 @@ function Outcomes({ outcomes }: { outcomes: { saved: number; notSaved: number; p
     const total = outcomes.saved + outcomes.notSaved + outcomes.pending;
     const segments: (Segment & { note: string })[] = [
         { key: 'saved', label: 'Saved', count: outcomes.saved, color: '#4ADE80', note: 'hatched' },
-        { key: 'notSaved', label: 'Not saved', count: outcomes.notSaved, color: DANGER, note: 'lost, or faded unprotected' },
+        { key: 'notSaved', label: 'Not saved', count: outcomes.notSaved, color: DANGER, note: 'lost, faded unprotected, or no protection 30 min after a person came near' },
         { key: 'pending', label: 'Pending', count: outcomes.pending, color: '#8A9BA6', note: 'still open' },
     ];
     return (
@@ -167,7 +170,7 @@ function Outcomes({ outcomes }: { outcomes: { saved: number; notSaved: number; p
                             <span className="text-2xl font-semibold text-ink sm:text-3xl">{segment.count}</span>
                             <span className="font-mono text-xs text-ink-muted tabular-nums">{percentOf(segment.count, total)}%</span>
                         </dd>
-                        <dd className="mt-0.5 hidden truncate text-[11px] text-ink-muted/80 sm:block">{segment.note}</dd>
+                        <dd className="mt-0.5 hidden text-[11px] leading-snug text-ink-muted/80 sm:block">{segment.note}</dd>
                     </div>
                 ))}
             </dl>
@@ -194,7 +197,11 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
 {
     const snapshot = useLiveSnapshot(initialSnapshot);
     const [scope, setScope] = useState<Scope>('map');
-    const m = analyticsMetrics(snapshot, scope);
+    // The client clock re-applies the 30-min danger rule, so Not saved moves when a deadline passes.
+    const now = useNow(15_000);
+    const m = analyticsMetrics(snapshot, scope, now);
+    const danger = dangerStats(snapshot);
+    const firstDanger = snapshot.alerts.find(alert => alert.kind === 'DANGER' && alert.site.active)?.id ?? null;
     const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
     const nothingYet = snapshot.alerts.length === 0 && snapshot.inactiveCount === 0;
     const icon = 'h-4 w-4';
@@ -206,7 +213,7 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
             <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[60rem] max-w-[200vw] -translate-x-1/2 rounded-full bg-amber/[0.06] blur-3xl" />
 
             <div className="sticky top-0 z-20 p-3">
-                <TopBar user={user} current="analytics" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
+                <TopBar user={user} current="analytics" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} dangerCount={snapshot.dangerCount} firstDangerId={firstDanger} />
             </div>
 
             <div className="relative mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
@@ -229,12 +236,13 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
                     ? <div className="mt-8"><EmptyState title="No sites yet — waiting for the live feed" body="Digging alerts from the beach cameras will show up here as soon as the first one arrives." /></div>
                     : (
                         <>
-                            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
                                 <Tile label="Sites" value={String(m.sites)} caption={scope === 'map' ? 'on the live map' : `${activeSites} active · ${m.sites - activeSites} inactive`} icon={<MapPin className={icon} />} />
                                 <Tile label="Unprotected" value={String(m.unprotected)} caption={`${m.unprotectedPct}% of sites`} icon={<ShieldAlert className={icon} />} danger={m.unprotected > 0} meter={{ pct: m.unprotectedPct, color: DANGER }} />
                                 <Tile label="Patrol visited" value={String(m.patrolVisited)} caption={`${m.patrolVisitedPct}% of sites`} icon={<Footprints className={icon} />} meter={{ pct: m.patrolVisitedPct, color: '#D7E3EA' }} />
                                 <Tile label="Seen by both cameras" value={`${m.bothCamerasPct}%`} caption={`${m.bothCameras} of ${m.charted} sites`} icon={<Cctv className={icon} />} meter={{ pct: m.bothCamerasPct, color: '#FFB547' }} />
-                                <Tile label="Archived" value={String(m.archived)} caption={scope === 'map' ? 'none on the live map' : 'faded, nobody logged'} icon={<Archive className={icon} />} className="max-sm:col-span-2" />
+                                <Tile label="Archived" value={String(m.archived)} caption={scope === 'map' ? 'none on the live map' : 'faded, nobody logged'} icon={<Archive className={icon} />} />
+                                <Tile label="Danger alerts" value={`${danger.active}/${danger.total}`} caption={danger.active > 0 ? 'open now · person near a nest' : danger.total > 0 ? 'all resolved' : 'none logged'} icon={<Siren className={icon} />} danger={danger.active > 0} alarm />
                             </div>
 
                             {m.charted === 0

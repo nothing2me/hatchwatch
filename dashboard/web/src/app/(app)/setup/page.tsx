@@ -12,10 +12,11 @@ export default async function SetupPage()
 {
     const [user, snapshot] = await Promise.all([requireCurrentUser('ADMIN'), getMapSnapshot()]);
     const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
+    const firstDangerId = snapshot.alerts.find(alert => alert.kind === 'DANGER' && alert.site.active)?.id ?? null;
     return (
         <main className="min-h-full bg-night-950">
             <div className="sticky top-0 z-20 p-3">
-                <TopBar user={user} current="setup" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
+                <TopBar user={user} current="setup" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} dangerCount={snapshot.dangerCount} firstDangerId={firstDangerId} />
             </div>
             <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-ink">Setup</h1>

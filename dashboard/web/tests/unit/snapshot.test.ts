@@ -82,3 +82,18 @@ describe('outcomesFromStatusCounts', () =>
         expect(toMapSnapshot({ ...rows, outcomes: { saved: 9, notSaved: 8, pending: 7 } }).outcomes).toEqual({ saved: 9, notSaved: 8, pending: 7 });
     });
 });
+
+describe('danger fields', () =>
+{
+    it('names who resolved a danger and stamps when the snapshot was made', () =>
+    {
+        const danger = { ...rows.alerts[0], id: 'd1', kind: 'DANGER' as const, status: 'REVIEWED' as const, level: 1, siteId: 'a1', events: [
+            { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+            { type: 'dangerResolved', at: new Date('2026-10-09T18:05:00Z'), author: 'Vera Volunteer' },
+        ] };
+        const snapshot = toMapSnapshot({ ...rows, alerts: [...rows.alerts, danger], now: new Date('2026-10-09T19:00:00Z') });
+        expect(snapshot.alerts[2]).toMatchObject({ resolvedBy: 'Vera Volunteer', resolvedAt: '2026-10-09T18:05:00.000Z' });
+        expect(snapshot.alerts[0]).toMatchObject({ resolvedBy: null, resolvedAt: null });
+        expect(snapshot.generatedAt).toBe('2026-10-09T19:00:00.000Z');
+    });
+});
