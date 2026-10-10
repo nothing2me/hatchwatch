@@ -1,0 +1,15 @@
+{
+	# Self-signed certificates from Caddy's internal CA; never contact ACME.
+	local_certs
+	auto_https disable_redirects
+	# Clients connecting by IP send no SNI; serve the LAN certificate to them.
+	default_sni {$LAN_HOST}
+}
+
+https://{$LAN_HOST}:3443, https://localhost:3443 {
+	tls internal
+	reverse_proxy web:3000 {
+		# Server-sent events must not be buffered.
+		flush_interval -1
+	}
+}
