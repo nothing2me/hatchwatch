@@ -8,7 +8,7 @@ const deleteCamera = vi.fn();
 const faceOcean = vi.fn();
 const mergeZoneInto = vi.fn();
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
-vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPairToZone, addCameraPairNewZone, updateCamera, deleteCamera, faceOcean, mergeZoneInto }));
+vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPairToZone, addCameraPairNewZone, updateCamera, deleteCamera, faceOcean, mergeZoneInto, setCameraSource: vi.fn() }));
 
 const { CamerasScreen } = await import('@/features/cameras/CamerasScreen');
 
@@ -20,7 +20,7 @@ const zones = [
     { code: 'B', name: 'Zone B', suggested: [-97.0645, 27.8166] as [number, number], mergeable: false },
     { code: 'D', name: 'Zone D', suggested: [-97.059, 27.8227] as [number, number], mergeable: true },
 ];
-const row = { fovDeg: 44, rangeM: 350, status: 'ONLINE' as const, footage: 1, alerts: 0 };
+const row = { fovDeg: 44, rangeM: 350, status: 'ONLINE' as const, footage: 1, alerts: 0, liveDeviceId: null, liveDeviceName: null };
 const cameras = [
     { ...row, code: 'B1', zoneCode: 'B', lng: -97.062796, lat: 27.81816, headingDeg: 203, liveSlot: true },
     { ...row, code: 'B2', zoneCode: 'B', lng: -97.065525, lat: 27.815179, headingDeg: 56, liveSlot: true },

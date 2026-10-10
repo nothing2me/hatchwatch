@@ -15,3 +15,9 @@ web/local-models/
 
 # opencode continuation state
 .omo/
+# ESP32 firmware local Wi-Fi settings
+firmware/**/secrets.h
+
+# Live detection worker: local virtualenv and the downloaded model (fetched at image build, never committed)
+dashboard/worker/.venv/
+dashboard/worker/models/

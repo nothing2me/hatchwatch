@@ -27,14 +27,50 @@ services:
       # The container is the one live watcher; host dev (`npm run dev`) stays off unless LIVE_FEED=1 there.
       LIVE_FEED: "1"
       LIVE_ROOT: /sim-public
+      RECORDINGS_ROOT: /recordings
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./media:/media
       - ../artifacts/public:/sim-public:ro
+      - ./recordings:/recordings
+    networks:
+      - default
+      - internal
     depends_on:
       db:
         condition: service_healthy
 
+  # People and possible-turtle detection on live frames (spec 2026-10-10-live-detection-design.md). No published ports;
+  # the internal network has no route out, so frames and results never leave the laptop.
+  worker:
+    build: ./worker
+    environment:
+      WEB_URL: http://web:3000
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+    networks:
+      - internal
+    depends_on:
+      - web
+    # An unset WORKER_TOKEN exits non-zero: retry 3 times, then stay down instead of looping forever.
+    restart: on-failure:3
+
+  caddy:
+    image: caddy:2
+    environment:
+      LAN_HOST: ${LAN_HOST:-127.0.0.1}
+    ports:
+      - "0.0.0.0:3443:3443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - web
+
 volumes:
   pgdata:
+  caddy_data:
+
+networks:
+  internal:
+    internal: true

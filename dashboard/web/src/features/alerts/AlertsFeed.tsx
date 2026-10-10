@@ -4,12 +4,13 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { BellOff, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
+import { isCameraDanger } from '@/lib/danger';
 import { classifyOutcome } from '@/lib/sites/outcomes';
 import type { AlertKind, AlertView } from '@/lib/types';
 import { useStoredBoolean } from '@/features/map/useStoredBoolean';
 import { isActive, type Playback } from '@/features/map/playback';
 import { inactiveState, NESTING, PROTECTION, type Tone } from '@/features/sites/labels';
-import { DangerGroupCard, ResolvedDangerCard } from './DangerCards';
+import { CameraDangerCard, DangerGroupCard, ResolvedDangerCard } from './DangerCards';
 import { groupDangers } from './dangerGroups';
 
 const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
@@ -64,7 +65,9 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
     const filtered = alerts.filter(alert => activities.has(alert.kind));
     const active = filtered.filter(alert => alert.site.active);
     const inactive = filtered.filter(alert => !alert.site.active);
-    const dangerGroups = groupDangers(active.filter(alert => alert.kind === 'DANGER'));
+    // Camera-level dangers (live detection, no nest site) get their own cards and are never grouped with site dangers.
+    const cameraDangers = active.filter(isCameraDanger);
+    const dangerGroups = groupDangers(active.filter(alert => alert.kind === 'DANGER' && !isCameraDanger(alert)));
     const sitesById = new Map(alerts.filter(alert => alert.kind !== 'DANGER').map(alert => [alert.id, alert]));
     const shown = (tab === 'active' ? active : inactive).filter(alert => tab === 'inactive' || alert.kind !== 'DANGER');
     const empty = tab === 'active' ? active.length === 0 : inactive.length === 0;
@@ -134,6 +137,9 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
             </details>
 
             <ul aria-label={tab === 'active' ? 'Active sites' : 'Inactive sites'} className="min-h-0 max-h-[25rem] flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-2 pb-2">
+                {tab === 'active' && cameraDangers.map(danger => (
+                    <CameraDangerCard key={danger.id} danger={danger} canResolve={canResolve} onSelect={onSelect} selected={danger.id === selectedId} />
+                ))}
                 {tab === 'active' && dangerGroups.map(group => (
                     <DangerGroupCard
                         key={group.key}

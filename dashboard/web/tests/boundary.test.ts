@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const dashboardRoot = join(import.meta.dirname, '..', '..');
-const skipDirectories = new Set(['node_modules', '.next', 'generated', 'migrations', 'media']);
+const skipDirectories = new Set(['node_modules', '.next', 'generated', 'migrations', 'media', 'recordings', '.venv', 'models', '__pycache__', '.pytest_cache']);
 const scannedExtensions = /\.(ts|tsx|js|mjs|cjs|py|json|ya?ml|Dockerfile)$|Dockerfile$/;
 
 // agent.md: the dashboard must not depend on the simulator, the research API, or evaluator truth.
