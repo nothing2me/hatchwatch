@@ -159,6 +159,21 @@ describe('camera-level danger', () =>
         expect(await cameraDangers()).toHaveLength(1);
     });
 
+    it('measures the 2 s span only on validated trails (a future or unordered point is refused)', async () =>
+    {
+        await site();
+        store.put(deviceId, jpeg(), clock);
+        const post = (points: number[][]) =>
+        {
+            const body = { at: clock, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person', score: 0.9, box: [1, 2, 3, 4] }], trails: [{ track: 'P1', label: 'person', points }] };
+            return postInternalDetections({ prisma, store, token: TOKEN, now: () => clock, dangerThrottle: new CameraDangerThrottle(0) }, deviceId, new Request('http://web:3000/x', { method: 'POST', body: JSON.stringify(body), headers: { authorization: `Bearer ${TOKEN}` } }));
+        };
+        // Seen for 1 s only, padded with a point after the result or out of order.
+        expect((await post([[clock - 1_000, 1, 1], [clock, 2, 1], [clock + 5_000, 3, 1]])).status).toBe(400);
+        expect((await post([[clock - 1_000, 1, 1], [clock - 5_000, 2, 1], [clock, 3, 1]])).status).toBe(400);
+        expect(await cameraDangers()).toEqual([]);
+    });
+
     it('runs the locked check at most once per camera every 5 s', async () =>
     {
         expect(await seen()).toBe('none');

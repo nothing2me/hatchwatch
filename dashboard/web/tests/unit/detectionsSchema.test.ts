@@ -19,6 +19,12 @@ describe('detections payload', () =>
     {
         expect(parseDetections(valid)).toEqual(valid);
         expect(parseDetections({ ...valid, dark: true, objects: [], trails: [] })?.dark).toBe(true);
+        // Edges are inside; equal times are in order.
+        const edge = { ...valid, objects: [{ ...valid.objects[0], box: [289, 154, 31, 86] }], trails: [{ ...valid.trails[0], points: [[valid.at, 320, 240], [valid.at, 0, 0]] }] };
+        expect(parseDetections(edge)).toEqual(edge);
+        // The worker's 0.1 px rounding of a clipped edge box.
+        const rounded = { ...valid, objects: [{ ...valid.objects[0], box: [100.1, 154.1, 220, 86] }] };
+        expect(parseDetections(rounded)).toEqual(rounded);
     });
 
     it('refuses anything else', () =>
@@ -39,6 +45,18 @@ describe('detections payload', () =>
             { ...valid, trails: [{ ...valid.trails[0], points: [] }] },
             { ...valid, trails: [{ ...valid.trails[0], points: Array.from({ length: MAX_TRAIL_POINTS + 1 }, (_, i) => [i, 1, 1]) }] },
             { ...valid, trails: [{ ...valid.trails[0], label: 'possible turtle' }] },
+            // Boxes inside the picture: x + w <= width, y + h <= height (plus 0.5 px for the worker's rounding).
+            { ...valid, objects: [{ ...valid.objects[0], box: [290, 104, 31, 86] }] },
+            { ...valid, objects: [{ ...valid.objects[0], box: [194, 155, 31, 86] }] },
+            { ...valid, objects: [{ ...valid.objects[0], box: [400, 10, 0, 0] }] },
+            // Trail points inside the picture, in time order, never after the result.
+            { ...valid, trails: [{ ...valid.trails[0], points: [[valid.at, 321, 1]] }] },
+            { ...valid, trails: [{ ...valid.trails[0], points: [[valid.at, 1, 241]] }] },
+            { ...valid, trails: [{ ...valid.trails[0], points: [[valid.at, 1, 1], [valid.at - 2_000, 1, 1]] }] },
+            { ...valid, trails: [{ ...valid.trails[0], points: [[valid.at - 2_000, 1, 1], [valid.at + 1, 1, 1]] }] },
+            // Track ids unique within objects and within trails.
+            { ...valid, objects: [valid.objects[0], { ...valid.objects[0], box: [1, 1, 2, 2] }] },
+            { ...valid, trails: [valid.trails[0], valid.trails[0]] },
         ];
         for (const value of bad)
         {

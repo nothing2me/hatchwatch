@@ -63,7 +63,8 @@ export class FrameStore
         return entry?.motion && now - entry.at <= ONLINE_MS ? { ...entry.motion, at: entry.at } : null;
     }
 
-    // A worker result for the device's current picture; older or repeated frame times are refused.
+    // A worker result for the device's current picture; older or repeated frame times are refused, and so is a time
+    // after the newest frame this store issued (a far-future result would otherwise lock out every later one).
     putDetections(deviceId: string, detections: DetectionsView, now: number = Date.now()): 'stored' | 'stale' | 'offline'
     {
         const entry = this.entries.get(deviceId);
@@ -71,7 +72,7 @@ export class FrameStore
         {
             return 'offline';
         }
-        if (entry.detections && detections.at <= entry.detections.at)
+        if (detections.at > entry.at || (entry.detections && detections.at <= entry.detections.at))
         {
             return 'stale';
         }

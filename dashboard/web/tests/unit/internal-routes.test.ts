@@ -104,4 +104,30 @@ describe('internal routes', () =>
         expect((await postInternalDetections(deps, 'd1', post('d1', 'x'.repeat(256 * 1024 + 1)))).status).toBe(413);
         expect((await postInternalDetections(deps, 'gone', post('gone', empty(T0)))).status).toBe(404);
     });
+
+    it('refuses a result newer than the newest frame (409) so a far-future time cannot lock the device', async () =>
+    {
+        const { deps, store } = setup();
+        expect((await postInternalDetections(deps, 'd1', post('d1', empty(T0 + 1)))).status).toBe(409);
+        expect((await postInternalDetections(deps, 'd1', post('d1', empty(Number.MAX_SAFE_INTEGER)))).status).toBe(409);
+        expect(store.detections('d1', T0 + 100)).toBeNull();
+        expect((await postInternalDetections(deps, 'd1', post('d1', empty(T0)))).status).toBe(200);
+    });
+
+    it('refuses a result whose boxes or trails do not fit the picture and the frame time (400)', async () =>
+    {
+        const { deps, store } = setup();
+        const person = (box: number[]) => ({ track: 'P1', label: 'person', score: 0.9, box });
+        const trail = (points: number[][], track = 'P1') => ({ track, label: 'person', points });
+        const bad = [
+            { ...empty(T0), objects: [person([300, 10, 21, 10])] },
+            { ...empty(T0), trails: [trail([[T0, 1, 1], [T0 + 1, 2, 1]])] },
+            { ...empty(T0), trails: [trail([[T0, 1, 1], [T0 - 5_000, 2, 1]])] },
+        ];
+        for (const body of bad)
+        {
+            expect((await postInternalDetections(deps, 'd1', post('d1', body))).status).toBe(400);
+        }
+        expect(store.detections('d1', T0 + 100)).toBeNull();
+    });
 });

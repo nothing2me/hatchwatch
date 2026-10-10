@@ -113,4 +113,17 @@ describe('FrameStore', () =>
         store.forget('d1');
         expect(store.detections('d1', 11_300)).toBeNull();
     });
+
+    it('refuses a result newer than the newest frame, so a far-future time cannot lock the device', () =>
+    {
+        const store = new FrameStore();
+        const result = (at: number) => ({ at, dark: false, width: 320, height: 240, objects: [], trails: [] });
+        store.put('d1', jpeg(1), 1_000);
+        expect(store.putDetections('d1', result(1_001), 1_100)).toBe('stale');
+        expect(store.putDetections('d1', result(Number.MAX_SAFE_INTEGER), 1_100)).toBe('stale');
+        expect(store.detections('d1', 1_100)).toBeNull();
+        expect(store.putDetections('d1', result(1_000), 1_100)).toBe('stored');
+        store.put('d1', jpeg(2), 1_500);
+        expect(store.putDetections('d1', result(1_500), 1_600)).toBe('stored');
+    });
 });
