@@ -110,6 +110,7 @@ export async function listDevices(prisma: PrismaClient, store: FrameStore, optio
             recording: options.isRecording?.(row.id) ?? false,
             lastSeenAt: new Date(Math.max(frameAt ?? 0, row.lastSeenAt.getTime())).toISOString(),
             motion: reading ? { percent: reading.percent, active: reading.active, box: reading.box, at: new Date(reading.at).toISOString() } : null,
+            detections: online.has(row.id) ? store.detections(row.id, now) : null,
         };
     });
 }

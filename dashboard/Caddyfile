@@ -11,6 +11,9 @@ https://{$LAN_HOST}:3443, https://localhost:3443 {
 	request_body {
 		max_size 1MB
 	}
+	# Worker-only routes (dashboard/worker over the internal Compose network); never served to the LAN.
+	@internal path /api/internal /api/internal/*
+	respond @internal 404
 	reverse_proxy web:3000 {
 		# Server-sent events (/api/stream) must not be buffered.
 		flush_interval -1

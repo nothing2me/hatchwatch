@@ -5,7 +5,7 @@ const setCameraSource = vi.fn();
 vi.mock('@/app/(app)/camera-actions', () => ({ setCameraSource: (...args: unknown[]) => setCameraSource(...args) }));
 const { SourceSelect } = await import('@/features/phones/SourceSelect');
 
-const dune = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: null, online: true, recording: false, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null };
+const dune = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: null, online: true, recording: false, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null, detections: null };
 const taken = { ...dune, id: 'ck2', name: 'Pier phone', cameraCode: 'C1', online: false };
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });

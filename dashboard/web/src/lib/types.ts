@@ -147,6 +147,35 @@ export interface BoardMotionView
     at: string;
 }
 
+export type DetectionLabel = 'person' | 'possible turtle';
+export type PixelBox = [number, number, number, number];
+
+export interface DetectedObject
+{
+    track: string;            // 'P3' person, 'T1' possible turtle; per device
+    label: DetectionLabel;
+    score?: number;           // people only; a model score, not a probability
+    box: PixelBox;            // x, y, w, h in picture pixels
+}
+
+export interface DetectionTrail
+{
+    track: string;
+    label: DetectionLabel;
+    points: [number, number, number][];   // [epoch ms, x, y] box centres, oldest first, ≤ 60 points / 30 s
+}
+
+// Newest result of the live detection worker for one device (memory only, same lifetime as frames).
+export interface DetectionsView
+{
+    at: number;               // frame time (epoch ms) the result belongs to
+    dark: boolean;
+    width: number;
+    height: number;
+    objects: DetectedObject[];
+    trails: DetectionTrail[];
+}
+
 export interface LiveDeviceView
 {
     id: string;
@@ -158,6 +187,7 @@ export interface LiveDeviceView
     recording: boolean;
     lastSeenAt: string;
     motion: BoardMotionView | null;
+    detections: DetectionsView | null;
 }
 
 export interface RecordingView

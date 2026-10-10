@@ -171,6 +171,18 @@ describe('frames', () =>
         expect(getFrame({ user: null, store }, id, new Request('https://x')).status).toBe(401);
     });
 
+    it('returns the newest detections for online devices only', async () =>
+    {
+        const id = await register(volunteer);
+        const store = new FrameStore();
+        store.put(id, jpeg(), T0);
+        const list = async () => ((await (await getDevices({ prisma, user: viewer, store, now: () => T0 + 500 })).json()) as { devices: LiveDeviceView[] }).devices;
+        expect((await list())[0].detections).toBeNull();
+        const result = { at: T0, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person' as const, score: 0.82, box: [1, 2, 3, 4] as [number, number, number, number] }], trails: [] };
+        store.putDetections(id, result, T0 + 200);
+        expect((await list())[0].detections).toEqual(result);
+    });
+
     it('lists online phones for everyone and every phone for admins', async () =>
     {
         const online = await register(volunteer, 'Dune');

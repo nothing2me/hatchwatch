@@ -91,4 +91,26 @@ describe('FrameStore', () =>
         expect(store.put('b2', jpeg(99), 2_050, { ...moving, percent: 50 }).ok).toBe(false);
         expect(store.motion('b2', 2_050)?.percent).toBe(4.2);
     });
+
+    it('keeps detections beside the newest frame, across new frames, and drops them with the device', () =>
+    {
+        const store = new FrameStore();
+        const result = (at: number) => ({ at, dark: false, width: 320, height: 240, objects: [], trails: [] });
+        expect(store.putDetections('d1', result(1_000), 1_000)).toBe('offline');
+        store.put('d1', jpeg(1), 1_000);
+        expect(store.putDetections('d1', result(1_000), 1_100)).toBe('stored');
+        expect(store.putDetections('d1', result(1_000), 1_200)).toBe('stale');
+        store.put('d1', jpeg(2), 1_500);
+        expect(store.detections('d1', 1_600)).toEqual(result(1_000));
+        // A stopped worker: the device keeps sending, but no result for more than 10 s → null ("Detection off").
+        store.put('d1', jpeg(3), 11_200);
+        expect(store.detections('d1', 11_100)).toEqual(result(1_000));
+        expect(store.detections('d1', 11_200)).toBeNull();
+        // An offline device has none, whatever was stored.
+        expect(store.putDetections('d1', result(11_200), 11_300)).toBe('stored');
+        expect(store.detections('d1', 11_300)).toEqual(result(11_200));
+        expect(store.detections('d1', 11_200 + 10_001)).toBeNull();
+        store.forget('d1');
+        expect(store.detections('d1', 11_300)).toBeNull();
+    });
 });

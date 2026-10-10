@@ -1,7 +1,10 @@
+import type { DetectionsView } from '@/lib/types';
+
 export const MAX_FRAME_BYTES = 500 * 1024;
 export const MAX_FRAMES_PER_SECOND = 10;
 export const ONLINE_MS = 10_000;
 export const TOUCH_EVERY_MS = 5_000;
+export const DETECTIONS_FRESH_MS = ONLINE_MS;
 const PRUNE_MS = 60_000;
 
 export interface BoardMotion
@@ -18,6 +21,7 @@ interface Entry
     recent: number[];
     touchedAt: number;
     motion: BoardMotion | null;
+    detections: (DetectionsView & { postedAt: number }) | null;
 }
 
 export type PutResult = { ok: true; at: number; touch: boolean } | { ok: false; reason: 'rate' };
@@ -42,7 +46,7 @@ export class FrameStore
         recent.push(now);
         const at = entry && now <= entry.at ? entry.at + 1 : now;
         const touch = !entry || now - entry.touchedAt >= TOUCH_EVERY_MS;
-        this.entries.set(deviceId, { jpeg, at, recent, touchedAt: touch || !entry ? now : entry.touchedAt, motion });
+        this.entries.set(deviceId, { jpeg, at, recent, touchedAt: touch || !entry ? now : entry.touchedAt, motion, detections: entry?.detections ?? null });
         return { ok: true, at, touch };
     }
 
@@ -57,6 +61,34 @@ export class FrameStore
     {
         const entry = this.entries.get(deviceId);
         return entry?.motion && now - entry.at <= ONLINE_MS ? { ...entry.motion, at: entry.at } : null;
+    }
+
+    // A worker result for the device's current picture; older or repeated frame times are refused.
+    putDetections(deviceId: string, detections: DetectionsView, now: number = Date.now()): 'stored' | 'stale' | 'offline'
+    {
+        const entry = this.entries.get(deviceId);
+        if (!entry || now - entry.at > ONLINE_MS)
+        {
+            return 'offline';
+        }
+        if (entry.detections && detections.at <= entry.detections.at)
+        {
+            return 'stale';
+        }
+        entry.detections = { ...detections, postedAt: now };
+        return 'stored';
+    }
+
+    // Null while offline, or when the worker has not reported for DETECTIONS_FRESH_MS (the tile says "Detection off").
+    detections(deviceId: string, now: number = Date.now()): DetectionsView | null
+    {
+        const entry = this.entries.get(deviceId);
+        const stored = entry?.detections;
+        if (!entry || !stored || now - entry.at > ONLINE_MS || now - stored.postedAt > DETECTIONS_FRESH_MS)
+        {
+            return null;
+        }
+        return { at: stored.at, dark: stored.dark, width: stored.width, height: stored.height, objects: stored.objects, trails: stored.trails };
     }
 
     isOnline(deviceId: string, now: number = Date.now()): boolean
