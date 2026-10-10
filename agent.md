@@ -20,6 +20,10 @@ The dashboard team may later create an explicit adapter for reviewed outputs: `p
 
 Coordinate any shared JSON contract in a small versioned schema before wiring the two applications together. Keep their ports, environment variables, storage locations, and deployment pipelines separate. If a change affects both applications, test each one independently and include an integration check at the adapter boundary.
 
+## Trails and people outputs
+
+Seaward/humans simulator options are opt-in and are not registered experiments. Two further public outputs per run, written by blind scripts that read only public files: `tracks/tracks.json` (`schemas/tracks.v1.json`: `{schema, version, note, tracks: [{id, pin_id, points: [[t, x, y], ...]}]}`) and `people/people.json` (`schemas/people.v1.json`: `{schema, version, note, people: [{id, max_height_m, points: [[t, x, y], ...]}]}`). People detection reads RGB video, but it is separate from the digging detector: `scripts/people_detect.py` must not import `pipeline/detect.py`, and its output never feeds it. The dashboard may read these two files (and the `live-chunk.v1` fields that name them), never truth, seeds or the layout setting.
+
 ## Current experiment status
 
 The simulator and detector are explicitly synthetic prototypes. `config/registration.json` and `config/frozen.json` document the original one-turtle validation at revision `f50d04c`; `config/stress-registration.json` documents the three-turtle result at `5ff15ae`. Their source hashes intentionally differ from the current larger simulator. `config/swarm-registration.json` separately registers paired six-turtle daylight and very-dark stress seeds. Keep all result sets distinct. The very-dark mode is visible-light noise, **not infrared**. See `README.md`, `RESULTS.md`, `STRESS_RESULTS.md`, and `SWARM_RESULTS.md` for measured limits.

@@ -27,6 +27,21 @@ To inspect the bundled development recording immediately, run `python scripts/in
 
 `NESTTRACE_BROWSER` can specify a Chrome-compatible executable. On systems without Chrome/Edge, run `npx playwright install chromium`; the recording CLI then uses Playwright's browser. FFmpeg is provided by `imageio-ffmpeg`.
 
+## Seaward layout, walkers, trails and people (opt-in)
+
+`scripts/record.mjs` and `scripts/live-runner.mjs` accept two optional simulator settings. Defaults (`--layout along`, `--humans 0`) render byte-identical frames to before.
+
+```sh
+node scripts/record.mjs --seed 929 --scenario swarm --model A --layout seaward --humans 2 --id A-seaward-humans-demo-929
+node scripts/live-runner.mjs --layout seaward --humans 2 --chunks 1
+```
+
+* `--layout seaward`: both cameras stand on the dune line, face the ocean and cross their views, so the surf is ahead. Marker visibility still bounds how far the views can turn.
+* `--humans 0-4`: that many walkers cross the beach, some along the dug sites.
+* Two blind scripts run after the digging pipeline and read only a run's public folder (`camera-N.mp4`, `calibration-N.json`, `timestamps.json`, and for trails `pins/`, `view-N/signals.npz`): `scripts/track_paths.py <run>` writes `tracks/tracks.json` (`schemas/tracks.v1.json`, points `[t, x, y]` in metres, each linked to a pin where one fits) and `scripts/people_detect.py <run>` writes `people/people.json` (`schemas/people.v1.json`). `people_detect.py` does not import `pipeline/detect.py`.
+
+Limits: the layout and humans are **not registered experiments** and no result is claimed for them. Trails and people are blind and approximate. People detection is a calibrated height rule on moving blobs (OpenCV 5 ships no person detector), and very dark video is unsupported for people. People within 2 m of each other may merge into one track, and one person may still split into several tracks. Live chunks imported before this change have no trails or dangers.
+
 ## Reproduce the current paired stress experiment
 
 The current six-turtle simulator compares paired daylight and very-dark synthetic videos on five registered seeds. The registration and fixed settings are in `config/swarm-registration.json` and `config/settings-swarm.json`. Run the batch with Vite serving port 5173:

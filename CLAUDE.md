@@ -40,6 +40,8 @@ node scripts/record.mjs --seed 11 --scenario clean --model A
 
 Live feed: with `npm run dev` running, `node scripts/live-runner.mjs [--chunks N]` writes `artifacts/public/live-*/live-chunk.json`; the dashboard watcher (enabled by `LIVE_FEED=1`, Compose default, read-only mount of `artifacts/public`) picks them up. Dashboard: `cd dashboard && docker compose up --build` (http://localhost:3000). Dev: `docker compose up -d db`, then in `dashboard/web`: `npm run dev`, `npm run db:test:prepare` (once, before `npm test`; integration tests use `TEST_DATABASE_URL`), `npm test`, single file `npx vitest run tests/unit/geo.test.ts`. Simulation feeds: repo root .venv/bin/python scripts/demo_runs.py, then in dashboard/web npm run sim:import -- --run ../../artifacts/public/<run> --pair <A-D>.
 
+Seaward layout and walkers (opt-in; not registered experiments): `node scripts/record.mjs ... --layout seaward --humans 2` or `node scripts/live-runner.mjs --layout seaward --humans 2`. Blind post-steps: `.venv/bin/python scripts/track_paths.py <run>` (tracks) and `.venv/bin/python scripts/people_detect.py <run>` (people), run by `demo_runs.py` and the live runner; schemas in `schemas/tracks.v1.json` and `schemas/people.v1.json`. Demo runs `A-seaward-humans-demo-929/937` and `A-seaward-demo-941` import with `npm run sim:import`; then use Setup > Cameras > Face ocean on that pair.
+
 ## Pipeline architecture and detector isolation
 
 `scripts/analyze.py` orchestrates per camera view, each step a separate subprocess:
