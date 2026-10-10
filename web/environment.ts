@@ -128,7 +128,7 @@ export class BeachEnvironment {
     const bladeGeometry = new THREE.BufferGeometry();
     bladeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(bladeVertices, 3));
     bladeGeometry.computeVertexNormals();
-    const grass = new THREE.InstancedMesh(bladeGeometry, new THREE.MeshStandardMaterial({ color: 0xc2b585, roughness: 1, side: THREE.DoubleSide }), 2800);
+    const grass = new THREE.InstancedMesh(bladeGeometry, new THREE.MeshStandardMaterial({ color: 0xc2b585, roughness: 1, side: THREE.DoubleSide }), 3600);
     const dummy = new THREE.Object3D();
     let state = 0x2352ad19;
     const random = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
