@@ -21,7 +21,43 @@ The pages and the stream have no password: anyone on the same Wi-Fi can watch. U
 
 The device token in `secrets.h` lets anyone who has it send pictures as this board. Keep `secrets.h` out of git (it is ignored) and rotate the token if it leaks.
 
-## Build and upload
+## Quick setup with the board helper
+
+`tools/board.py` does the whole setup from a terminal: it finds the board on USB, writes `secrets.h` without printing secrets, flashes, restarts and shows the log. It closes the Arduino IDE Serial Monitor if that is holding the port.
+
+One-time setup (from the repo root; needs Python 3.10+ and the Arduino IDE 2 or `arduino-cli` with the esp32 core 3.x):
+
+```sh
+python3 -m venv firmware/esp32s3-cam/tools/.venv
+firmware/esp32s3-cam/tools/.venv/bin/pip install -r firmware/esp32s3-cam/tools/requirements.txt
+alias board=firmware/esp32s3-cam/tools/.venv/bin/python\ firmware/esp32s3-cam/tools/board.py
+```
+
+New board, start to finish:
+
+```sh
+board init         # asks for the 2.4 GHz Wi-Fi name and password, writes secrets.h
+board flash        # compiles, uploads, shows the boot log (note the board's IP)
+# Dashboard (admin): Live cameras > Add board camera > copy the DEVICE_ID and token
+board dashboard    # asks for https://<LAN_HOST>:3443, DEVICE_ID and the token (hidden);
+                   # copies Caddy's root certificate into secrets.h
+board flash        # the boot log should end with "Dashboard: connecting", then it sends
+```
+
+Everyday commands:
+
+| Command | What it does |
+| --- | --- |
+| `board restart` | Resets the board over USB and shows 25 s of boot log (`--seconds 60` for longer). |
+| `board log` | Follows the log without resetting (Ctrl+C to stop). |
+| `board status --ip <board-ip>` | Sensor, Wi-Fi signal, free memory, motion and upload state over Wi-Fi. `export BOARD_IP=<board-ip>` once to drop `--ip`. |
+| `board flash` | Rebuilds and uploads after a code or `secrets.h` change. |
+| `board dashboard` | Puts a new token in `secrets.h` after **Rotate token**; follow with `board flash`. |
+| `board ports` | Lists serial ports. To pick one, put `--port <name>` before the command: `board --port <name> restart`. |
+
+If `board restart` shows `Dashboard refused the token (HTTP 401)`, the token was rotated or the board removed: run `board dashboard` with the new token, then `board flash`.
+
+## Build and upload by hand
 
 1. Copy `secrets.example.h` to `secrets.h` (git-ignored) and set `WIFI_SSID` and `WIFI_PASSWORD`. The board joins 2.4 GHz networks only.
 2. Arduino IDE, esp32 core 3.x, Tools:

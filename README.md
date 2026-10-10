@@ -120,6 +120,8 @@ cp .env.example .env          # set secrets, LAN_HOST = this laptop's Wi-Fi addr
 docker compose up -d --build  # web, db, caddy, worker
 ```
 
+ESP32 camera board: `firmware/esp32s3-cam/tools/board.py` sets it up, flashes, restarts and shows its log (`board init`, `board flash`, `board dashboard`, `board restart`, `board status`). See [the firmware README](firmware/esp32s3-cam/README.md#quick-setup-with-the-board-helper).
+
 Open http://localhost:3000 on the laptop, or `https://<LAN_HOST>:3443` from a phone on the same Wi-Fi. Sign in with the seeded admin from `.env`. From **Live cameras**, use **Connect phone** (QR code) or **Add board camera** (ESP32). The full guide is [`dashboard/README.md`](dashboard/README.md).
 
 ## Research simulator
