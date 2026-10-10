@@ -7,6 +7,7 @@ import { authenticate } from '@/lib/auth/authenticate';
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/session';
 import { isHttpsRequest } from '@/lib/auth/requestSecurity';
 import { authSecret } from '@/lib/auth/guard';
+import { safeNext } from '@/lib/auth/safeNext';
 
 export type LoginState = { error: string | null };
 
@@ -31,5 +32,5 @@ export async function loginAction(_prev: LoginState, form: FormData): Promise<Lo
 
     const store = await cookies();
     store.set(SESSION_COOKIE, await createSessionToken(user, authSecret()), sessionCookieOptions({ secure: isHttpsRequest(await headers()) }));
-    redirect('/');
+    redirect(safeNext(form.get('next')) ?? '/');
 }
