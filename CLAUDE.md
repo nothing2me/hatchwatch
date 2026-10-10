@@ -38,7 +38,7 @@ node scripts/record.mjs --seed 11 --scenario clean --model A
 .venv/bin/python scripts/batch.py --split development --reuse   # splits: development|validation|test|demonstrations; --model A|B
 ```
 
-Dashboard: `cd dashboard && docker compose up --build` (http://localhost:3000). Dev: `docker compose up -d db`, then in `dashboard/web`: `npm run dev`, `npm run db:test:prepare` (once, before `npm test`; integration tests use `TEST_DATABASE_URL`), `npm test`, single file `npx vitest run tests/unit/geo.test.ts`. Simulation feeds: repo root .venv/bin/python scripts/demo_runs.py, then in dashboard/web npm run sim:import -- --run ../../artifacts/public/<run> --pair <A-D>.
+Live feed: with `npm run dev` running, `node scripts/live-runner.mjs [--chunks N]` writes `artifacts/public/live-*/live-chunk.json`; the dashboard watcher (enabled by `LIVE_FEED=1`, Compose default, read-only mount of `artifacts/public`) picks them up. Dashboard: `cd dashboard && docker compose up --build` (http://localhost:3000). Dev: `docker compose up -d db`, then in `dashboard/web`: `npm run dev`, `npm run db:test:prepare` (once, before `npm test`; integration tests use `TEST_DATABASE_URL`), `npm test`, single file `npx vitest run tests/unit/geo.test.ts`. Simulation feeds: repo root .venv/bin/python scripts/demo_runs.py, then in dashboard/web npm run sim:import -- --run ../../artifacts/public/<run> --pair <A-D>.
 
 ## Pipeline architecture and detector isolation
 

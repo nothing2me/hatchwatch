@@ -6,7 +6,7 @@ This repository has two separate products with different data and trust boundari
 
 The real monitoring dashboard lives under `dashboard/` as a Docker Compose app: `web/` (Next.js, port 3000) and Postgres (host port 5433). It owns users, access control, persistent records, and camera feeds. Do not make production behavior depend on a running simulator, the local research API, synthetic seed configuration, or evaluator truth.
 
-Simulation footage reaches the dashboard only through the `sim-import-v1` adapter (`dashboard/web/scripts/sim-import.ts`), which reads public run outputs (`camera-*.mp4`, `view-*/pure-motion.mp4`, `calibration-*.json`, `timestamps.json`, `pins/predictions.json`) and refuses `private/` paths. `dashboard/web/tests/boundary.test.ts` fails if dashboard code references the simulator, the research API, or private truth.
+Simulation footage reaches the dashboard only through the `sim-import-v1` adapter (`dashboard/web/scripts/sim-import.ts`), which reads public run outputs (`camera-*.mp4`, `view-*/pure-motion.mp4`, `calibration-*.json`, `timestamps.json`, `pins/predictions.json`) and refuses `private/` paths. The dashboard also reads `live-chunk.v1` (`schemas/live-chunk.v1.json`) through a watcher over a read-only mount of `artifacts/public`, public files only (`live-*/live-chunk.json` and the media it names), never `private/` or truth. `dashboard/web/tests/boundary.test.ts` fails if dashboard code references the simulator, the research API, or private truth.
 
 ## Synthetic experiment (current application)
 

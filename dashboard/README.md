@@ -47,6 +47,49 @@ If Playwright's bundled browser is missing, `scripts/demo_runs.py` needs `NESTTR
 
 Media lands in `dashboard/media/` (git-ignored, bind-mounted into the container). Pins are placed at true scale around each zone's centre and labelled "Simulated · approximate position"; they mark digging activity for inspection, never a confirmed nest.
 
+## 24-hour live feed
+
+The root simulator can run as a continuous beach feed. In one terminal at the repo root run `npm run dev` (Vite on 127.0.0.1:5173), and in another run `node scripts/live-runner.mjs` (add `--chunks 2` to stop after two chunks; on macOS set `NESTTRACE_BROWSER` if Playwright's browser is missing). The runner records six-turtle chunks, runs the blind pipeline on each and writes `artifacts/public/live-<n>-<id>/live-chunk.json` last, so a chunk is either complete or invisible.
+
+The dashboard never talks to the runner. Compose mounts `artifacts/public` read-only at `/sim-public`, and a watcher inside the web container polls for `live-*/live-chunk.json` every 3 seconds. It reads only public files named by the `live-chunk.v1` schema (`schemas/live-chunk.v1.json`) and copies the chunk's media to `MEDIA_ROOT/live/<chunk_id>/`. It never reads `private/`, seeds, scenario names or truth. New pins and alerts reach open browsers without a reload. Each chunk's cameras map onto the dashboard zones in rotation: a manifest camera at `x_min` becomes the zone's `1` camera (north end) and `x_max` the `2` camera.
+
+Timings (all server side):
+
+- A site not refreshed for 5 minutes fades on the map (`LIVE_FADE_MINUTES`).
+- After 20 minutes it moves to Inactive as archived (`LIVE_ARCHIVE_MINUTES`), unless a person has logged any entry on it, in which case it stays until the person closes it with an outcome.
+- Media of the newest 40 chunks is kept (`LIVE_KEEP`). Older media is pruned but the database rows stay, and the UI falls back to the status card.
+
+Environment variables: `LIVE_FEED` (`1` starts the watcher; Compose defaults to `1`, set `0` to turn it off; run exactly one watcher), `LIVE_ROOT` (`/sim-public` in Compose, `../../artifacts/public` outside Docker), `LIVE_FADE_MINUTES`, `LIVE_ARCHIVE_MINUTES`, `LIVE_KEEP`.
+
+## People and roles
+
+There are three roles, each including the one before: viewer, volunteer, admin.
+
+- Viewer: view-only. Sees the map, feeds, alerts, site logs and analytics.
+- Volunteer: also adds site log entries (patrol visited, protection set up, nest confirmed, no nest found, hatched, lost, note).
+- Admin: also manages users, cameras and zones.
+
+Every request checks the database-backed role, so a role change or a disabled account takes effect on the next request. Admins manage people on the Users page: create an account with a role and an initial password, change a role, reset a password, or disable an account. Disable is how to cut a person off immediately: a password reset does not end sessions that already exist, while a disabled user is treated as signed out on their next request. Admins cannot change their own role or disable themselves.
+
+## Nest lifecycle and statistics
+
+Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site fades with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
+
+Active sites are open ones still on the live map. Inactive sites have an outcome (hatched or lost), a no-nest finding, or were archived.
+
+Saved and not saved, shown on Analytics ("Everything logged"):
+
+- Saved: the site was logged as hatched, with or without logged protection.
+- Not saved: logged as lost, or archived while unprotected with no person entry.
+- Pending: everything else still open.
+- No-nest sites are excluded from all three.
+
+## Editing cameras
+
+Admins click the pencil on the map to enter edit mode, then click the dune line to add a camera pair. Esc or Done leaves edit mode. A click creates a zone 120 m along the beach and 60 m seaward with its land edge centred on the click, plus two cameras at the ends of that edge facing the zone centre (fov 60 degrees, range 90 m). Codes continue after the highest existing letter (E, F, ...). Removing a zone, which asks for confirmation, removes its cameras. Volunteers and viewers do not see the edit button.
+
+Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
+
 ## Limits
 
 Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.
