@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { CameraView } from '@/lib/types';
 
 let live: { url: string | null; state: string } = { url: null, state: 'idle' };
 vi.mock('@/features/phones/useLiveFrame', () => ({ useLiveFrame: (id: string | null) => (id ? live : { url: null, state: 'idle' }) }));
+const detections = vi.hoisted(() => ({ value: null as unknown }));
+vi.mock('@/features/phones/useDeviceDetections', () => ({ useDeviceDetections: () => detections.value }));
 vi.mock('@/app/(app)/camera-actions', () => ({ setCameraSource: vi.fn(async () => ({ ok: true, code: 'B1' })) }));
 const { CameraPanel } = await import('@/features/cameras/CameraPanel');
 
@@ -13,6 +15,7 @@ const camera = {
     liveDevice: { id: 'ck1', name: 'Dune phone' },
 } as unknown as CameraView;
 
+beforeEach(() => { localStorage.clear(); detections.value = null; });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('CameraPanel with a linked phone', () =>
@@ -64,5 +67,36 @@ describe('CameraPanel with a linked phone', () =>
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(document.querySelector('video')).not.toBeNull();
         expect(screen.getByText('Phone offline · Dune phone')).toBeTruthy();
+    });
+
+    it('draws detections over the live picture with the counts, Detection off, and nothing when switched off', () =>
+    {
+        live = { url: 'blob:1', state: 'live' };
+        detections.value = { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person', score: 0.82, box: [1, 2, 3, 4] }], trails: [] };
+        const { container, unmount } = render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        expect(screen.getByText('person 0.82')).toBeTruthy();
+        expect(container.querySelector('svg[viewBox="0 0 320 240"] rect[data-track="P1"]')).toBeTruthy();
+        expect(screen.getByText('People 1 · Possible turtles 0')).toBeTruthy();
+        expect(screen.getByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeTruthy();
+        unmount();
+
+        detections.value = null;
+        const second = render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        expect(screen.getByText('Detection off')).toBeTruthy();
+        second.unmount();
+
+        localStorage.setItem('nesttrace.detections', 'off');
+        detections.value = { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person', score: 0.82, box: [1, 2, 3, 4] }], trails: [] };
+        render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        expect(screen.queryByText('person 0.82')).toBeNull();
+        expect(screen.queryByText('People 1 · Possible turtles 0')).toBeNull();
+        expect(screen.queryByText('Detection off')).toBeNull();
+    });
+
+    it('shows no detection lines while the camera plays the simulation loop', () =>
+    {
+        live = { url: null, state: 'offline' };
+        render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        expect(screen.queryByText('Detection off')).toBeNull();
     });
 });

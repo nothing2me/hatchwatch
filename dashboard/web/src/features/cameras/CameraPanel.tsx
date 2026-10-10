@@ -7,7 +7,10 @@ import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { compassPoint } from '@/lib/geo';
 import type { CameraView } from '@/lib/types';
+import { DetectionNote, DetectionOverlay, DetectionStatus } from '@/features/phones/DetectionOverlay';
 import { SourceSelect } from '@/features/phones/SourceSelect';
+import { useDetectionsToggle } from '@/features/phones/useDetectionsToggle';
+import { useDeviceDetections } from '@/features/phones/useDeviceDetections';
 import { useLiveFrame } from '@/features/phones/useLiveFrame';
 import { CameraVideo, type FeedVariant, type SeekRequest } from './CameraVideo';
 import { ExpandedFeed } from './ExpandedFeed';
@@ -27,6 +30,8 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
     const live = useLiveFrame(phone?.id ?? null);
     const showLive = phone !== null && phone !== undefined && live.state === 'live';
     const phoneOffline = Boolean(phone) && (live.state === 'offline' || live.state === 'signed-out');
+    const [detectionsOn] = useDetectionsToggle();
+    const detections = useDeviceDetections(showLive ? phone!.id : null, detectionsOn);
     // Going live closes the expanded loop, so its placeholder cannot outlive it.
     if (showLive && expanded)
     {
@@ -106,6 +111,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
                 ? (
                     <div className="relative mt-2 aspect-video max-md:aspect-[5/2] overflow-hidden rounded-lg border border-white/6 bg-black">
                         {live.url && <img src={live.url} alt={`Live picture from ${phone.name}`} className="h-full w-full object-contain" />}
+                        {detectionsOn && detections && !detections.dark && <DetectionOverlay detections={detections} />}
                         <span className="absolute top-2 left-2 flex max-w-[calc(100%-1rem)] items-center gap-2">
                             <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded bg-alarm px-1.5 text-[10px] font-bold tracking-[0.12em] text-white shadow-[0_0_12px_rgba(255,77,94,0.45)]">
                                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-white motion-safe:animate-pulse" />
@@ -136,6 +142,12 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
                         </span>
                     </div>
                 )}
+            {showLive && detectionsOn && (
+                <div className="mt-1.5 space-y-1">
+                    <DetectionStatus detections={detections} />
+                    <DetectionNote detections={detections} />
+                </div>
+            )}
             {phoneOffline && phone && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
                     <VideoOff aria-hidden className="h-3.5 w-3.5" />

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LiveDeviceView } from '@/lib/types';
 
-// Phones known to the server, refreshed every `intervalMs` while the tab is visible. A failed refresh keeps the last list.
-export function useLiveDevices(intervalMs = 3000): { devices: LiveDeviceView[]; error: string | null; refresh(): void }
+// Phones known to the server, refreshed every `intervalMs` while the tab is visible (null: not polled). A failed refresh keeps the last list.
+export function useLiveDevices(intervalMs: number | null = 3000): { devices: LiveDeviceView[]; error: string | null; refresh(): void }
 {
     const [devices, setDevices] = useState<LiveDeviceView[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,15 @@ export function useLiveDevices(intervalMs = 3000): { devices: LiveDeviceView[]; 
     useEffect(() =>
     {
         active.current = true;
+        if (intervalMs === null)
+        {
+            // Paused: forget the list so a later resume never shows an old one.
+            setDevices(previous => previous.length > 0 ? [] : previous);
+            return () =>
+            {
+                active.current = false;
+            };
+        }
         void refresh();
         const timer = setInterval(() =>
         {

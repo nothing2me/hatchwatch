@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const frame = vi.hoisted(() => ({ url: null as string | null }));
@@ -29,6 +29,7 @@ function stubFetch(devices: unknown[])
         ? Response.json({ devices })
         : Response.json({ enabled: true, convertsToMp4: true, recordings: [] })));
 }
+beforeEach(() => localStorage.clear());
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); frame.url = null; });
 
 describe('LiveScreen', () =>
@@ -209,6 +210,66 @@ describe('camera boards', () =>
         const row = await screen.findByRole('listitem', { name: 'Dune board' });
         fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune board' }));
         expect(within(row).getByText('Remove Dune board? Its camera returns to the simulation loop and the board\'s token stops working. Add it again to get a new token.')).toBeTruthy();
+    });
+});
+
+describe('LiveScreen detections', () =>
+{
+    const seen = { ...phone, detections: { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person' as const, score: 0.82, box: [1, 2, 3, 4] as [number, number, number, number] }], trails: [] } };
+
+    it('draws the overlay and the counts under the tile, with the footer note', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([seen]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        expect(await screen.findByText('person 0.82')).toBeTruthy();
+        expect(screen.getByText('People 1 · Possible turtles 0')).toBeTruthy();
+        expect(screen.getByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeTruthy();
+    });
+
+    it('says Detection off when the worker sends nothing', async () =>
+    {
+        stubFetch([phone]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        expect(await screen.findByText('Detection off')).toBeTruthy();
+    });
+
+    it('says Too dark to detect and draws nothing on a dark frame', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([{ ...seen, detections: { ...seen.detections, dark: true, objects: [], trails: [] } }]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        const tile = await screen.findByRole('article', { name: 'Dune phone' });
+        expect(await within(tile).findByText('Too dark to detect')).toBeTruthy();
+        expect(tile.querySelector('svg[preserveAspectRatio]')).toBeNull();
+    });
+
+    it('hides everything with the Detections toggle and remembers it', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([seen]);
+        const { unmount } = render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        const toggle = await screen.findByRole('button', { name: 'Detections' });
+        expect(toggle.getAttribute('aria-pressed')).toBe('true');
+        await screen.findByText('person 0.82');
+        fireEvent.click(toggle);
+        expect(screen.queryByText('person 0.82')).toBeNull();
+        expect(screen.queryByText('People 1 · Possible turtles 0')).toBeNull();
+        expect(screen.queryByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeNull();
+        expect(localStorage.getItem('nesttrace.detections')).toBe('off');
+        unmount();
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        expect((await screen.findByRole('button', { name: 'Detections' })).getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('draws the overlay in the expanded view too', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([seen]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        await screen.findByText('person 0.82');
+        fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+        expect(within(screen.getByRole('dialog', { name: 'Dune phone' })).getByText('person 0.82')).toBeTruthy();
     });
 });
 

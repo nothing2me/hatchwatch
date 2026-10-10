@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState, useSyncExternalStore, useTransition } from 'react';
-import { Activity, Cpu, KeyRound, LoaderCircle, Maximize2, QrCode, Smartphone, Trash2, VideoOff, X } from 'lucide-react';
+import { Activity, Cpu, KeyRound, LoaderCircle, Maximize2, QrCode, ScanSearch, Smartphone, Trash2, VideoOff, X } from 'lucide-react';
 import { removePhone, rotateDeviceToken, type IssuedTokenResult } from '@/app/(app)/live/actions';
 import { TopBar, type TopBarCounts } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
@@ -11,7 +11,9 @@ import { cn } from '@/lib/cn';
 import type { LiveFrameState } from './framePoller';
 import { AddBoardDialog, IssuedTokenDialog } from './BoardToken';
 import { ConnectPhone, useModal } from './ConnectPhone';
+import { DetectionNote, DetectionOverlay, DetectionStatus } from './DetectionOverlay';
 import { RecordingsPanel } from './RecordingsPanel';
+import { useDetectionsToggle } from './useDetectionsToggle';
 import { useLiveDevices } from './useLiveDevices';
 import { useLiveFrame } from './useLiveFrame';
 
@@ -74,12 +76,13 @@ export function LivePicture({ url, state, name, className, onNaturalSize, childr
     );
 }
 
-function Expanded({ device, url, state, onClose, returnTo }: { device: LiveDeviceView; url: string | null; state: LiveFrameState | 'idle'; onClose: () => void; returnTo: React.RefObject<HTMLButtonElement | null> })
+function Expanded({ device, url, state, detectionsOn, onClose, returnTo }: { device: LiveDeviceView; url: string | null; state: LiveFrameState | 'idle'; detectionsOn: boolean; onClose: () => void; returnTo: React.RefObject<HTMLButtonElement | null> })
 {
     const dialogRef = useRef<HTMLDivElement>(null);
     const closeRef = useRef<HTMLButtonElement>(null);
     useModal(dialogRef, closeRef, onClose, returnTo);
     const titleId = `expanded-${device.id}`;
+    const detections = detectionsOn && device.online ? device.detections : null;
     return (
         <div className="fixed inset-0 z-50 bg-black/90 p-3 backdrop-blur-sm sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
             <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="flex h-full flex-col gap-3">
@@ -87,18 +90,22 @@ function Expanded({ device, url, state, onClose, returnTo }: { device: LiveDevic
                     <h2 id={titleId} className="truncate text-sm font-semibold text-ink">{device.name}</h2>
                     {device.recording && <RecBadge />}
                     <span className="truncate text-xs text-ink-muted max-sm:hidden">by {device.ownerName}</span>
+                    {detectionsOn && device.online && <DetectionStatus detections={device.detections} className="shrink-0" />}
                     <button ref={closeRef} type="button" onClick={onClose} className={cn(action, 'ml-auto shrink-0')}>
                         <X aria-hidden className="h-3.5 w-3.5" />
                         Close
                     </button>
                 </div>
-                <LivePicture url={url} state={state} name={device.name} className="min-h-0 flex-1 rounded-xl" />
+                <LivePicture url={url} state={state} name={device.name} className="min-h-0 flex-1 rounded-xl">
+                    {detections && !detections.dark && <DetectionOverlay detections={detections} />}
+                </LivePicture>
+                {detectionsOn && device.online && <DetectionNote detections={device.detections} />}
             </div>
         </div>
     );
 }
 
-function Tile({ device }: { device: LiveDeviceView })
+function Tile({ device, detectionsOn }: { device: LiveDeviceView; detectionsOn: boolean })
 {
     const { url, state } = useLiveFrame(device.id);
     const [open, setOpen] = useState(false);
@@ -107,11 +114,14 @@ function Tile({ device }: { device: LiveDeviceView })
     const board = device.kind === 'BOARD';
     const box = device.motion?.box;
     const showBox = board && device.motion?.active && size && box && box[2] > 0 && box[3] > 0;
+    const showDetections = detectionsOn && device.online;
+    const detections = showDetections ? device.detections : null;
     return (
         <article aria-label={device.name} className="overflow-hidden rounded-2xl border border-white/8 bg-night-900/70">
             <div className="relative">
                 <LivePicture url={url} state={state} name={device.name} className="aspect-video" onNaturalSize={(width, height) => setSize(previous => previous?.width === width && previous.height === height ? previous : { width, height })}>
                     {showBox && <MotionBox box={box} width={size.width} height={size.height} />}
+                    {detections && !detections.dark && <DetectionOverlay detections={detections} />}
                 </LivePicture>
                 {device.recording && <span className="absolute top-2.5 left-2.5"><RecBadge /></span>}
                 {board && <span className="absolute top-2.5 right-2.5"><MotionBadge motion={device.motion} /></span>}
@@ -122,6 +132,7 @@ function Tile({ device }: { device: LiveDeviceView })
                     <p className="mt-0.5 truncate text-xs text-ink-muted">{board ? `Camera board · added by ${device.ownerName}` : `by ${device.ownerName}`}</p>
                     <p className={cn('mt-1.5 text-xs', device.cameraCode ? 'font-mono text-amber' : 'text-ink-muted')}>{device.cameraCode ? `Camera ${device.cameraCode}` : 'Not linked to a map camera'}</p>
                     {board && <p className="mt-1 text-[11px] text-ink-muted">Motion measured on the camera board</p>}
+                    {showDetections && <DetectionStatus detections={device.detections} className="mt-1" />}
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                     <Link href={`/live/motion?device=${encodeURIComponent(device.id)}`} className={action}>
@@ -133,8 +144,9 @@ function Tile({ device }: { device: LiveDeviceView })
                         Expand
                     </button>
                 </div>
+                {showDetections && <DetectionNote detections={device.detections} className="w-full border-t border-white/8 pt-2.5" />}
             </div>
-            {open && <Expanded device={device} url={url} state={state} onClose={() => setOpen(false)} returnTo={expandRef} />}
+            {open && <Expanded device={device} url={url} state={state} detectionsOn={detectionsOn} onClose={() => setOpen(false)} returnTo={expandRef} />}
         </article>
     );
 }
@@ -244,7 +256,8 @@ function DeviceRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: (
 
 export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: TopBarCounts; connect: { url: string | null; qrSvg: string | null } | null })
 {
-    const { devices, error, refresh } = useLiveDevices(3000);
+    const [detectionsOn, setDetectionsOn] = useDetectionsToggle();
+    const { devices, error, refresh } = useLiveDevices(detectionsOn ? 1000 : 3000);
     const [connecting, setConnecting] = useState(false);
     const [adding, setAdding] = useState(false);
     const addRef = useRef<HTMLButtonElement>(null);
@@ -274,8 +287,13 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Live cameras</h1>
                         <p className="mt-1.5 text-sm text-ink-muted">Phones sending over the local Wi-Fi. Pictures refresh about five times a second.</p>
                     </div>
-                    {isAdmin && (
-                        <div className="flex shrink-0 gap-2 max-sm:w-full max-sm:flex-col">
+                    <div className="flex shrink-0 gap-2 max-sm:w-full max-sm:flex-col">
+                        <button type="button" aria-pressed={detectionsOn} onClick={() => setDetectionsOn(!detectionsOn)} className={cn(action, 'h-10 justify-center px-4 text-sm', detectionsOn && 'border-amber/50 text-amber ring-1 ring-amber/40')}>
+                            <ScanSearch aria-hidden className="h-4 w-4" />
+                            Detections
+                        </button>
+                        {isAdmin && (
+                            <>
                             <button ref={addRef} type="button" onClick={() => setAdding(true)} className={cn(action, 'h-10 justify-center px-4 text-sm')}>
                                 <Cpu aria-hidden className="h-4 w-4" />
                                 Add board camera
@@ -284,8 +302,9 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                                 <QrCode aria-hidden className="h-4 w-4" />
                                 Connect phone
                             </button>
-                        </div>
-                    )}
+                            </>
+                        )}
+                    </div>
                 </header>
 
                 {error && <p role="alert" className="mt-6 rounded-lg border border-danger/35 bg-danger/[0.07] px-3 py-2 text-sm text-[#F2865A]">{error}</p>}
@@ -293,7 +312,7 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                 {online.length > 0
                     ? (
                         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            {online.map(device => <Tile key={device.id} device={device} />)}
+                            {online.map(device => <Tile key={device.id} device={device} detectionsOn={detectionsOn} />)}
                         </div>
                     )
                     : (
