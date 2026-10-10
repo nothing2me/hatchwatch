@@ -2,7 +2,9 @@
 
 Reads only camera-N.mp4, calibration-N.json and timestamps.json from a run's public
 folder. Writes people/people.json. Separate from the digging detector (pipeline/*):
-nothing is imported from it and nothing here feeds it.
+nothing is imported from it and nothing here feeds it. Assumes two frame-synchronised
+cameras (camera-0/1, one shared timestamps.json); a person track must be confirmed by both
+views or, where only one camera covers it, by dense single-view hits.
 """
 import argparse
 import json
@@ -28,9 +30,15 @@ FOOT_WIDEN = 3.0         # a lower row this many times wider ends the person (tu
 FUSE_M = 1.0             # same-frame detections from two views closer than this are merged
 LINK_M = 1.5             # max step between linked detections
 MAX_GAP_FRAMES = 4
+MIN_BOTH_VIEW_FRAMES = 2    # keep a track with this many frames where both cameras agree (within FUSE_M) ...
+SINGLE_VIEW_MIN_HITS = 6    # ... or, single-camera coverage: at least this many hits
+SINGLE_VIEW_MIN_DENSITY = 0.5  # ... filling at least this share of the frames the track spans
 MIN_DURATION_S = 1.0
 DECIMATE_HZ = 4.0
-NOTE = 'Blind height-rule detections from public video; not identity, not intent.'
+NOTE = ('Blind height-rule detections from public video; not identity, not intent. '
+        'Very dark or low-contrast video is not supported; people may be missed.')
+REQUIRED_CALIBRATION = ('width', 'height', 'mount_position_m', 'orientation_quaternion_xyzw',
+                        'vertical_fov_degrees', 'reference_points')
 
 
 def _rotate(q, v):
@@ -186,9 +194,10 @@ def _view_detections(calibration, frames):
 
 
 def _fuse(per_view):
+    """Per frame: [x, z, height, both] where both = 1 when the two views agree within FUSE_M."""
     fused = []
     for t in range(max(len(v) for v in per_view)):
-        pts = [(np.array(d, float), vi) for vi, view in enumerate(per_view) if t < len(view) for d in view[t]]
+        pts = [(np.array([*d, 0.0], float), vi) for vi, view in enumerate(per_view) if t < len(view) for d in view[t]]
         used = [False] * len(pts)
         frame = []
         for i, (p, v) in enumerate(pts):
@@ -204,14 +213,14 @@ def _fuse(per_view):
             if best is not None:
                 used[best] = True
                 q = pts[best][0]
-                p = np.array([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, max(p[2], q[2])])
+                p = np.array([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, max(p[2], q[2]), 1.0])
             frame.append(p)
         fused.append(frame)
     return fused
 
 
 def _link(frames, times):
-    tracks = []  # {'pts': [(frame, x, z, height)]}
+    tracks = []  # {'pts': [(frame, x, z, height, both)]}
     for t, dets in enumerate(frames):
         open_tracks = [tr for tr in tracks if 0 < t - tr['pts'][-1][0] <= MAX_GAP_FRAMES + 1]
         pairs = []
@@ -229,11 +238,30 @@ def _link(frames, times):
             used_t.add(ti)
             used_d.add(di)
             d = dets[di]
-            open_tracks[ti]['pts'].append((t, float(d[0]), float(d[1]), float(d[2])))
+            open_tracks[ti]['pts'].append((t, *map(float, d[:4])))
         for di, d in enumerate(dets):
             if di not in used_d:
-                tracks.append({'pts': [(t, float(d[0]), float(d[1]), float(d[2]))]})
-    return [[(times[f], x, z, hm) for f, x, z, hm in tr['pts']] for tr in tracks]
+                tracks.append({'pts': [(t, *map(float, d[:4]))]})
+    return [tr['pts'] for tr in tracks]
+
+
+def _confirmed(track):
+    """Cross-view agreement, or dense hits where only one camera covers the person."""
+    if sum(1 for p in track if p[4]) >= MIN_BOTH_VIEW_FRAMES:
+        return True
+    span = track[-1][0] - track[0][0] + 1
+    return len(track) >= SINGLE_VIEW_MIN_HITS and len(track) / span >= SINGLE_VIEW_MIN_DENSITY
+
+
+def _people_tracks(per_view, times):
+    """Kept person tracks as [(t, x, z, height)], sorted by start time."""
+    kept = []
+    for tr in _link(_fuse(per_view), times):
+        if len(tr) < 2 or times[tr[-1][0]] - times[tr[0][0]] < MIN_DURATION_S or not _confirmed(tr):
+            continue
+        kept.append([(times[f], x, z, hm) for f, x, z, hm, _ in tr])
+    kept.sort(key=lambda tr: tr[0][0])
+    return kept
 
 
 def _decimate(points):
@@ -248,12 +276,20 @@ def _decimate(points):
     return out
 
 
+def _check_calibration(cal):
+    missing = [k for k in REQUIRED_CALIBRATION if k not in cal]
+    if missing:
+        raise SystemExit(f'calibration for camera {cal.get("camera", "?")} lacks {", ".join(missing)}')
+    if len(cal['reference_points']) < 4:
+        raise SystemExit(f'calibration for camera {cal.get("camera", "?")} needs at least 4 reference_points')
+
+
 def detect_in_frames(views, times):
     """views: [(calibration, iterable of BGR or grey frames)]; times: seconds per frame."""
+    for cal, _ in views:
+        _check_calibration(cal)
     per_view = [_view_detections(cal, frames) for cal, frames in views]
-    raw = _link(_fuse(per_view), list(times))
-    kept = [tr for tr in raw if len(tr) >= 2 and tr[-1][0] - tr[0][0] >= MIN_DURATION_S]
-    kept.sort(key=lambda tr: tr[0][0])
+    kept = _people_tracks(per_view, list(times))
     people = [{'id': f'person-{n + 1}',
                'points': _decimate([(t, x, z) for t, x, z, _ in tr]),
                'max_height_m': round(float(max(hm for *_, hm in tr)), 2)}

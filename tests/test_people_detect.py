@@ -112,3 +112,130 @@ def test_schema_shape():
             assert p['id'].startswith('person-')
             assert isinstance(p['max_height_m'], float)
             assert len(p['points']) >= 2 and all(len(q) == 3 for q in p['points'])
+
+
+# ---- regression tests (review round 1) ----
+
+def _poly(eye, rot, w, h, pts):
+    return np.round(np.array([_project(eye, rot, w, h, p) for p in pts], np.float32)).astype(np.int32)
+
+
+def _box(x, z, width, height):
+    """Vertical rectangle facing the camera along +z."""
+    return [(x - width / 2, 0, z), (x + width / 2, 0, z), (x + width / 2, height, z), (x - width / 2, height, z)]
+
+
+def _ground_ellipse(x, z, rx, rz):
+    return [(x + rx * np.cos(a), 0, z + rz * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 32)]
+
+
+def _render(cal, rot, n, draw):
+    """Grey 720p frames; draw(img, k) paints frame k (k = frames since the background window)."""
+    w, h = cal['width'], cal['height']
+    frames = []
+    for f in range(n):
+        img = np.full((h, w), 90, np.uint8)
+        if f >= people_detect.BACKGROUND_FRAMES:
+            draw(img, f - people_detect.BACKGROUND_FRAMES)
+        frames.append(img)
+    return frames
+
+
+def _last_blobs(cal, frames):
+    out = list(people_detect._frame_blobs(cal, frames))
+    return out[-1][2]
+
+
+def test_line_of_sight_ground_strip_seen_by_one_view_is_not_a_person():
+    cal, rot = _calibration()
+    eye = cal['mount_position_m']
+
+    def strip(img, k):  # disturbed-sand strip running away from camera A, flickering sparsely
+        if k % 3 == 0:
+            pts = [(1.85, 0, 2), (2.15, 0, 2), (2.15, 0, -4), (1.85, 0, -4)]
+            cv2.fillPoly(img, [_poly(eye, rot, 1280, 720, pts)], 200 if (k // 3) % 2 else 20)
+
+    frames = _render(cal, rot, people_detect.BACKGROUND_FRAMES + 30, strip)
+    # per blob it does pass the height and aspect rules in view A ...
+    hits = [b for _, _, blobs in people_detect._frame_blobs(cal, frames) for b in blobs if b[7]]
+    assert hits and all(b[6] >= people_detect.PERSON_HEIGHT_M for b in hits)
+    # ... but view B never sees it, and the single-view hits are sparse: no person track
+    cal_b, rot_b = _calibration(eye=(-10.0, 5.0, 4.0))
+    empty_b = _render(cal_b, rot_b, len(frames), lambda img, k: None)
+    times = [f / 8 for f in range(len(frames))]
+    doc = people_detect.detect_in_frames([(cal, frames), (cal_b, empty_b)], times)
+    assert doc['people'] == []
+
+
+def test_static_blob_after_background_window_is_dropped_by_motion_gate():
+    cal, rot = _calibration()
+    eye = cal['mount_position_m']
+    frames = _render(cal, rot, people_detect.BACKGROUND_FRAMES + 12,
+                     lambda img, k: cv2.fillPoly(img, [_poly(eye, rot, 1280, 720, _box(1, 0, 0.6, 1.8))], 230))
+    blobs = _last_blobs(cal, frames)
+    assert not any(b[7] for b in blobs)
+    times = [f / 8 for f in range(len(frames))]
+    assert people_detect.detect_in_frames([(cal, frames), (cal, frames)], times)['people'] == []
+
+
+def test_tall_but_wide_blob_rejected_and_person_touching_turtle_split():
+    cal, rot = _calibration()
+    eye = cal['mount_position_m']
+
+    rng = np.random.default_rng(0)
+
+    def wide(img, k):  # 3 m wide, 1.5 m tall textured moving object: tall enough, far too wide
+        m = np.zeros_like(img)
+        cv2.fillPoly(m, [_poly(eye, rot, 1280, 720, _box(-4 + 0.15 * k, 0, 3.0, 1.5))], 1)
+        img[m > 0] = rng.integers(150, 256, int(m.sum()), dtype=np.uint8)
+
+    blobs = _last_blobs(cal, _render(cal, rot, people_detect.BACKGROUND_FRAMES + 6, wide))
+    assert blobs and max(b[6] for b in blobs) >= people_detect.PERSON_HEIGHT_M
+    assert not any(b[7] for b in blobs)
+
+    def touching(img, k):  # person beside a turtle, joined by a 2 px "flipper"
+        x = 0.15 * k
+        person = _poly(eye, rot, 1280, 720, _box(x, 0, 0.6, 1.8))
+        turtle = _poly(eye, rot, 1280, 720, _ground_ellipse(x + 1.6, 0.5, 1.0, 0.7))
+        cv2.fillPoly(img, [person], 230)
+        cv2.fillPoly(img, [turtle], 20)
+        a = (int(person[:, 0].max()), int(person[:, 1].max()) - 5)
+        b = (int(turtle[:, 0].min()) + 3, int(turtle[:, 1].mean()))
+        cv2.line(img, a, b, 230, 2)
+
+    blobs = _last_blobs(cal, _render(cal, rot, people_detect.BACKGROUND_FRAMES + 6, touching))
+    people = [b for b in blobs if b[7]]
+    assert len(people) == 1
+    assert abs(people[0][4] - 0.75) <= 0.6 and abs(people[0][5]) <= 0.6
+
+
+def test_cross_view_agreement_rule():
+    times = [f / 8 for f in range(40)]
+    empty = [[] for _ in times]
+
+    def walk(frames_on, x0=0.0):
+        out = [[] for _ in times]
+        for f in frames_on:
+            out[f] = [(x0 + 0.15 * f, 1.0, 1.8)]
+        return out
+
+    dense = range(5, 25)
+    sparse = range(5, 30, 5)  # 5 hits, one every 5 frames
+    # seen by both cameras: kept even though each view is sparse-ish
+    both = people_detect._people_tracks([walk(range(5, 25, 2)), walk(range(5, 25, 2))], times)
+    assert len(both) == 1
+    # one camera, sparse hits: dropped
+    assert people_detect._people_tracks([walk(sparse), empty], times) == []
+    # one camera, dense hits (single-camera coverage): kept
+    assert len(people_detect._people_tracks([walk(dense), empty], times)) == 1
+    # two cameras that disagree by more than FUSE_M never confirm each other
+    far = walk(sparse, x0=3.0)
+    assert people_detect._people_tracks([walk(sparse), far], times) == []
+
+
+def test_missing_calibration_key_is_a_clean_exit():
+    import pytest
+    cal, rot = _calibration(64, 36)
+    del cal['vertical_fov_degrees']
+    with pytest.raises(SystemExit, match='vertical_fov_degrees'):
+        people_detect.detect_in_frames([(cal, [])], [])
