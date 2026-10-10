@@ -1,4 +1,4 @@
-# NestTrace dashboard
+# HatchWatch dashboard
 
 Monitoring app for sea turtle crawl and digging activity on the Holiday Beach stretch of Port Aransas. It is separate from the research simulator in the repository root and never reads simulator state, the research API, or private evaluator truth (see `../agent.md`).
 

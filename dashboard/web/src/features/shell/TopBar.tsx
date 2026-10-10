@@ -49,9 +49,9 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
 
     return (
         <GlassPanel className="pointer-events-auto flex h-12 shrink-0 items-center gap-2 pr-2 pl-3 sm:gap-3 sm:pl-4">
-            <Link href="/" className="flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-amber" aria-label="NestTrace home">
+            <Link href="/" className="flex items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-amber" aria-label="HatchWatch home">
                 <Mark />
-                <span className="hidden text-[13px] font-bold tracking-[0.2em] sm:inline">NESTTRACE</span>
+                <span className="hidden text-[13px] font-bold tracking-[0.2em] sm:inline">HATCHWATCH</span>
             </Link>
             <span aria-hidden className="hidden h-4 w-px bg-white/12 sm:block" />
 
@@ -75,7 +75,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                 })}
             </nav>
 
-            <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas · Holiday Beach</span>
+            <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas Â· Holiday Beach</span>
 
             <div className="ml-auto flex items-center gap-1.5">
                 {dangerCount > 0 && firstDangerId && (
