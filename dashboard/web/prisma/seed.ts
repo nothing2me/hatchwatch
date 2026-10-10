@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
 import { hash } from '@node-rs/argon2';
 import type { PrismaClient } from '../src/generated/prisma/client';
 import { backfillSiteEvents } from './backfill-site-events';
@@ -82,7 +81,7 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
 }
 
 // CLI entry: `tsx prisma/seed.ts`
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url)
+if (process.argv[1] && /(?:^|[\\/])seed\.ts$/.test(process.argv[1]))
 {
     const { createPrismaClient } = await import('../src/lib/db');
     const adminEmail = process.env.SEED_ADMIN_EMAIL;
