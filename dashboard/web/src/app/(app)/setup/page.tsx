@@ -1,16 +1,31 @@
 import Link from 'next/link';
+import { Users } from 'lucide-react';
 import { requireCurrentUser } from '@/lib/auth/guard';
+import { getMapSnapshot } from '@/server/snapshot';
+import { TopBar } from '@/features/shell/TopBar';
 
-// Admin gate in place now; the setup tools arrive in Plan 3.
+export const dynamic = 'force-dynamic';
+
+// Setup hub: Users today; zone, camera and upload tools arrive in the next release.
 export default async function SetupPage()
 {
-    await requireCurrentUser('ADMIN');
+    const [user, snapshot] = await Promise.all([requireCurrentUser('ADMIN'), getMapSnapshot()]);
+    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
     return (
-        <main className="grid min-h-full place-items-center bg-night-950 p-6 text-center">
-            <div>
-                <h1 className="text-xl font-semibold">Setup</h1>
-                <p className="mt-1 text-ink-muted">Zone, camera and upload tools are coming in the next release.</p>
-                <Link href="/" className="mt-4 inline-block text-amber hover:underline">Back to map</Link>
+        <main className="min-h-full bg-night-950">
+            <div className="sticky top-0 z-20 p-3">
+                <TopBar user={user} current="setup" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
+            </div>
+            <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
+                <h1 className="text-3xl font-semibold tracking-tight text-ink">Setup</h1>
+                <p className="mt-1.5 text-sm text-ink-muted">Zone, camera and upload tools are coming in the next release.</p>
+                <Link href="/setup/users" className="mt-6 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
+                    <Users aria-hidden className="h-5 w-5 text-amber" />
+                    <span>
+                        <span className="block font-medium text-ink">Users</span>
+                        <span className="block text-sm text-ink-muted">Add people, set roles, disable or enable accounts.</span>
+                    </span>
+                </Link>
             </div>
         </main>
     );

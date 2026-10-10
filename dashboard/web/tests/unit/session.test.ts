@@ -13,6 +13,12 @@ describe('session tokens', () =>
         expect(await readSessionToken(token, secret)).toEqual(user);
     });
 
+    it('round-trips a volunteer', async () =>
+    {
+        const volunteer: SessionUser = { ...user, role: 'VOLUNTEER' };
+        expect(await readSessionToken(await createSessionToken(volunteer, secret), secret)).toEqual(volunteer);
+    });
+
     it('rejects a token signed with another secret', async () =>
     {
         const token = await createSessionToken(user, 'another-secret-another-secret-0123456789');

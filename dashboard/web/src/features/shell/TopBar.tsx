@@ -5,7 +5,7 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'analytics' | 'setup';
+export type Page = 'map' | 'analytics' | 'setup' | 'users';
 
 interface TopBarProps
 {
@@ -22,6 +22,7 @@ const NAV: { page: Page; href: string; label: string; adminOnly?: boolean }[] = 
     { page: 'map', href: '/', label: 'Map' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
     { page: 'setup', href: '/setup', label: 'Setup', adminOnly: true },
+    { page: 'users', href: '/setup/users', label: 'Users', adminOnly: true },
 ];
 
 // Turtle mark from the favicon, drawn inline so it inherits the ink colour.

@@ -17,7 +17,7 @@ const payloadSchema = z.object({
     sub: z.string().min(1),
     email: z.string().min(1),
     name: z.string(),
-    role: z.enum(['ADMIN', 'VIEWER']),
+    role: z.enum(['ADMIN', 'VOLUNTEER', 'VIEWER']),
 });
 
 function key(secret: string): Uint8Array
