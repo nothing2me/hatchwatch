@@ -14,8 +14,11 @@ export class Simulation{
  constructor(canvas:HTMLCanvasElement,config:SimConfig){
  this.config=config;this.random=rng(config.seed);this.night=config.scenario==='swarm-night'||config.scenario==='low-light';
  const spread=config.scenario==='swarm-spread',swarm=config.scenario==='swarm'||config.scenario==='swarm-night'||spread,multi=config.scenario==='multi'||swarm;
- // Preview-only spread layout: each turtle gets its own [x, z] lane so the end cameras don't see them stacked.
- const spreadSites=[[-9,-5],[-5,3],[-1,-1],[3,5],[7,-3],[10,1]];
+ // Spread layout: every turtle gets its own dune-to-water lane (shuffled per seed) so the end cameras never
+ // see two turtles stacked, plus a seeded along-shore position at least 3.5 m from every other site.
+ const spreadSites:number[][]=[];
+ if(spread){const lanes=[-5,-3,-1,1,3,5];for(let i=lanes.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[lanes[i],lanes[j]]=[lanes[j],lanes[i]]}
+  for(const z of lanes){let x=0;for(let attempt=0;attempt<200;attempt++){x=-10.5+this.random()*21;if(spreadSites.every(([sx,sz])=>Math.hypot(sx-x,sz-z)>=3.5))break}spreadSites.push([x,z])}}
  const specs=Array.from({length:swarm?6:multi?3:1},(_,id)=>{
  const targetX=spread?spreadSites[id][0]+(this.random()-.5)*.6:swarm?-10+id*4+(this.random()-.5)*.6:multi?-5+id*5+(this.random()-.5)*.8:(this.random()-.5)*6;
  const startX=multi?targetX+(this.random()-.5)*1.4:(this.random()-.5)*7;
