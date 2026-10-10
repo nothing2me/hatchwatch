@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { isCameraDanger } from '@/lib/danger';
 import { classifyOutcome } from '@/lib/sites/outcomes';
-import type { AlertView } from '@/lib/types';
+import type { AlertKind, AlertView } from '@/lib/types';
 import { useStoredBoolean } from '@/features/map/useStoredBoolean';
 import { isActive, type Playback } from '@/features/map/playback';
 import { inactiveState, NESTING, PROTECTION, type Tone } from '@/features/sites/labels';
@@ -19,6 +19,12 @@ const tierNote = { TWO_CAMERA: ' · both cameras', SINGLE_CAMERA: ' · one camer
 
 type Tab = 'active' | 'inactive';
 const TABS: Tab[] = ['active', 'inactive'];
+const ACTIVITIES: { kind: AlertKind; label: string }[] = [
+    { kind: 'DIGGING', label: 'Digging' },
+    { kind: 'TRACK_ONLY', label: 'Crawl only' },
+    { kind: 'NO_TURTLE', label: 'No turtle' },
+    { kind: 'DANGER', label: 'Person near site' },
+];
 
 export function StatusPill({ tone, className }: { tone: Tone; className?: string })
 {
@@ -43,6 +49,16 @@ export function PatrolledMark()
     );
 }
 
+// A patrol found the nest damaged; shown beside the protection pill until the site closes.
+export function DamagedMark()
+{
+    return (
+        <span className="inline-flex h-[18px] items-center rounded-full bg-[#E2581F]/15 px-1.5 text-[10px] font-semibold tracking-[0.04em] text-[#F4A27F] ring-1 ring-[#E2581F]/40 ring-inset">
+            Damaged
+        </span>
+    );
+}
+
 const outcomeNote = { saved: 'Saved', notSaved: 'Not saved', pending: '', none: '' } as const;
 
 // `inactiveCount` is the server's whole-log count; the snapshot lists only the newest inactive sites.
@@ -51,19 +67,21 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
 {
     const [open, setOpen] = useStoredBoolean('nesttrace.alerts.open', true);
     const [tab, setTab] = useState<Tab>('active');
+    const [activities, setActivities] = useState<Set<AlertKind>>(() => new Set(ACTIVITIES.map(item => item.kind)));
     // Danger ids whose group card is expanded (a card stays open as its dangers are resolved one by one).
     const [expanded, setExpanded] = useState<Set<string>>(() => new Set(selectedId ? [selectedId] : []));
     const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ active: null, inactive: null });
 
-    const active = alerts.filter(alert => alert.site.active);
-    const inactive = alerts.filter(alert => !alert.site.active);
+    const filtered = alerts.filter(alert => activities.has(alert.kind));
+    const active = filtered.filter(alert => alert.site.active);
+    const inactive = filtered.filter(alert => !alert.site.active);
     // Camera-level dangers (live detection, no nest site) get their own cards and are never grouped with site dangers.
     const cameraDangers = active.filter(isCameraDanger);
     const dangerGroups = groupDangers(active.filter(alert => alert.kind === 'DANGER' && !isCameraDanger(alert)));
     const sitesById = new Map(alerts.filter(alert => alert.kind !== 'DANGER').map(alert => [alert.id, alert]));
     const shown = (tab === 'active' ? active : inactive).filter(alert => tab === 'inactive' || alert.kind !== 'DANGER');
     const empty = tab === 'active' ? active.length === 0 : inactive.length === 0;
-    const counts: Record<Tab, number> = { active: active.length, inactive: Math.max(inactive.length, inactiveCount ?? 0) };
+    const counts: Record<Tab, number> = { active: active.length, inactive: activities.size === ACTIVITIES.length ? Math.max(inactive.length, inactiveCount ?? 0) : inactive.length };
 
     function onTabKey(event: KeyboardEvent<HTMLButtonElement>)
     {
@@ -121,7 +139,14 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                 ))}
             </div>
 
-            <ul aria-label={tab === 'active' ? 'Active sites' : 'Inactive sites'} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2 pb-2">
+            <details className="relative mx-2 mb-2 shrink-0 rounded-lg bg-night-950/70 text-xs ring-1 ring-white/8">
+                <summary className="cursor-pointer px-3 py-2 text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">Activity filters · {activities.size}/{ACTIVITIES.length}</summary>
+                <div className="absolute inset-x-0 top-full z-20 mt-1 space-y-1 rounded-lg border border-white/12 bg-night-900 p-2 shadow-xl">
+                    {ACTIVITIES.map(item => <label key={item.kind} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-ink hover:bg-white/5"><input type="checkbox" checked={activities.has(item.kind)} onChange={() => setActivities(current => { const next = new Set(current); if (next.has(item.kind)) next.delete(item.kind); else next.add(item.kind); return next; })} className="accent-amber" />{item.label}</label>)}
+                </div>
+            </details>
+
+            <ul aria-label={tab === 'active' ? 'Active sites' : 'Inactive sites'} className="min-h-0 max-h-[25rem] flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-2 pb-2">
                 {tab === 'active' && cameraDangers.map(danger => (
                     <CameraDangerCard key={danger.id} danger={danger} canResolve={canResolve} onSelect={onSelect} selected={danger.id === selectedId} />
                 ))}
@@ -151,6 +176,8 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                         </span>
                         {alerts.length === 0
                             ? (<><p className="text-sm text-ink">No alerts yet.</p><p className="text-xs leading-relaxed text-ink-muted">Digging and crawl alerts appear here once camera footage is analysed.</p></>)
+                            : activities.size === 0
+                                ? (<><p className="text-sm text-ink">No activities selected.</p><p className="text-xs leading-relaxed text-ink-muted">Choose an activity filter to show sites.</p></>)
                             : tab === 'active'
                                 ? (<><p className="text-sm text-ink">No active sites.</p><p className="text-xs leading-relaxed text-ink-muted">Every site has an outcome or has faded from the live map.</p></>)
                                 : (<><p className="text-sm text-ink">No inactive sites.</p><p className="text-xs leading-relaxed text-ink-muted">Hatched, lost, no-nest and archived sites move here.</p></>)}
@@ -188,12 +215,12 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                                 </span>
                                 <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                                     {live
-                                        ? (<><StatusPill tone={PROTECTION[alert.site.protection]} />{alert.site.patrolVisited && <PatrolledMark />}<span className="text-[11px] text-ink-muted">{NESTING[alert.site.nesting]}</span></>)
+                                        ? (<><StatusPill tone={PROTECTION[alert.site.protection]} />{alert.site.patrolVisited && <PatrolledMark />}{alert.site.damaged && <DamagedMark />}<span className="text-[11px] text-ink-muted">{NESTING[alert.site.nesting]}</span></>)
                                         : (<><StatusPill tone={inactiveState(alert.site)} />{note && <span className="text-[11px] text-ink-muted">{note}</span>}</>)}
                                 </span>
-                                {alert.simulated && (
+                                {alert.evidenceTier && (
                                     <span className="mt-1 block text-[11px] text-ink-muted/80">
-                                        Simulated · approximate position{alert.evidenceTier ? tierNote[alert.evidenceTier] : ''}
+                                        Approximate position{tierNote[alert.evidenceTier]}
                                     </span>
                                 )}
                             </button>

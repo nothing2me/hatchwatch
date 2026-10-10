@@ -1,9 +1,20 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { getRecorder, Recorder, recorderSettings, startRecorder, type RecorderOptions, type Sidecar } from '@/lib/phones/recorder';
 import { fakeJpeg, parseAvi } from './aviTestUtils';
+
+// Run the fake encoder through Node on every platform; exercise real child exits
+// and filesystem writes without depending on a Unix shell on Windows.
+vi.mock('node:child_process', async importOriginal =>
+{
+    const actual = await importOriginal<typeof import('node:child_process')>();
+    return { ...actual, spawn: (command: string, args: readonly string[], options: import('node:child_process').SpawnOptions) =>
+        command.includes('fake-ffmpeg-')
+            ? actual.spawn(process.execPath, [command, ...args], options)
+            : actual.spawn(command, args, options) };
+});
 
 const T0 = Date.UTC(2026, 9, 10, 7, 5, 9);
 const meta = { deviceName: 'Dune phone', cameraCode: 'E1' };
@@ -12,11 +23,11 @@ function setup(ffmpeg: 'none' | 'ok' | 'fail' = 'none')
 {
     const root = mkdtempSync(join(tmpdir(), 'nt-rec-'));
     const ffmpegPath = join(root, '..', `fake-ffmpeg-${ffmpeg}-${Math.random().toString(36).slice(2)}`);
-    // Stands in for ffmpeg: answers -version, then writes "mp4" to its last argument (or fails).
-    writeFileSync(ffmpegPath, ffmpeg === 'fail'
-        ? '#!/bin/sh\nif [ "$1" = "-version" ]; then exit 0; fi\nexit 1\n'
-        : '#!/bin/sh\nif [ "$1" = "-version" ]; then exit 0; fi\nfor last; do :; done\nprintf mp4 > "$last"\n');
-    chmodSync(ffmpegPath, 0o755);
+    // Answers -version, then writes "mp4" to its last argument (or fails).
+    writeFileSync(ffmpegPath, `const fs = require('node:fs');
+if (process.argv.includes('-version')) process.exit(0);
+${ffmpeg === 'fail' ? 'process.exit(1);' : "fs.writeFileSync(process.argv.at(-1), 'mp4');"}
+`);
     const options: RecorderOptions = { root, fps: 5, segmentMinutes: 10, retentionHours: 72, ffmpegPath };
     return { root, options, make: (hasFfmpeg = ffmpeg !== 'none') => new Recorder(options, hasFfmpeg) };
 }
@@ -273,7 +284,7 @@ describe('recorderSettings', () =>
     it('reads the environment', () =>
     {
         expect(recorderSettings(env({ RECORDING: 'off' }))).toBeNull();
-        expect(recorderSettings(env({ RECORDINGS_ROOT: '/recordings' }))).toEqual({ root: '/recordings', fps: 5, segmentMinutes: 10, retentionHours: 72, ffmpegPath: 'ffmpeg' });
+        expect(recorderSettings(env({ RECORDINGS_ROOT: '/recordings' }))).toEqual({ root: resolve('/recordings'), fps: 5, segmentMinutes: 10, retentionHours: 72, ffmpegPath: 'ffmpeg' });
         expect(recorderSettings(env({ RECORDINGS_ROOT: '/r', RECORDING_RETENTION_HOURS: '24', FFMPEG_PATH: '/usr/bin/ffmpeg' }))).toMatchObject({ retentionHours: 24, ffmpegPath: '/usr/bin/ffmpeg' });
         expect(recorderSettings(env({ RECORDINGS_ROOT: '/r', RECORDING_RETENTION_HOURS: 'soon' }))?.retentionHours).toBe(72);
     });

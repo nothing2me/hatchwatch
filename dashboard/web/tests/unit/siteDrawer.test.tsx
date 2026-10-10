@@ -85,6 +85,19 @@ describe('SiteDrawer', () =>
         expect(fetchMock.mock.calls[2][0]).toBe('/api/sites/a1');
     });
 
+    it('offers direct protection and Google Maps actions on a pin', async () =>
+    {
+        const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST' ? json({ summary: openSite }) : json(log()));
+        vi.stubGlobal('fetch', fetchMock);
+        render(<SiteDrawer alert={siteAlert('a1')} user={volunteer} onClose={vi.fn()} />);
+        await screen.findByText('Patrol visited');
+        const maps = screen.getByRole('link', { name: /Open in Google Maps/ }) as HTMLAnchorElement;
+        expect(maps.href).toContain('google.com/maps/search/');
+        fireEvent.click(screen.getByRole('button', { name: 'Mark protected' }));
+        await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(true));
+        expect(JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')?.[1]?.body))).toEqual({ type: 'protectionInstalled' });
+    });
+
     it('shows the server message when the entry is refused', async () =>
     {
         const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST'

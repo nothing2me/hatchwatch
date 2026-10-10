@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
-import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
+import type { AlertView, FeedVideo, LngLat, MapSnapshot } from '@/lib/types';
 import { isNestSite } from '@/lib/danger';
 import { addCameraPair, deleteZone, moveZone, updateCamera } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
@@ -41,14 +41,16 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const selectedAlert = liveSelected ?? (heldAlert?.id === selectedAlertId ? heldAlert : null);
     const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
-    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, trails: true });
+    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, motion: true, trails: true });
 
-    const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
+    const [historyVideo, setHistoryVideo] = useState<{ cameraId: string; video: FeedVideo } | null>(null);
+    const baseCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
+    const selectedCamera = baseCamera && historyVideo?.cameraId === baseCamera.id ? { ...baseCamera, video: historyVideo.video } : baseCamera;
     const [playback, setPlayback] = useState<Playback | null>(null);
     const [seek, setSeek] = useState<SeekRequest | null>(null);
     const selectedVideo = selectedCamera?.status === 'ONLINE' ? selectedCamera.video : null;
 
-    // The playing feed drives the map clock; pins outside its window stay hidden.
+    // The playing feed drives trail and motion playback; site pins remain visible.
     const handleTime = useCallback((t: number) =>
     {
         if (selectedVideo)
@@ -58,19 +60,34 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         }
     }, [selectedVideo]);
 
-    // Opening a feed gates pins at once (nothing shows until its clock ticks); only no feed shows all pins.
+    // Opening a feed starts its playback clock without changing the site pins.
     const selectCamera = useCallback((cameraId: string | null) =>
     {
-        if (cameraId === selectedCameraId)
+        if (cameraId === selectedCameraId && !historyVideo)
         {
             return;
         }
         const camera = snapshot.cameras.find(candidate => candidate.id === cameraId);
         const video = camera?.status === 'ONLINE' ? camera.video : null;
+        if (video?.motionMap)
+        {
+            const lngs = video.motionMap.corners.map(point => point[0]);
+            const lats = video.motionMap.corners.map(point => point[1]);
+            mapRef.current?.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 180, maxZoom: 20, duration: 700 });
+        }
         setSelectedCameraId(cameraId);
+        setHistoryVideo(null);
         setSeek(null);
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
-    }, [selectedCameraId, snapshot.cameras]);
+    }, [selectedCameraId, historyVideo, snapshot.cameras]);
+
+    const playRecording = useCallback((cameraId: string, video: FeedVideo) =>
+    {
+        setSelectedCameraId(cameraId);
+        setHistoryVideo({ cameraId, video });
+        setSeek(null);
+        setPlayback({ key: playbackKey(video), t: -Infinity });
+    }, []);
 
     // Admin camera editing: a click joins a zone within 150 m or makes a new zone there; cameras and map-made zones drag.
     const isAdmin = user.role === 'ADMIN';
@@ -192,6 +209,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
             return;
         }
         setSelectedCameraId(camera.id);
+        setHistoryVideo(null);
         const video = camera.status === 'ONLINE' ? camera.video : null;
         if (video && playbackKey(video) === alertKey(alert))
         {
@@ -244,7 +262,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
-            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById}
+            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById} onPlayRecording={playRecording}
                 editing={editing} onMapClick={placePair} onMoveCamera={moveCamera} onMoveZone={shiftZone} onDeleteZone={removeZone} />
 
             {editing && (
@@ -264,7 +282,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
                         {selectedCamera && (
                             <div className="max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:z-10">
-                                <CameraPanel key={selectedCamera.id} camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} canEditSource={isAdmin} />
+                                <CameraPanel key={`${selectedCamera.id}:${selectedCamera.video?.id ?? ''}`} camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} canEditSource={isAdmin} />
                             </div>
                         )}
                         <MapControls

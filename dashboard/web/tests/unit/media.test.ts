@@ -4,11 +4,11 @@ import { mediaRoot, resolveMediaPath } from '@/lib/media';
 
 describe('media paths', () =>
 {
-    const root = '/srv/media';
+    const root = resolve('media-test-root');
 
     it('resolves a relative path inside the root', () =>
     {
-        expect(resolveMediaPath('sim/RUN/camera-0.mp4', root)).toBe('/srv/media/sim/RUN/camera-0.mp4');
+        expect(resolveMediaPath('sim/RUN/camera-0.mp4', root)).toBe(resolve(root, 'sim/RUN/camera-0.mp4'));
     });
 
     it('rejects traversal and absolute paths', () =>

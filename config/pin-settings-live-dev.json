@@ -1,0 +1,15 @@
+{
+  "version": "live-daylight-pin-development-v1",
+  "pair_max_distance_m": 2.5,
+  "pair_min_temporal_overlap_seconds": 1.0,
+  "same_site_distance_m": 2.8,
+  "same_site_overlap_seconds": 1.0,
+  "minimum_persistent_evidence": 0.2,
+  "minimum_inland_z_m": -12.0,
+  "frozen_fallback_min_score": 0.55,
+  "frozen_fallback_min_activity": 0.015,
+  "frozen_fallback_min_persistent": 0.4,
+  "frozen_fallback_pair_distance_m": 1.5,
+  "frozen_fallback_single_min_z_m": 7.0,
+  "note": "Development-only grouping and public-evidence checks for the wide live scene. Registered pin settings are unchanged."
+}

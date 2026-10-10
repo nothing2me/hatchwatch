@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { FeedVideo } from '@/lib/types';
+import { MASK_FRAME, validMaskPoints } from '@/lib/cameras/masks';
 
 export type FeedVariant = 'raw' | 'motion';
 
@@ -22,6 +23,10 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
     const resumeAt = useRef<number | null>(null);
     const [localVariant, setVariant] = useState<FeedVariant>('raw');
     const variant = variantProp ?? localVariant;
+    const mask = video.maskPolygon && validMaskPoints(video.maskPolygon) ? video.maskPolygon : null;
+    const motionClip = variant === 'motion' && mask
+        ? `polygon(${mask.map(([x, y]) => `${x / MASK_FRAME[0] * 100}% ${y / MASK_FRAME[1] * 100}%`).join(', ')})`
+        : undefined;
 
     useEffect(() =>
     {
@@ -87,7 +92,8 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
             <video
                 ref={ref}
                 data-testid="camera-video"
-                className={cn('block aspect-video w-full', large ? 'max-h-[calc(92vh-5rem)] object-contain' : 'object-cover max-md:aspect-[5/2]')}
+                className={cn('block aspect-video w-full object-contain', large && 'max-h-[calc(92vh-5rem)]')}
+                style={motionClip ? { clipPath: motionClip } : undefined}
                 src={`/api/media/video/${video.id}?variant=${variant}`}
                 autoPlay
                 muted
@@ -95,9 +101,21 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
                 playsInline
                 onLoadedMetadata={restore}
             />
-            {video.source === 'SIMULATION' && (
-                <span className="absolute top-2 left-2 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-amber uppercase ring-1 ring-amber/40">
-                    Simulated
+            {variant === 'raw' && mask && (
+                <svg viewBox="0 0 1280 720" className="pointer-events-none absolute inset-0 h-full w-full" aria-label="Watch mask">
+                    <polygon
+                        points={mask.map(point => point.join(',')).join(' ')}
+                        fill="rgba(255,181,71,0.05)"
+                        stroke="#FFB547"
+                        strokeWidth={3}
+                        strokeDasharray="10 8"
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </svg>
+            )}
+            {variant === 'raw' && mask && (
+                <span className="absolute top-2 right-2 rounded-md bg-night-950/70 px-1.5 py-0.5 text-[10px] tracking-[0.12em] text-ink-muted uppercase ring-1 ring-amber/30">
+                    Watch mask
                 </span>
             )}
             {video.hasMotion && (
@@ -112,7 +130,7 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
                             className={cn('rounded px-2 py-0.5 font-medium capitalize transition-colors focus-visible:outline-2 focus-visible:outline-amber',
                                 variant === option ? 'bg-white/12 text-ink' : 'text-ink-muted hover:text-ink')}
                         >
-                            {option === 'raw' ? 'Raw' : 'Motion'}
+                            {option === 'raw' ? 'Camera' : 'Motion diff'}
                         </button>
                     ))}
                 </div>

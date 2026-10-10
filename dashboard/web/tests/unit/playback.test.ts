@@ -6,7 +6,7 @@ const alert = (id: string, simRunId: string | null, startT: number, endT: number
     id, kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1',
     position, radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `v-${id}`, simRunId, startT, endT,
     evidenceTier: 'TWO_CAMERA', simulated: simRunId !== null, level: 0, siteId: null, colorIndex: null,
-    site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null },
+    site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, damaged: false, danger: 'none', dangerDeadline: null, secured: null },
 });
 
 describe('playback gating', () =>
@@ -34,10 +34,10 @@ describe('playback gating', () =>
         expect(isActive(alerts[0], null)).toBe(false);
     });
 
-    it('shows all positioned alerts without playback, only active ones with it', () =>
+    it('keeps all positioned site pins visible during playback', () =>
     {
         expect(visibleAlerts(alerts, null).map(a => a.id)).toEqual(['a', 'b', 'c']);
-        expect(visibleAlerts(alerts, { key: 'R1', t: 15 }).map(a => a.id)).toEqual(['a']);
-        expect(visibleAlerts(alerts, { key: 'R1', t: 50 })).toEqual([]);
+        expect(visibleAlerts(alerts, { key: 'R1', t: 15 }).map(a => a.id)).toEqual(['a', 'b', 'c']);
+        expect(visibleAlerts(alerts, { key: 'R1', t: 50 }).map(a => a.id)).toEqual(['a', 'b', 'c']);
     });
 });

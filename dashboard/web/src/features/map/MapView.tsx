@@ -3,13 +3,13 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as maplibre from 'maplibre-gl';
 import { GripVertical, ImageOff, X } from 'lucide-react';
-import { forwardRef, useMemo, useState } from 'react';
-import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
+import { forwardRef, useEffect, useMemo, useState } from 'react';
+import Map, { Layer, Marker, Popup, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import { cn } from '@/lib/cn';
 import { CAMERA_DANGER_LABEL } from '@/lib/danger';
-import { boundsOf, viewCone } from '@/lib/geo';
-import type { LngLat, MapSnapshot } from '@/lib/types';
+import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
+import type { FeedVideo, LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
 import { isMarkerClick } from './markerClick';
@@ -35,6 +35,7 @@ interface MapViewProps
     now?: number;
     selectedAlertId?: string | null;
     onSelectAlert?: (alertId: string) => void;
+    onPlayRecording?: (cameraId: string, video: FeedVideo) => void;
     // Admin edit mode: a click joins a zone within 150 m or starts a new zone there; camera markers can be dragged.
     editing?: boolean;
     onMapClick?: (at: LngLat) => void;
@@ -68,10 +69,25 @@ const ALARM = '#FF4D5E';
 // "Secured" labels appear once a 20 m circle is big enough on screen to carry one.
 const SECURED_LABEL_ZOOM = 16.5;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
+type ZoneRecording = { cameraId: string; cameraCode: string; recordedAt: string; video: FeedVideo };
+const recordingTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, onPlayRecording, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
     const [pinHover, setPinHover] = useState(false);
+    const [zoneMenu, setZoneMenu] = useState<{ code: string; position: LngLat } | null>(null);
+    const [history, setHistory] = useState<{ loading: boolean; recordings: ZoneRecording[]; error: string | null }>({ loading: false, recordings: [], error: null });
+    useEffect(() =>
+    {
+        if (!zoneMenu) return;
+        const controller = new AbortController();
+        fetch(`/api/zones/${zoneMenu.code}/recordings`, { cache: 'no-store', signal: controller.signal })
+            .then(async response => { if (!response.ok) throw new Error('Could not load recordings.'); return response.json() as Promise<ZoneRecording[]>; })
+            .then(recordings => setHistory({ loading: false, recordings, error: null }))
+            .catch(error => { if (!controller.signal.aborted) setHistory({ loading: false, recordings: [], error: error instanceof Error ? error.message : 'Could not load recordings.' }); });
+        return () => controller.abort();
+    }, [zoneMenu?.code]);
     const style = useMemo(buildMapStyle, []);
     // A dragged camera stays where it was dropped until the server's next snapshot moves it there (or back).
     const [dropped, setDropped] = useState<{ cameras: MapSnapshot['cameras']; at: Record<string, LngLat> }>({ cameras: snapshot.cameras, at: {} });
@@ -114,6 +130,26 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
     // Rebuild (and so MapLibre setData) only when a pin's look changes, not on every clock tick.
     const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
     const alertsGeoJson = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(pinKey) }), [pinKey]);
+const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: alertsGeoJson.features.flatMap(feature =>
+        {
+            if (feature.geometry.type !== 'Point') return [];
+            const alert = snapshot.alerts.find(candidate => candidate.id === feature.properties?.id);
+            if (!alert?.position || !(alert.radiusM > 0)) return [];
+            const ring = Array.from({ length: 33 }, (_, index) => destinationPoint(alert.position!, index * 360 / 32, alert.radiusM));
+            return [{ type: 'Feature' as const, properties: feature.properties, geometry: { type: 'Polygon' as const, coordinates: [ring] } }];
+        }),
+    }), [alertsGeoJson, snapshot.alerts]);
+    const visibleCandidates = (snapshot.motionCandidates ?? []).filter(candidate => !playback || (candidate.simRunId === playback.key && playback.t >= candidate.startT - 0.5 && playback.t <= candidate.endT + 0.5));
+    const candidatesGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: visibleCandidates.map(candidate => ({ type: 'Feature', properties: { id: candidate.id, cameraCode: candidate.cameraCode, color: candidate.cameraCode.endsWith('1') ? '#1b9767' : '#e68f32' }, geometry: { type: 'Point', coordinates: candidate.position } })),
+    }), [JSON.stringify(visibleCandidates)]);
+    const candidateFootprintsGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: visibleCandidates.map(candidate => ({ type: 'Feature', properties: { id: candidate.id, color: candidate.cameraCode.endsWith('1') ? '#1b9767' : '#e68f32' }, geometry: { type: 'Polygon', coordinates: [Array.from({ length: 33 }, (_, index) => destinationPoint(candidate.position, index * 360 / 32, candidate.radiusM))] } })),
+    }), [JSON.stringify(visibleCandidates)]);
     const dangers = dangerPins(snapshot.alerts);
     const securedKey = JSON.stringify(securedAreaFeatures(snapshot.alerts));
     const securedAreas = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(securedKey) }), [securedKey]);
@@ -164,6 +200,16 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         onSelectAlert?.(id);
                     }
                 }}
+                onContextMenu={event =>
+                {
+                    if (editing || !layers.zones) return;
+                    const feature = event.target.queryRenderedFeatures(event.point, { layers: ['zone-fill'] })[0];
+                    const code = feature?.properties?.code;
+                    if (typeof code !== 'string') return;
+                    event.originalEvent.preventDefault();
+                    setHistory({ loading: true, recordings: [], error: null });
+                    setZoneMenu({ code, position: [event.lngLat.lng, event.lngLat.lat] });
+                }}
                 onError={event =>
                 {
                     // Only a failing satellite source means imagery is offline.
@@ -174,6 +220,11 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 }}
                 style={{ position: 'absolute', inset: 0 }}
             >
+                {layers.motion && snapshot.cameras.filter(camera => camera.video?.motionMap).map(camera => (
+                    <Source key={`motion-${camera.video!.id}`} id={`motion-${camera.video!.id}`} type="image" url={camera.video!.motionMap!.url} coordinates={camera.video!.motionMap!.corners}>
+                        <Layer id={`motion-raster-${camera.video!.id}`} type="raster" paint={{ 'raster-opacity': 0.85, 'raster-resampling': 'linear' }} />
+                    </Source>
+                ))}
                 {layers.cameras && (
                     <Source id="cones" type="geojson" data={conesGeoJson}>
                         <Layer id="cone-fill" type="fill" paint={{
@@ -207,6 +258,23 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                     <Layer id="trail-head-glow" type="circle" layout={{ visibility: trailVisibility }} paint={{ 'circle-radius': 9, 'circle-color': ['get', 'color'] as unknown as string, 'circle-opacity': 0.22, 'circle-blur': 0.6 }} />
                     <Layer id="trail-head" type="circle" layout={{ visibility: trailVisibility }} paint={{ 'circle-radius': 4, 'circle-color': ['get', 'color'] as unknown as string, 'circle-stroke-color': '#04080C', 'circle-stroke-width': 1.25 }} />
                 </Source>
+                {layers.alerts && (
+                    <Source id="alert-footprints" type="geojson" data={footprintsGeoJson}>
+                        <Layer id="alert-footprint-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 }} />
+                        <Layer id="alert-footprint-line" type="line" paint={{ 'line-color': ['get', 'color'], 'line-opacity': ['get', 'opacity'], 'line-width': 1 }} />
+                    </Source>
+                )}
+                {layers.motion && (
+                    <Source id="motion-candidate-footprints" type="geojson" data={candidateFootprintsGeoJson}>
+                        <Layer id="motion-candidate-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 }} />
+                        <Layer id="motion-candidate-line" type="line" paint={{ 'line-color': ['get', 'color'], 'line-width': 1, 'line-dasharray': [2, 2] }} />
+                    </Source>
+                )}
+                {layers.motion && (
+                    <Source id="motion-candidates" type="geojson" data={candidatesGeoJson}>
+                        <Layer id="motion-candidate-pins" type="circle" paint={{ 'circle-radius': 5, 'circle-color': '#07151a', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 2 }} />
+                    </Source>
+                )}
                 {layers.alerts && (
                     <Source id="alerts" type="geojson" data={alertsGeoJson}>
                         <Layer id="alert-danger-halo" type="circle" filter={['==', ['get', 'danger'], true]} paint={{
@@ -368,6 +436,22 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         </button>
                     </Marker>
                 ))}
+                {zoneMenu && !editing && (() =>
+                {
+                    const zone = snapshot.zones.find(item => item.code === zoneMenu.code);
+                    return <Popup longitude={zoneMenu.position[0]} latitude={zoneMenu.position[1]} anchor="bottom" maxWidth="290px" closeButton={false} className="zone-history-popup" onClose={() => setZoneMenu(null)}>
+                        <div className="w-64 rounded-lg bg-night-900 p-3 text-ink">
+                            <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold">Zone {zoneMenu.code}</p><p className="text-xs text-ink-muted">{zone?.name ?? 'Beach zone'} · {zone?.activityLevel.toLowerCase() ?? 'unknown'} activity</p></div><button type="button" onClick={() => setZoneMenu(null)} aria-label="Close zone details" className="rounded p-0.5 text-ink-muted hover:text-ink"><X className="h-4 w-4" /></button></div>
+                            <p className="mt-3 text-[10px] font-semibold tracking-[0.12em] text-ink-muted uppercase">Historical playback</p>
+                            {history.loading && <p className="mt-1 text-xs text-ink-muted">Loading recordings…</p>}
+                            {history.error && <p role="alert" className="mt-1 text-xs text-[#FFB3BA]">{history.error}</p>}
+                            {!history.loading && !history.error && history.recordings.length === 0 && <p className="mt-1 text-xs text-ink-muted">No saved footage for this zone.</p>}
+                            <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+                                {history.recordings.map(row => <button key={row.video.id} type="button" onClick={() => { onPlayRecording?.(row.cameraId, row.video); setZoneMenu(null); }} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-amber">Camera {row.cameraCode} · {recordingTime.format(new Date(row.recordedAt))}</button>)}
+                            </div>
+                        </div>
+                    </Popup>;
+                })()}
             </Map>
 
             {imageryOffline && (

@@ -8,23 +8,28 @@ export type SandForcing={x:number;z:number;heading:number;mode:'travel'|'dig'|'c
  * are solved at 32 Hz. A coarse-grain approximation, not grain-scale sand. */
 export class ParticleSand {
  mesh:THREE.InstancedMesh;count:number;positions:Float32Array;velocities:Float32Array;radii:Float32Array;initial:Float32Array;
- active=new Set<number>();hash=new Map<string,Set<number>>();keys:string[]=[];quiet:Uint16Array;step=0;matrix=new THREE.Matrix4();changed=new Set<number>();
+ active=new Set<number>();hash=new Map<string,Set<number>>();keys:string[]=[];quiet:Uint16Array;exposed:Uint8Array;step=0;matrix=new THREE.Matrix4();changed=new Set<number>();
  constructor(random:()=>number){
  const nx=Math.floor(BEACH_LENGTH/SPACING),nz=Math.floor(BEACH_WIDTH/SPACING);this.count=nx*nz*2;
- this.positions=new Float32Array(this.count*3);this.velocities=new Float32Array(this.count*3);this.radii=new Float32Array(this.count);this.quiet=new Uint16Array(this.count);
- this.mesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshStandardMaterial({roughness:1,flatShading:true}),this.count);this.mesh.receiveShadow=true;this.mesh.frustumCulled=false;
+ this.positions=new Float32Array(this.count*3);this.velocities=new Float32Array(this.count*3);this.radii=new Float32Array(this.count);this.quiet=new Uint16Array(this.count);this.exposed=new Uint8Array(this.count);
+ this.mesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0xc9ae87,roughness:1,flatShading:true}),this.count);this.mesh.receiveShadow=true;this.mesh.frustumCulled=false;
  const color=new THREE.Color();let i=0;
  for(let layer=0;layer<2;layer++)for(let ix=0;ix<nx;ix++)for(let iz=0;iz<nz;iz++,i++){
  const x=-BEACH_LENGTH/2+(ix+.5)*SPACING+layer*SPACING*.5+(random()-.5)*.055,z=-BEACH_WIDTH/2+(iz+.5)*SPACING+layer*SPACING*.5+(random()-.5)*.055;
  const r=.087+random()*.008,y=sandFloor(z)+.09+layer*.255;
- this.positions.set([x,y,z],i*3);this.radii[i]=r;const tone=.72+random()*.20;color.setRGB(tone,tone*.84,tone*.57);this.mesh.setColorAt(i,color);this.updateMatrix(i);this.insert(i);
- }this.initial=this.positions.slice();this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.mesh.instanceMatrix.needsUpdate=true;
+ this.positions.set([x,y,z],i*3);this.radii[i]=r;const tone=.42+random()*.12;color.setRGB(tone,tone*.83,tone*.61);this.mesh.setColorAt(i,color);this.updateMatrix(i);this.insert(i);
+ }this.initial=this.positions.slice();this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+ // The physical particles are much larger than real grains. The continuous
+ // surface supplies the fine sand; disturbed upper-layer cells become small
+ // visible clumps so travel as well as excavation moves actual geometry.
+ for(let grain=0;grain<this.count;grain++)this.updateMatrix(grain);
+ this.mesh.instanceMatrix.needsUpdate=true;
  }
  key(x:number,z:number){return `${Math.floor(x/CELL)},${Math.floor(z/CELL)}`}
  insert(i:number){const k=this.key(this.positions[i*3],this.positions[i*3+2]);this.keys[i]=k;let bucket=this.hash.get(k);if(!bucket){bucket=new Set();this.hash.set(k,bucket)}bucket.add(i)}
- updateMatrix(i:number){const o=i*3,r=this.radii[i];this.matrix.makeScale(r,r*.88,r);this.matrix.setPosition(this.positions[o],this.positions[o+1],this.positions[o+2]);this.mesh.setMatrixAt(i,this.matrix)}
+ updateMatrix(i:number){const o=i*3,r=this.radii[i];const moved=this.initial&&Math.hypot(this.positions[o]-this.initial[o],this.positions[o+2]-this.initial[o+2])>.028;const visible=moved&&(this.exposed[i]===1||(i>=this.count/2&&i%8===0));const size=visible?r*(this.exposed[i]===1?.23:.13):0;this.matrix.makeScale(size,size*.65,size);this.matrix.setPosition(this.positions[o],Math.max(this.positions[o+1],sandFloor(this.positions[o+2])+.43+size*.25),this.positions[o+2]);this.mesh.setMatrixAt(i,this.matrix)}
  neighbors(x:number,z:number,r:number){const result:number[]=[];for(let gx=Math.floor((x-r)/CELL);gx<=Math.floor((x+r)/CELL);gx++)for(let gz=Math.floor((z-r)/CELL);gz<=Math.floor((z+r)/CELL);gz++){const bucket=this.hash.get(`${gx},${gz}`);if(bucket)for(const i of bucket)result.push(i)}return result}
- reset(){this.positions.set(this.initial);this.velocities.fill(0);this.active.clear();this.hash.clear();this.quiet.fill(0);this.step=0;for(let i=0;i<this.count;i++){this.insert(i);this.updateMatrix(i)}this.mesh.instanceMatrix.needsUpdate=true}
+ reset(){this.positions.set(this.initial);this.velocities.fill(0);this.active.clear();this.hash.clear();this.quiet.fill(0);this.exposed.fill(0);this.step=0;for(let i=0;i<this.count;i++){this.insert(i);this.updateMatrix(i)}this.mesh.instanceMatrix.needsUpdate=true}
  wake(i:number){this.active.add(i);this.quiet[i]=0}
  force(f:SandForcing){
  if(f.mode==='none')return;
@@ -38,14 +43,14 @@ export class ParticleSand {
  // under gravity, colliding with neighboring grains and settling by friction.
  const strike=Math.sin(phase)>.88&&Math.sin(phase-STEP*(moving?7:11))<=.88;
  let strength=0,fx=0,fz=0,lift=0;
- if(moving){if(Math.abs(localX)>.18&&Math.abs(localX)<.85&&Math.abs(localZ)<.72){strength=pulse*1.25;fx=Math.sign(localX)*cos;fz=-Math.sign(localX)*sin;lift=.24}}
+ if(moving){if(Math.abs(localX)>.18&&Math.abs(localX)<.85&&Math.abs(localZ)<.72){strength=strike?.62:0;fx=Math.sign(localX)*cos;fz=-Math.sign(localX)*sin;lift=.34}}
  else if(f.model==='A'){
  const d=Math.hypot(localX,localZ+.3);if(d<(cover?1.4:.88)&&d>.06){strength=(cover?pulse:strike?1:0)*(cover?2.6:1.35)*(cover?1:(1-d*.3));fx=(cover?-1:1)*dx/d;fz=(cover?-1:1)*(dz-.12)/d;lift=cover?.18:1}
  }else{
  // B rakes alternating tangential strips rather than radial excavation jets.
  const strip=Math.abs(localX-Math.sin(f.time*2.1)*.42);if(strip<.43&&Math.abs(localZ+.3)<(cover?1.35:.88)){strength=(cover?pulse:strike?1:0)*(cover?1.8:1.3);const side=Math.sin(f.time*2.1)>0?1:-1;fx=cover?-dx:side*cos+.45*sin;fz=cover?-dz:-side*sin+.45*cos;lift=cover?.08:1}
  }
- if(strength>0){this.wake(i);const launched=!moving&&!cover,scale=strength*f.strength*(launched?1:STEP);
+ if(strength>0){this.wake(i);if(!moving)this.exposed[i]=1;const launched=!cover,scale=strength*f.strength*(launched?1:STEP);
  this.velocities[o]+=fx*scale*(launched?2.4:1);
  this.velocities[o+1]+=lift*scale*(launched?3.1:3);
  this.velocities[o+2]+=fz*scale*(launched?2.4:1)}

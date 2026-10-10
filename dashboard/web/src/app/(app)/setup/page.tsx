@@ -7,7 +7,7 @@ import { TopBar } from '@/features/shell/TopBar';
 
 export const dynamic = 'force-dynamic';
 
-// Setup hub: people and cameras; upload tools arrive in a later release.
+// Settings hub: people and cameras.
 export default async function SetupPage()
 {
     const [user, snapshot] = await Promise.all([requireCurrentUser('ADMIN'), getMapSnapshot()]);
@@ -19,7 +19,7 @@ export default async function SetupPage()
                 <TopBar user={user} current="setup" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} dangerCount={snapshot.dangerCount} firstDangerId={firstDangerId} />
             </div>
             <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
-                <h1 className="text-3xl font-semibold tracking-tight text-ink">Setup</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-ink">Settings</h1>
                 <p className="mt-1.5 text-sm text-ink-muted">Manage who can sign in and where the cameras stand.</p>
                 <Link href="/setup/users" className="mt-6 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
                     <Users aria-hidden className="h-5 w-5 text-amber" />

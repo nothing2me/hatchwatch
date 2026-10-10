@@ -60,9 +60,10 @@ describe('UsersScreen', () =>
         await waitFor(() => expect(setDisabledAction).toHaveBeenCalledWith('v', true));
     });
 
-    it('shows Users in the nav for admins', () =>
+    it('keeps Settings selected for the users page', () =>
     {
         render(<UsersScreen user={admin} users={users} bar={bar} />);
-        expect(screen.getByRole('link', { name: 'Users' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
     });
 });

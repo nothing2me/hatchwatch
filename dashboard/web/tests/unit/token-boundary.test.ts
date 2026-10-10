@@ -21,7 +21,7 @@ describe('device token boundary', () =>
 {
     it('lets only the token, device and board modules touch tokenHash', () =>
     {
-        const touching = files(join(root, 'src')).filter(path => readFileSync(path, 'utf8').includes('tokenHash')).map(path => relative(root, path));
+        const touching = files(join(root, 'src')).filter(path => readFileSync(path, 'utf8').includes('tokenHash')).map(path => relative(root, path).replaceAll('\\', '/'));
         expect(touching.filter(path => !ALLOWED.includes(path))).toEqual([]);
     });
 

@@ -24,7 +24,7 @@ export function clipTrail(points: TrackView['points'], t: number): TrackView['po
 export interface TrailProperties { id: string; color: string; opacity: number }
 
 // While a feed plays, that clip's trails grow with its clock and carry a head dot at their newest point.
-// With no feed, the whole trails of active sites rest at 60 % so the map shows where each turtle went.
+// With no feed, matched active-site trails and current unmatched motion tracks remain visible.
 export function trailFeatures(tracks: TrackView[], alerts: AlertView[], playback: Playback | null): { lines: Feature<LineString, TrailProperties>[]; heads: Feature<Point, TrailProperties>[] }
 {
     const lines: Feature<LineString, TrailProperties>[] = [];
@@ -36,9 +36,9 @@ export function trailFeatures(tracks: TrackView[], alerts: AlertView[], playback
         const active = new Set(alerts.filter(alert => isNestSite(alert) && alert.site.active).map(alert => alert.id));
         for (const track of tracks)
         {
-            if (track.alertId && active.has(track.alertId) && track.points.length >= 2)
+            if (track.points.length >= 2 && (track.alertId === null || active.has(track.alertId)))
             {
-                line(track.id, trailColor(track.colorIndex), RESTING_OPACITY, track.points.map(point => point.position));
+                line(track.id, trailColor(track.colorIndex), track.alertId === null ? RESTING_OPACITY * 0.65 : RESTING_OPACITY, track.points.map(point => point.position));
             }
         }
         return { lines, heads };

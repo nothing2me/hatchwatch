@@ -1,4 +1,4 @@
-# NestTrace results — synthetic daylight prototype
+# HatchWatch results — synthetic daylight prototype
 
 **Historical one-turtle result:** these measurements used the simulator at Git revision `f50d04c`. The current higher-density, three-turtle simulator changes the footage distribution and requires its own stress evaluation in `STRESS_RESULTS.md`. The results below must not be read as validation of the current simulator.
 

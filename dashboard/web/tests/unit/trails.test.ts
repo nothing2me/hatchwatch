@@ -63,12 +63,12 @@ describe('trailFeatures', () =>
         expect(heads).toHaveLength(3);
     });
 
-    it('with no feed playing, shows whole trails of active sites at 60 % and no heads', () =>
+    it('with no feed playing, shows active-site trails and current unmatched tracks', () =>
     {
         const { lines, heads } = trailFeatures(tracks, alerts, null);
-        expect(lines.map(line => line.properties.id)).toEqual(['t1', 't4']);
+        expect(lines.map(line => line.properties.id)).toEqual(['t1', 't3', 't4']);
         expect(lines[0].geometry.coordinates).toHaveLength(5);
-        expect(lines.every(line => line.properties.opacity === 0.6)).toBe(true);
+        expect(lines.map(line => line.properties.opacity)).toEqual([0.6, 0.39, 0.6]);
         expect(heads).toEqual([]);
     });
 });

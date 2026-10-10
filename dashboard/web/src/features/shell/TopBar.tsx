@@ -5,7 +5,7 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'analytics' | 'live' | 'setup' | 'users';
+export type Page = 'map' | 'cameras' | 'analytics' | 'live' | 'setup' | 'users';
 
 // Counts a server page passes through to the bar.
 export interface TopBarCounts
@@ -32,13 +32,12 @@ interface TopBarProps
 
 const chip = 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2 text-xs sm:gap-1.5 sm:px-2.5';
 
-// `wideOnly` items drop out on phones so the admin bar fits; Setup links to Users.
-const NAV: { page: Page; href: string; label: string; adminOnly?: boolean; wideOnly?: boolean }[] = [
+const NAV: { page: Page; href: string; label: string; adminOnly?: boolean }[] = [
     { page: 'map', href: '/', label: 'Map' },
+    { page: 'cameras', href: '/cameras', label: 'Cameras' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
     { page: 'live', href: '/live', label: 'Live cameras' },
-    { page: 'setup', href: '/setup', label: 'Setup', adminOnly: true },
-    { page: 'users', href: '/setup/users', label: 'Users', adminOnly: true, wideOnly: true },
+    { page: 'setup', href: '/setup', label: 'Settings', adminOnly: true },
 ];
 
 // Turtle mark from the favicon, drawn inline so it inherits the ink colour.
@@ -61,9 +60,9 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
     return (
         <GlassPanel className="pointer-events-auto flex h-12 shrink-0 items-center gap-1.5 pr-1.5 pl-3 sm:gap-3 sm:pr-2 sm:pl-4">
             {/* Phones drop the mark for room; Map links home too. */}
-            <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md max-sm:hidden focus-visible:outline-2 focus-visible:outline-amber" aria-label="NestTrace home">
+            <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md max-sm:hidden focus-visible:outline-2 focus-visible:outline-amber" aria-label="HatchWatch home">
                 <Mark />
-                <span className="hidden text-[13px] font-bold tracking-[0.2em] sm:inline">NESTTRACE</span>
+                <span className="hidden text-[13px] font-bold tracking-[0.2em] sm:inline">HATCHWATCH</span>
             </Link>
             <span aria-hidden className="hidden h-4 w-px bg-white/12 sm:block" />
 
@@ -71,7 +70,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
             <nav aria-label="Main" className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-night-950/60 p-0.5 ring-1 ring-white/8 [scrollbar-width:none]">
                 {links.map(item =>
                 {
-                    const here = item.page === current;
+                    const here = item.page === current || (item.page === 'setup' && current === 'users');
                     return (
                         <Link
                             key={item.page}
@@ -79,8 +78,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                             aria-current={here ? 'page' : undefined}
                             aria-label={item.page === 'live' ? item.label : undefined}
                             className={cn('inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber sm:px-3',
-                                here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink',
-                                item.wideOnly && 'max-sm:hidden')}
+                                here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink')}
                         >
                             {here && <span aria-hidden className="mr-1.5 h-1 w-1 rounded-full bg-amber max-sm:hidden" />}
                             {/* "Live" alone on phones so the admin bar still fits 360 px. */}

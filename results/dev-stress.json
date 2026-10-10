@@ -1,0 +1,172 @@
+[
+  {
+    "id": "A-travel-stress-dev-61",
+    "scenario": "travel",
+    "seed": 61,
+    "analysisSeconds": 37.928638900000806,
+    "views": [
+      {
+        "view": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 0,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      },
+      {
+        "view": 1,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "A-unrelated-stress-dev-62",
+    "scenario": "unrelated",
+    "seed": 62,
+    "analysisSeconds": 41.600749400000495,
+    "views": [
+      {
+        "view": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 0,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      },
+      {
+        "view": 1,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 0,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "A-noeggs-stress-dev-63",
+    "scenario": "no-eggs",
+    "seed": 63,
+    "analysisSeconds": 31.106795199999397,
+    "views": [
+      {
+        "view": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      },
+      {
+        "view": 1,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "A-weak-stress-dev-64",
+    "scenario": "weak",
+    "seed": 64,
+    "analysisSeconds": 24.878571699999156,
+    "views": [
+      {
+        "view": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      },
+      {
+        "view": 1,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "A-obstructed-stress-dev-65",
+    "scenario": "obstructed",
+    "seed": 65,
+    "analysisSeconds": 25.703156899999158,
+    "views": [
+      {
+        "view": 0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 0,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      },
+      {
+        "view": 1,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "meanCenterErrorM": null,
+        "candidates": {
+          "frozen": 1,
+          "motion": 0,
+          "tracker": 0,
+          "full": 0
+        }
+      }
+    ]
+  }
+]

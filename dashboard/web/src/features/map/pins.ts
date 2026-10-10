@@ -17,7 +17,6 @@ export interface PinProperties
     danger: boolean;
 }
 
-const TIER_COLOR = { TWO_CAMERA: '#4ADE80', SINGLE_CAMERA: '#FFB547' } as const;
 export const FADED_OPACITY = 0.4;
 
 export function isFaded(alert: AlertView, now: number, fadeMinutes: number): boolean
@@ -29,8 +28,7 @@ export function isFaded(alert: AlertView, now: number, fadeMinutes: number): boo
 const isOpenDanger = (alert: AlertView) => alert.kind === 'DANGER' && alert.site.active;
 
 // Active nest sites only. A site with a trail is ringed in its trail colour so the two read as one turtle;
-// otherwise, with no feed playing, pins show protection and fade once old and untouched, and while a feed
-// plays they keep the evidence colours of Plan A. Ring weight always shows the evidence tier.
+// otherwise pins show protection and fade once old and untouched. Playing footage never hides or recolours them.
 export function pinFeatures(alerts: AlertView[], playback: Playback | null, now: number, fadeMinutes: number, selectedId: string | null): Feature<Point, PinProperties>[]
 {
     const inDanger = new Set(alerts.filter(isOpenDanger).map(alert => alert.siteId));
@@ -40,9 +38,9 @@ export function pinFeatures(alerts: AlertView[], playback: Playback | null, now:
             id: alert.id,
             color: alert.colorIndex !== null
                 ? trailColor(alert.colorIndex)
-                : playback ? TIER_COLOR[alert.evidenceTier ?? 'SINGLE_CAMERA'] : PROTECTION[alert.site.protection].color,
+                : PROTECTION[alert.site.protection].color,
             strokeWidth: alert.evidenceTier === 'TWO_CAMERA' ? 2.5 : 1.25,
-            opacity: !playback && isFaded(alert, now, fadeMinutes) ? FADED_OPACITY : 1,
+            opacity: isFaded(alert, now, fadeMinutes) ? FADED_OPACITY : 1,
             selected: alert.id === selectedId,
             danger: inDanger.has(alert.id),
         },

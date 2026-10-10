@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { MapSnapshot } from '@/lib/types';
 import { siteAlert } from './siteFixtures';
 
@@ -8,7 +8,7 @@ vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
 const { AnalyticsScreen } = await import('@/features/analytics/AnalyticsScreen');
 const { TopBar } = await import('@/features/shell/TopBar');
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 const viewer = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
 const admin = { ...viewer, role: 'ADMIN' as const };
@@ -48,17 +48,15 @@ describe('AnalyticsScreen', () =>
         expect(within(outcomes).getByRole('img').getAttribute('aria-label')).toBe('Outcomes: 0 saved, 0 not saved, 2 pending');
     });
 
-    it('switches every total to the whole log with the scope toggle', () =>
+    it('loads the persisted historical sheet with selectable time windows', async () =>
     {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ range: '30d', bucket: 'day', from: '2026-10-01T00:00:00.000Z', to: '2026-10-10T00:00:00.000Z', firstLoggedAt: '2026-09-01T00:00:00.000Z', rows: [{ window: '2026-10-09T00:00:00.000Z', videos: 3, digging: 2, crawl: 1, danger: 0, patrol: 1, protected: 1, noNest: 0 }] }) }));
         render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
-        fireEvent.click(screen.getByRole('radio', { name: 'Everything logged' }));
-        expect(within(tile('Sites')).getByTestId('value').textContent).toBe('4');
-        expect(within(tile('Unprotected')).getByTestId('value').textContent).toBe('2');
-        expect(within(tile('Archived')).getByTestId('value').textContent).toBe('1');
-        const outcomes = screen.getByRole('region', { name: 'Outcomes' });
-        expect(within(outcomes).getByRole('img').getAttribute('aria-label')).toBe('Outcomes: 1 saved, 1 not saved, 2 pending');
-        expect(outcomes.textContent).toContain('25%');
-        expect(outcomes.textContent).toContain('50%');
+        fireEvent.click(screen.getByRole('radio', { name: 'Historical record' }));
+        expect(screen.getByRole('heading', { name: 'Historical record' })).toBeTruthy();
+        await waitFor(() => expect(screen.getByRole('table')).toBeTruthy());
+        expect(screen.getByRole('button', { name: 'All time' })).toBeTruthy();
+        expect(within(screen.getByRole('table')).getByText('Oct 9, 2026, 12:00 AM')).toBeTruthy();
     });
 
     it('draws the three bar charts as labelled SVG images listing every zone', () =>
@@ -132,32 +130,31 @@ describe('TopBar', () =>
         expect(screen.getByText('active sites')).toBeTruthy();
         expect(screen.getByRole('link', { name: 'Analytics' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBeNull();
-        expect(screen.queryByRole('link', { name: 'Setup' })).toBeNull();
+        expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
     });
 
-    it('shows Setup to admins and uses the singular for one site', () =>
+    it('shows Settings to admins and uses the singular for one site', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
-        expect(screen.getByRole('link', { name: 'Setup' }).getAttribute('href')).toBe('/setup');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByText('active site')).toBeTruthy();
     });
 
-    it('shows Live cameras to every role, between Analytics and Setup', () =>
+    it('keeps Live cameras available to viewers alongside Cameras and Analytics', () =>
     {
-        const { rerender } = render(<TopBar user={viewer} current="live" camerasOnline={1} camerasTotal={2} activeSites={0} />);
+        render(<TopBar user={viewer} current="live" camerasOnline={1} camerasTotal={2} activeSites={0} />);
         const nav = screen.getByRole('navigation', { name: 'Main' });
-        expect(within(nav).getAllByRole('link').map(link => link.getAttribute('aria-label') ?? link.textContent)).toEqual(['Map', 'Analytics', 'Live cameras']);
+        expect(within(nav).getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
         expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('href')).toBe('/live');
         expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('aria-current')).toBe('page');
-        rerender(<TopBar user={{ ...viewer, role: 'ADMIN' }} current="map" camerasOnline={1} camerasTotal={2} activeSites={0} />);
-        expect(within(nav).getAllByRole('link').map(link => link.getAttribute('aria-label') ?? link.textContent)).toEqual(['Map', 'Analytics', 'Live cameras', 'Setup', 'Users']);
     });
 
-    it('drops the Users link on phones only (Setup links to it)', () =>
+    it('keeps Cameras and Settings in the main navigation and Users inside Settings', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
-        expect(screen.getByRole('link', { name: 'Users' }).className).toContain('max-sm:hidden');
-        expect(screen.getByRole('link', { name: 'Setup' }).className).not.toContain('max-sm:hidden');
+        expect(screen.getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
+        expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
     });
 });

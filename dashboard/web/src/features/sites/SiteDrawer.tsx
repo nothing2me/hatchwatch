@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ChevronRight, Eye, MapPinOff, ShieldCheck, Siren, X } from 'lucide-react';
+import { ChevronRight, ExternalLink, Eye, MapPinOff, ShieldCheck, Siren, X } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 import { CAMERA_DANGER_LABEL, isCameraDanger } from '@/lib/danger';
 import { PERSON_EVENTS } from '@/lib/sites/summary';
 import type { AlertView, SiteEventType, SiteSummary } from '@/lib/types';
-import { PatrolledMark, StatusPill } from '@/features/alerts/AlertsFeed';
+import { DamagedMark, PatrolledMark, StatusPill } from '@/features/alerts/AlertsFeed';
 import { CLOSED_SITE_NOTE, DangerBadge, siteClosed } from '@/features/alerts/DangerCards';
 import { siteLabel } from '@/features/alerts/dangerGroups';
 import { trailColor } from '@/features/map/trails';
@@ -53,8 +53,7 @@ export function relativeTime(iso: string, now: number): string
 
 function sourceLabel(alert: AlertView): string
 {
-    if (alert.simRunId?.startsWith('live-')) return 'Live simulator feed';
-    return alert.simulated ? 'Simulated run' : 'Camera footage';
+    return alert.simRunId ? 'Recorded clip' : 'Camera footage';
 }
 
 interface SiteDrawerProps
@@ -79,6 +78,8 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
     const request = useRef(0);
     const [log, setLog] = useState<SiteLog | null>(null);
     const [failed, setFailed] = useState(false);
+    const [quickBusy, setQuickBusy] = useState(false);
+    const [quickError, setQuickError] = useState<string | null>(null);
     const now = useNow(30_000);
     // The live snapshot changes this when anyone (or the camera watcher) touches the site.
     const siteVersion = JSON.stringify(alert.site);
@@ -166,6 +167,31 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
     const dangerOpen = isDanger && site.active;
     const pinColor = isDanger ? ALARM : alert.colorIndex !== null ? trailColor(alert.colorIndex) : PROTECTION[site.protection].color;
     const openDangers = dangers.filter(danger => danger.site.active);
+    const mapsUrl = alert.position ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${alert.position[1]},${alert.position[0]}`)}` : null;
+
+    async function quickAction(type: 'protectionInstalled' | 'noNestFound')
+    {
+        setQuickBusy(true);
+        setQuickError(null);
+        try
+        {
+            const response = await fetch(`/api/sites/${alert.id}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
+            if (!response.ok)
+            {
+                const body = await response.json().catch(() => null) as { error?: string } | null;
+                throw new Error(body?.error ?? 'Could not update this site.');
+            }
+            await load();
+        }
+        catch (error)
+        {
+            setQuickError(error instanceof Error ? error.message : 'Could not update this site.');
+        }
+        finally
+        {
+            setQuickBusy(false);
+        }
+    }
 
     return (
         <GlassPanel
@@ -196,7 +222,7 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                             ? <StatusPill tone={{ label: 'Open · act now', color: ALARM }} />
                             : <span className="inline-flex items-center gap-1 text-xs text-ok"><ShieldCheck aria-hidden className="h-3.5 w-3.5" />Resolved{alert.resolvedBy ? ` by ${alert.resolvedBy}` : ''}</span>
                         : site.active
-                        ? (<><StatusPill tone={PROTECTION[site.protection]} />{site.patrolVisited && <PatrolledMark />}<span className="text-[11px] text-ink-muted">{NESTING[site.nesting]}</span></>)
+                        ? (<><StatusPill tone={PROTECTION[site.protection]} />{site.patrolVisited && <PatrolledMark />}{site.damaged && <DamagedMark />}<span className="text-[11px] text-ink-muted">{NESTING[site.nesting]}</span></>)
                         : (<><StatusPill tone={inactiveState(site)} /><span className="text-[11px] text-ink-muted">{PROTECTION[site.protection].label}</span></>)}
                     {!isDanger && faded && site.active && <span className="text-[11px] text-ink-muted/80">· untouched {fadeMinutes}+ min</span>}
                 </div>
@@ -265,6 +291,7 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                             </>)
                             : (<>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Evidence</dt><dd className="mt-0.5 font-medium">{alert.evidenceTier ? tierText[alert.evidenceTier] : '—'}</dd></div>
+                        <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Path</dt><dd className="mt-0.5 font-medium">{alert.colorIndex !== null ? 'Matched motion track' : 'No reliable track'}</dd></div>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Score</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.score !== null ? alert.score.toFixed(2) : '—'}</dd></div>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">In clip</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.startT.toFixed(1)}–{alert.endT.toFixed(1)} s</dd></div>
                         <div className="col-span-3"><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Detected</dt><dd className="mt-0.5"><span className="font-medium">{relativeTime(detectedAt, now)}</span> <span className="font-mono text-ink-muted">· {absolute.format(new Date(detectedAt))}</span></dd></div>
@@ -309,6 +336,14 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
             </div>
 
             <footer className="shrink-0 border-t border-white/8 bg-night-950/40 px-4 pt-3 pb-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))]">
+                {!isDanger && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                        {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 px-3 text-xs font-medium text-ink hover:bg-white/8 focus-visible:outline-2 focus-visible:outline-amber">Open in Google Maps <ExternalLink aria-hidden className="h-3.5 w-3.5" /></a>}
+                        {canLog && site.active && site.protection === 'unprotected' && <button type="button" disabled={quickBusy} onClick={() => void quickAction('protectionInstalled')} className="h-9 rounded-lg border border-ok/40 px-3 text-xs font-medium text-ok hover:bg-ok/10 disabled:opacity-50">Mark protected</button>}
+                        {canLog && site.active && site.nesting === 'unresolved' && <button type="button" disabled={quickBusy} onClick={() => void quickAction('noNestFound')} className="h-9 rounded-lg border border-white/15 px-3 text-xs font-medium text-ink hover:bg-white/8 disabled:opacity-50">No nest found</button>}
+                        {quickError && <p role="alert" className="w-full text-xs text-[#FFB3BA]">{quickError}</p>}
+                    </div>
+                )}
                 {isDanger && !dangerOpen
                     ? <p className="flex items-center gap-2 text-xs text-ink-muted"><ShieldCheck aria-hidden className="h-3.5 w-3.5 text-ok" />Resolved{alert.resolvedBy ? ` by ${alert.resolvedBy}` : ''}. Log follow-ups on the nest site.</p>
                     : !canLog

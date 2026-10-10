@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bearingBetween, destinationPoint } from '@/lib/geo';
-import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import { recordingOffsetM, shiftedZoneFrame, simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
 import { SEED_CAMERAS, SEED_ZONES } from '../../prisma/seed-data';
 
 function metres(a: [number, number], b: [number, number]): number
@@ -57,5 +57,35 @@ describe('zone frame', () =>
         expect(metres(frame.origin, inland)).toBeCloseTo(8, 1);
         const seaMid: [number, number] = [(ring[2][0] + ring[3][0]) / 2, (ring[2][1] + ring[3][1]) / 2];
         expect(metres(inland, seaMid)).toBeGreaterThan(metres(frame.origin, seaMid));
+    });
+
+    it('spreads successive recordings along the zone without stretching a 24 m footprint', () =>
+    {
+        const offsets = Array.from({ length: 8 }, (_, visit) => recordingOffsetM(ring, visit * 4 + 1, 4, 24));
+        expect(new Set(offsets.map(offset => Math.round(offset))).size).toBe(8);
+        for (const offset of offsets)
+        {
+            const placed = shiftedZoneFrame(frame, offset);
+            expect(metres(simPointToLngLat(placed, [-12, 0]), simPointToLngLat(placed, [12, 0]))).toBeCloseTo(24, 1);
+            expect(Math.abs(offset) + 12).toBeLessThan(metres(ring[0], ring[1]) / 2);
+        }
+    });
+
+    it('keeps a zone\'s back-to-back wide recordings from overlapping, and inside the zone', () =>
+    {
+        const lengthM = metres(ring[0], ring[1]);
+        for (const widthM of [24, 78])
+        {
+            const stations = Math.max(1, Math.floor((lengthM - 12) / widthM));
+            const offsets = Array.from({ length: 12 }, (_, visit) => recordingOffsetM(ring, visit * 4 + 2, 4, widthM));
+            offsets.forEach((offset, visit) =>
+            {
+                expect(Math.abs(offset) + widthM / 2).toBeLessThanOrEqual(lengthM / 2 - 6 + 1e-6);
+                if (visit > 0 && stations > 1)
+                {
+                    expect(Math.abs(offset - offsets[visit - 1])).toBeGreaterThanOrEqual(widthM - 1e-6);
+                }
+            });
+        }
     });
 });

@@ -14,7 +14,7 @@ export const ALERT_MESSAGES = {
 
 export type AlertKind = keyof typeof ALERT_MESSAGES;
 export type AlertStatus = 'NEW' | 'REVIEWED' | 'DISMISSED' | 'FIELD_CONFIRMED' | 'HATCHED' | 'LOST' | 'ARCHIVED';
-export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'protectionInstalled' | 'hatched' | 'lost' | 'note' | 'danger' | 'dangerResolved';
+export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'nestDamaged' | 'protectionInstalled' | 'hatched' | 'lost' | 'note' | 'danger' | 'dangerResolved';
 export type Protection = 'unprotected' | 'protected' | 'notNeeded';
 export type Nesting = 'unresolved' | 'confirmed' | 'noNest';
 export type Outcome = 'open' | 'hatched' | 'lost';
@@ -30,6 +30,8 @@ export interface SiteSummary
     patrolVisited: boolean;
     detectedAt: string | null;
     archivedAt: string | null;
+    /** A patrol found the nest damaged (trampled, driven over, dug up, washed out). Sticky once logged; the site stays active. */
+    damaged: boolean;
     /** Person-near-site state from the log: a `danger` entry makes it active until someone resolves or acts on the site. */
     danger: DangerState;
     /** ISO time the site counts as Not saved unless protection is logged first (first danger + 30 min); null = no deadline. */
@@ -62,6 +64,10 @@ export interface FeedVideo
     durationS: number | null;
     hasMotion: boolean;
     simRunId: string | null;
+    motionMap?: { url: string; corners: [LngLat, LngLat, LngLat, LngLat]; fitRmseM: number | null };
+    /** Operator-drawn watch polygon in source-frame pixels; motion signals are
+     * computed only inside it at extraction. Never simulator truth. */
+    maskPolygon?: [number, number][];
 }
 
 export interface CameraView
@@ -110,6 +116,19 @@ export interface AlertView
     site: SiteSummary;
 }
 
+export interface MotionCandidateView
+{
+    id: string;
+    cameraCode: string;
+    zoneCode: string;
+    position: LngLat;
+    radiusM: number;
+    score: number;
+    startT: number;
+    endT: number;
+    simRunId: string;
+}
+
 export interface TrackView
 {
     id: string;
@@ -125,6 +144,7 @@ export interface MapSnapshot
     zones: ZoneView[];
     cameras: CameraView[];
     alerts: AlertView[];
+    motionCandidates?: MotionCandidateView[];
     camerasOnline: number;
     camerasTotal: number;
     inactiveCount: number;    // dismissed, hatched, lost or archived nest sites, plus resolved danger alerts

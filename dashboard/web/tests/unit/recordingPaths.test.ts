@@ -1,8 +1,8 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { recordingsRoot, resolveRecordingPath, segmentBase } from '@/lib/phones/recordingPaths';
 
-const root = '/srv/recordings';
+const root = resolve('/srv/recordings');
 const env = (values: Record<string, string>) => values as unknown as NodeJS.ProcessEnv;
 
 describe('recording paths', () =>
@@ -25,7 +25,7 @@ describe('recording paths', () =>
 
     it('defaults to dashboard/recordings beside the web folder', () =>
     {
-        expect(recordingsRoot(env({ RECORDINGS_ROOT: '/recordings' }))).toBe('/recordings');
+        expect(recordingsRoot(env({ RECORDINGS_ROOT: '/recordings' }))).toBe(resolve('/recordings'));
         expect(recordingsRoot(env({}))).toBe(join(process.cwd(), '..', 'recordings'));
     });
 });

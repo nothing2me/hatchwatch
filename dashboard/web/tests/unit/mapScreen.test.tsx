@@ -97,10 +97,10 @@ describe('MapScreen', () =>
         expect(screen.queryByText('Camera B1')).toBeNull();
     });
 
-    it('hides Setup link for viewers', () =>
+    it('hides Settings link for viewers', () =>
     {
         render(<MapScreen snapshot={snapshot} user={user} />);
-        expect(screen.queryByText('Setup')).toBeNull();
+        expect(screen.queryByText('Settings')).toBeNull();
     });
 
     it('shows zoom, fit, and layer controls and an empty alerts state', () =>
@@ -123,13 +123,13 @@ describe('MapScreen', () =>
     {
         const withVideo: MapSnapshot = {
             ...snapshot,
-            cameras: [{ ...snapshot.cameras[0], video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } }],
+            cameras: [{ ...snapshot.cameras[0], calibrated: true, video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } }],
         };
         render(<MapScreen snapshot={withVideo} user={user} />);
         fireEvent.click(screen.getByText('cam B1'));
         expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(screen.queryByText('No footage yet')).toBeNull();
-        expect(screen.getByText('Simulated footage · pins placed approximately')).toBeTruthy();
+        expect(screen.queryByText(/Simulated/)).toBeNull();
         expect(screen.queryByText(/Calibrate this camera/)).toBeNull();
     });
 
@@ -137,7 +137,7 @@ describe('MapScreen', () =>
         id, kind: 'DIGGING', message: `Digging activity detected; nesting unresolved.`, status: 'NEW', zoneCode: 'B', cameraCode,
         position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `video-${runId}`,
         simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: null,
-        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null },
+        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, damaged: false, danger: 'none', dangerDeadline: null, secured: null },
     });
     const twoRuns: MapSnapshot = {
         ...snapshot,
@@ -156,18 +156,18 @@ describe('MapScreen', () =>
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         fireEvent(element, new Event('loadedmetadata'));
         expect(element.currentTime).toBeCloseTo(8);
-        expect(screen.getByTestId('visible-pins').textContent).toBe('a1');
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         const [first, second] = screen.getAllByRole('button', { name: /Digging activity detected/ });
         expect(first.getAttribute('aria-current')).toBe('true');
         expect(second.getAttribute('aria-current')).toBeNull();
     });
 
-    it('never shows other runs\' pins when a camera opens', () =>
+    it('keeps every site pin visible when a camera opens', () =>
     {
         render(<MapScreen snapshot={twoRuns} user={user} />);
         expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         fireEvent.click(screen.getByText('cam C1'));
-        expect(screen.getByTestId('visible-pins').textContent).toBe('');
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         fireEvent.click(screen.getByLabelText('Close camera panel'));
         expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
     });
@@ -352,7 +352,7 @@ describe('MapScreen', () =>
     describe('trails and dangers', () =>
     {
         const site = { id: 's1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1', position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: 'v', simRunId: 'R', startT: 8, endT: 20, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: 0,
-            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null, secured: null } } as AlertView;
+            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, damaged: false, danger: 'active', dangerDeadline: null, secured: null } } as AlertView;
         const danger = { ...site, id: 'd1', kind: 'DANGER', message: 'Danger · person near an active nest site — immediate action', level: 1, siteId: 's1', colorIndex: null, startT: 14, endT: 15 } as AlertView;
         const withDanger: MapSnapshot = { ...snapshot, alerts: [site, danger], dangerCount: 1, dangerTotal: 1 };
 

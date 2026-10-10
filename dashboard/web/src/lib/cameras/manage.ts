@@ -425,16 +425,25 @@ export interface CameraRow
     footage: number;
     alerts: number;
     liveSlot: boolean;
+    /** Latest simulation clip: the mask editor draws its polygon over this feed. */
+    video?: { id: string; maskPolygon: [number, number][] | null } | null;
     liveDeviceId: string | null;
     liveDeviceName: string | null;
 }
 
-// Every camera with its footage and alert counts, for Setup → Cameras.
+// Every camera with its footage, alert counts and latest pickup, for Setup → Cameras.
 export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code: string; name: string; mergeable: boolean }[]; cameras: CameraRow[] }>
 {
     const [zones, cameras] = await Promise.all([
         prisma.zone.findMany({ orderBy: { code: 'asc' }, select: { code: true, name: true, createdById: true } }),
-        prisma.camera.findMany({ include: { zone: { select: { code: true } }, liveDevice: { select: { id: true, name: true } }, _count: { select: { videos: true, alerts: true } } } }),
+        prisma.camera.findMany({
+            include: {
+                zone: { select: { code: true } },
+                liveDevice: { select: { id: true, name: true } },
+                _count: { select: { videos: true, alerts: true } },
+                videos: { where: { source: 'SIMULATION' }, orderBy: { createdAt: 'desc' }, take: 1, select: { id: true, maskPolygon: true } },
+            },
+        }),
     ]);
     const order = (code: string) => { const m = /^([A-Z])([0-9]+)$/.exec(code); return m ? [m[1], Number(m[2])] as const : [code, 0] as const; };
     cameras.sort((a, b) => { const [x, y] = [order(a.code), order(b.code)]; return x[0].localeCompare(y[0]) || x[1] - y[1]; });
@@ -444,6 +453,7 @@ export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code
             code: camera.code, zoneCode: camera.zone.code, lng: camera.lng, lat: camera.lat, headingDeg: camera.headingDeg,
             fovDeg: camera.fovDeg, rangeM: camera.rangeM, status: camera.status, footage: camera._count.videos, alerts: camera._count.alerts,
             liveSlot: isLiveSlot(camera.code, camera.zone.code),
+            video: camera.videos[0] ? { id: camera.videos[0].id, maskPolygon: Array.isArray(camera.videos[0].maskPolygon) ? camera.videos[0].maskPolygon as [number, number][] : null } : null,
             liveDeviceId: camera.liveDevice?.id ?? null, liveDeviceName: camera.liveDevice?.name ?? null,
         })),
     };

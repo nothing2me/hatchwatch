@@ -15,7 +15,7 @@
     "published_at": { "type": "string", "format": "date-time" },
     "clip_seconds": { "type": "number", "exclusiveMinimum": 0 },
     "fps": { "type": "number", "exclusiveMinimum": 0 },
-    "rendering": { "enum": ["synthetic-daylight", "synthetic-very-dark"] },
+    "rendering": { "enum": ["synthetic-daylight", "synthetic-very-dark", "synthetic-active-nir"] },
     "ground_bounds_m": {
       "type": "array",
       "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }, { "type": "number" }],
@@ -35,7 +35,12 @@
           "index": { "enum": [0, 1] },
           "end": { "enum": ["x_min", "x_max"], "description": "Which end of the analyzed area the camera sits at; it faces the other end." },
           "video": { "enum": ["camera-0.mp4", "camera-1.mp4"] },
-          "calibration": { "enum": ["calibration-0.json", "calibration-1.json"] }
+          "calibration": { "enum": ["calibration-0.json", "calibration-1.json"] },
+          "motion_map": { "enum": ["view-0/motion-map.png", "view-1/motion-map.png"], "description": "Optional transparent planar motion projection from the public extractor. Older chunks omit it." },
+          "motion_metadata": { "enum": ["view-0/metadata.json", "view-1/metadata.json"], "description": "Optional extraction diagnostics, including calibration fit residual (not independent accuracy)." },
+          "motion_candidates": { "enum": ["view-0/detection/predictions.json", "view-1/detection/predictions.json"], "description": "Optional public localized-activity candidates; never confirmed digging alerts." },
+          "pure_motion": { "enum": ["view-0/pure-motion.mp4", "view-1/pure-motion.mp4"], "description": "Optional native-resolution delayed-difference video for the dashboard camera toggle." },
+          "mask": { "const": "mask.json", "description": "Optional operator-drawn per-camera watch polygon (source-frame pixels). Both cameras reference one shared file; motion signals are computed only inside it." }
         }
       }
     },

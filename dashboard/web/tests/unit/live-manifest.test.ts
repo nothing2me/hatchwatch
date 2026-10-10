@@ -18,6 +18,28 @@ export const validManifest = () => ({
 describe('liveManifestSchema', () =>
 {
     it('accepts a valid manifest', () => { expect(liveManifestSchema.safeParse(validManifest()).success).toBe(true); });
+    it('accepts the live night development rendering label', () =>
+    {
+        expect(liveManifestSchema.safeParse({ ...validManifest(), rendering: 'synthetic-active-nir' }).success).toBe(true);
+    });
+    it('accepts paired public motion maps and rejects a mismatched view', () =>
+    {
+        const manifest = validManifest();
+        Object.assign(manifest.cameras[0], { motion_map: 'view-0/motion-map.png', motion_metadata: 'view-0/metadata.json', pure_motion: 'view-0/pure-motion.mp4' });
+        Object.assign(manifest.cameras[1], { motion_map: 'view-1/motion-map.png', motion_metadata: 'view-1/metadata.json', pure_motion: 'view-1/pure-motion.mp4' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(true);
+        Object.assign(manifest.cameras[0], { motion_map: 'view-1/motion-map.png' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(false);
+    });
+    it('accepts an optional shared per-camera watch mask and rejects a wrong file', () =>
+    {
+        const manifest = validManifest();
+        Object.assign(manifest.cameras[0], { mask: 'mask.json' });
+        Object.assign(manifest.cameras[1], { mask: 'mask.json' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(true);
+        Object.assign(manifest.cameras[0], { mask: 'view-0/mask.json' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(false);
+    });
     it('accepts the real runner output', () =>
     {
         const path = join(import.meta.dirname, '../fixtures/live-chunk/live-chunk.json');

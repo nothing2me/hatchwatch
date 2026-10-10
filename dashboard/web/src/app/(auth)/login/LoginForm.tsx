@@ -16,7 +16,7 @@ export function LoginForm({ next }: { next: string | null })
             {/* Faint shoreline gradient as the backdrop */}
             <div aria-hidden className="absolute inset-0 bg-[linear-gradient(118deg,#0a1118_0%,#111c25_45%,#16303f_52%,#0a1118_100%)]" />
             <GlassPanel className="relative w-full max-w-sm p-6">
-                <p className="text-xs font-semibold tracking-[0.2em] text-ink-muted">NESTTRACE</p>
+                <p className="text-xs font-semibold tracking-[0.2em] text-ink-muted">HATCHWATCH</p>
                 <h1 className="mt-1 text-xl font-semibold">Sign in</h1>
                 <p className="mt-1 text-sm text-ink-muted">Port Aransas beach monitoring</p>
 
@@ -34,7 +34,7 @@ export function LoginForm({ next }: { next: string | null })
                     </label>
                     {state.error && <p role="alert" className="text-sm text-danger">{state.error}</p>}
                     <Button type="submit" variant="primary" className="w-full" disabled={pending}>
-                        {pending ? 'Signing in…' : 'Sign in'}
+                        {pending ? 'Signing inâ€¦' : 'Sign in'}
                     </Button>
                 </form>
             </GlassPanel>

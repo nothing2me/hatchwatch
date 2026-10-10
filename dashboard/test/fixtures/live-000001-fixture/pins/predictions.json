@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "methods": {
+    "pins": [
+      {
+        "id": "pin-1",
+        "point": [
+          -5.811320754716981,
+          4.100840336134453
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          9.125,
+          27.5
+        ],
+        "score": 0.6655456721782684,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "camera_0": {
+            "activity": 0.2172,
+            "persistent": 0.6364,
+            "dwell": 0.346,
+            "travel_continuity": 1.7899
+          },
+          "camera_1": {
+            "activity": 0.2268,
+            "persistent": 0.81,
+            "dwell": 0.4115,
+            "travel_continuity": 0.9488
+          },
+          "camera_disagreement_m": 0.3018867924528301
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Equal-weight paired estimate; camera disagreement and elevated-body parallax remain.",
+        "supporting_clips": [
+          "view-0/extraction.mp4",
+          "view-1/extraction.mp4"
+        ],
+        "source_views": [
+          0,
+          1
+        ],
+        "evidence_tier": "two_camera",
+        "confidence_note": "Both camera detections agree within the registered distance and time window."
+      },
+      {
+        "id": "pin-2",
+        "point": [
+          7.245283018867925,
+          -3.764705882352941
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          9.125,
+          27.625
+        ],
+        "score": 0.6038579046726227,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "camera_0": {
+            "activity": 0.1458,
+            "persistent": 0.8801,
+            "dwell": 0.4378,
+            "travel_continuity": 1.2678
+          },
+          "camera_1": {
+            "activity": 0.1607,
+            "persistent": 0.8425,
+            "dwell": 0.4346,
+            "travel_continuity": 1.4358
+          },
+          "camera_disagreement_m": 0.7665999875894532
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Equal-weight paired estimate; camera disagreement and elevated-body parallax remain.",
+        "supporting_clips": [
+          "view-0/extraction.mp4",
+          "view-1/extraction.mp4"
+        ],
+        "source_views": [
+          0,
+          1
+        ],
+        "evidence_tier": "two_camera",
+        "confidence_note": "Both camera detections agree within the registered distance and time window."
+      },
+      {
+        "id": "pin-3",
+        "point": [
+          -4.0,
+          -4.705882352941176
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.125,
+          27.625
+        ],
+        "score": 0.6010326147079468,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "camera_0": {
+            "activity": 0.1671,
+            "persistent": 0.5119,
+            "dwell": 0.4496,
+            "travel_continuity": 1.2421
+          },
+          "camera_1": {
+            "activity": 0.1624,
+            "persistent": 0.8488,
+            "dwell": 0.4399,
+            "travel_continuity": 1.236
+          },
+          "camera_disagreement_m": 1.215009459503246
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Equal-weight paired estimate; camera disagreement and elevated-body parallax remain.",
+        "supporting_clips": [
+          "view-0/extraction.mp4",
+          "view-1/extraction.mp4"
+        ],
+        "source_views": [
+          0,
+          1
+        ],
+        "evidence_tier": "two_camera",
+        "confidence_note": "Both camera detections agree within the registered distance and time window."
+      },
+      {
+        "id": "pin-4",
+        "point": [
+          -0.2264150943396217,
+          -4.440892098500626e-16
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          9.125,
+          27.875
+        ],
+        "score": 0.5999158024787903,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "camera_0": {
+            "activity": 0.1844,
+            "persistent": 0.7511,
+            "dwell": 0.3853,
+            "travel_continuity": 0.5705
+          },
+          "camera_1": {
+            "activity": 0.1722,
+            "persistent": 0.8454,
+            "dwell": 0.4701,
+            "travel_continuity": 0.0557
+          },
+          "camera_disagreement_m": 0.4033613445378146
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Equal-weight paired estimate; camera disagreement and elevated-body parallax remain.",
+        "supporting_clips": [
+          "view-0/extraction.mp4",
+          "view-1/extraction.mp4"
+        ],
+        "source_views": [
+          0,
+          1
+        ],
+        "evidence_tier": "two_camera",
+        "confidence_note": "Both camera detections agree within the registered distance and time window."
+      },
+      {
+        "id": "pin-5",
+        "point": [
+          -8.452830188679245,
+          -2.2857142857142856
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          7.75,
+          27.5
+        ],
+        "score": 0.5372762084007263,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "camera_0": {
+            "activity": 0.1431,
+            "persistent": 0.7085,
+            "dwell": 0.3194,
+            "travel_continuity": 0.8745
+          },
+          "camera_1": {
+            "activity": 0.1431,
+            "persistent": 0.8492,
+            "dwell": 0.4824,
+            "travel_continuity": 0.222
+          },
+          "camera_disagreement_m": 0.8105557746727026
+        },
+        "observation_quality": "usable",
+        "uncertainty_note": "Equal-weight paired estimate; camera disagreement and elevated-body parallax remain.",
+        "supporting_clips": [
+          "view-0/extraction.mp4",
+          "view-1/extraction.mp4"
+        ],
+        "source_views": [
+          0,
+          1
+        ],
+        "evidence_tier": "two_camera",
+        "confidence_note": "Both camera detections agree within the registered distance and time window."
+      },
+      {
+        "id": "pin-6",
+        "point": [
+          3.547169811320753,
+          2.2184873949579824
+        ],
+        "radius_m": 0.9,
+        "area_m2": 2.5446900494077327,
+        "interval": [
+          10.875,
+          27.5
+        ],
+        "score": 0.5903975963592529,
+        "label": "Digging activity pin; nesting unresolved.",
+        "evidence": {
+          "activity": 0.1665,
+          "persistent": 0.7804,
+          "dwell": 0.4279,
+          "travel_continuity": 0.5415
+        },
+        "observation_quality": "single-view",
+        "uncertainty_note": "Only one camera supplied this candidate; no cross-view localization check.",
+        "supporting_clip": "extraction.mp4",
+        "source_views": [
+          1
+        ],
+        "supporting_clips": [
+          "view-1/extraction.mp4"
+        ],
+        "evidence_tier": "single_camera",
+        "confidence_note": "Only one camera supplied a detection; review source video before inspection."
+      }
+    ]
+  },
+  "suppressed_nearby_candidates": [
+    {
+      "candidate_id": "fusion-7",
+      "kept_pin_id": "pin-4",
+      "distance_m": 1.61532798096917
+    },
+    {
+      "candidate_id": "fusion-8",
+      "kept_pin_id": "pin-5",
+      "distance_m": 1.2590573190161185
+    },
+    {
+      "candidate_id": "fusion-6",
+      "kept_pin_id": "pin-3",
+      "distance_m": 1.4826107933488033
+    }
+  ],
+  "status": "Digging activity pins for review; nesting unresolved.",
+  "input_contract": "Two public camera prediction JSON files and fixed registration only; no RGB, simulator state, eggs, or truth.",
+  "registration_sha256": "0a5060d341c9f9300e8d1cdba55532e2b705dc1f16a76c57a79887da68afd1d6",
+  "camera_prediction_sha256": [
+    "8d186dc80deb9b832f05a31e9f702bf0be1cc4bb14aa86fe7124ae24567927ca",
+    "5f30d1e7e8fe290b4737e84b58f4971938a2a4c8af4f12149aadbf6424df19a0"
+  ]
+}

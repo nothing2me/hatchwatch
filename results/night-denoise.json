@@ -1,0 +1,240 @@
+{
+  "development_run": "A-swarm-night-dev-601",
+  "rows": [
+    {
+      "variant": "fixed",
+      "sigma": null,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 1,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "floor",
+      "sigma": 2.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "floor",
+      "sigma": 2.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "floor",
+      "sigma": 3.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "floor",
+      "sigma": 3.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "temporal",
+      "sigma": 2.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "temporal",
+      "sigma": 2.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "temporal",
+      "sigma": 3.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "temporal",
+      "sigma": 3.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "running",
+      "sigma": 2.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "running",
+      "sigma": 2.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "running",
+      "sigma": 3.0,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    },
+    {
+      "variant": "running",
+      "sigma": 3.5,
+      "views": {
+        "0": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        },
+        "1": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "center_error_m": []
+        }
+      }
+    }
+  ],
+  "note": "Development night-denoise comparison; not registered accuracy."
+}

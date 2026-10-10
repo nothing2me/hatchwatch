@@ -1,4 +1,4 @@
-# NestTrace repository guide
+# HatchWatch repository guide
 
 This repository has two separate products with different data and trust boundaries.
 

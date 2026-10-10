@@ -30,6 +30,7 @@ export const EVENT_LABELS: Record<SiteEventType, string> = {
     patrolVisit: 'Patrol visited',
     nestConfirmed: 'Nest confirmed',
     noNestFound: 'No nest found',
+    nestDamaged: 'Nest found damaged',
     protectionInstalled: 'Protection set up',
     hatched: 'Hatched',
     lost: 'Lost',

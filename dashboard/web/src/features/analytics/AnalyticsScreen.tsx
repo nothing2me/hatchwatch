@@ -11,10 +11,11 @@ import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
 import { useNow } from '@/features/live/useNow';
 import { BarChart, StackedBar, type Segment } from './charts';
 import { analyticsMetrics, dangerStats, percentOf, type Bar, type Scope } from './metrics';
+import { HistorySheet } from './HistorySheet';
 
 const SCOPES: { key: Scope; label: string }[] = [
     { key: 'map', label: 'On the map now' },
-    { key: 'all', label: 'Everything logged' },
+    { key: 'all', label: 'Historical record' },
 ];
 
 const DANGER = '#E2581F';
@@ -226,13 +227,13 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
                             </span>
                             Live · Port Aransas
                         </p>
-                        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Tonight at a glance</h1>
-                        <p className="mt-1.5 text-sm text-ink-muted">Nest sites from the camera network and the patrol log, updated as they change.</p>
+                        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{scope === 'all' ? 'Beach monitoring history' : 'Tonight at a glance'}</h1>
+                        <p className="mt-1.5 text-sm text-ink-muted">{scope === 'all' ? 'Saved camera activity and field actions since the first database record.' : 'Nest sites from the camera network and the patrol log, updated as they change.'}</p>
                     </div>
                     <ScopeToggle scope={scope} onChange={setScope} />
                 </header>
 
-                {nothingYet
+                {scope === 'all' ? <HistorySheet /> : nothingYet
                     ? <div className="mt-8"><EmptyState title="No sites yet — waiting for the live feed" body="Digging alerts from the beach cameras will show up here as soon as the first one arrives." /></div>
                     : (
                         <>
@@ -251,7 +252,7 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
                                         <EmptyState
                                             title="Nothing on the live map right now"
                                             body="Every site has an outcome or has faded from the map."
-                                            action={<button type="button" onClick={() => setScope('all')} className="mt-1 rounded-lg px-3 py-1.5 text-sm text-amber ring-1 ring-amber/30 hover:bg-amber/10 focus-visible:outline-2 focus-visible:outline-amber">See everything logged</button>}
+                                            action={<button type="button" onClick={() => setScope('all')} className="mt-1 rounded-lg px-3 py-1.5 text-sm text-amber ring-1 ring-amber/30 hover:bg-amber/10 focus-visible:outline-2 focus-visible:outline-amber">View historical record</button>}
                                         />
                                     </div>
                                 )

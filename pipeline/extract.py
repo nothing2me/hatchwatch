@@ -6,7 +6,28 @@ import cv2
 import numpy as np
 from common import read_json, write_json, sha, writer, ground_homography
 
-def extract(video, calibration, settings, output):
+def load_mask(mask_file, camera_index):
+    """Operator-drawn per-camera watch polygon (source-frame pixels).
+
+    Everything outside the polygon is excluded from the motion-signal grid
+    (skies, surf, water, dune edges) while the raw video is untouched. Masks
+    are public operator configuration, never simulator truth.
+    """
+    masks=read_json(mask_file)
+    for entry in masks.get('cameras', []):
+        if int(entry.get('camera'))==int(camera_index):
+            polygon=[[float(x),float(y)] for x,y in entry['polygon']]
+            if len(polygon)<3:
+                raise ValueError('Camera mask needs at least 3 polygon points')
+            return polygon, sha(mask_file)
+    return None, None
+
+def mask_image(polygon, height, width):
+    img=np.zeros((height,width),np.uint8)
+    cv2.fillConvexPoly(img,np.array(polygon,dtype=np.int32).reshape(-1,1,2),255)
+    return img
+
+def extract(video, calibration, settings, output, mask_file=None):
     start=time.perf_counter(); output=Path(output);output.mkdir(parents=True,exist_ok=True)
     cfg=read_json(settings); cal=read_json(calibration); cap=cv2.VideoCapture(str(video))
     if not cap.isOpened(): raise ValueError(f'Cannot decode {video}')
@@ -25,6 +46,12 @@ def extract(video, calibration, settings, output):
     features=cv2.goodFeaturesToTrack(baseline,100,.01,4,mask=stable)
     H,cal_error=ground_homography(cal,w,h)
     valid=cv2.warpPerspective(np.ones_like(baseline)*255,H,(w,h))>250
+    mask_polygon=None;mask_sha256=None
+    if mask_file:
+        mask_polygon,mask_sha256=load_mask(mask_file,cal['camera'])
+        if mask_polygon is not None:
+            native_mask=mask_image(mask_polygon,*baseline.shape)
+            valid=cv2.warpPerspective(native_mask,H,(w,h))>128
     background=[];motion=[];times=[];history=deque(maxlen=max(1,round(cfg['delay_seconds']*fps))+1)
     out=writer(output/'extraction.mp4',w*3,h,fps)
     pure=writer(output/'pure-motion.mp4',baseline.shape[1],baseline.shape[0],fps)
@@ -71,8 +98,8 @@ def extract(video, calibration, settings, output):
     overlay[:,:,3]=opacity
     overlay[~valid,3]=0
     cv2.imwrite(str(output/'motion-map.png'),overlay)
-    meta={'source_sha256':sha(video),'calibration_sha256':sha(calibration),'settings_sha256':sha(settings),'frames':i,'fps':fps,'runtime_seconds':time.perf_counter()-start,'registration_failures':failures,'mean_gain':float(np.mean(gains)) if gains else 1,'mean_absolute_difference_suppressed':float(np.mean(suppression)),'calibration_fit_rmse_m':cal_error,'pure_motion_sha256':sha(output/'pure-motion.mp4'),'pure_motion_resolution':[int(baseline.shape[1]),int(baseline.shape[0])],'motion_map_sha256':sha(output/'motion-map.png'),'note':'Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change.'}
+    meta={'source_sha256':sha(video),'calibration_sha256':sha(calibration),'settings_sha256':sha(settings),'frames':i,'fps':fps,'runtime_seconds':time.perf_counter()-start,'registration_failures':failures,'mean_gain':float(np.mean(gains)) if gains else 1,'mean_absolute_difference_suppressed':float(np.mean(suppression)),'calibration_fit_rmse_m':cal_error,'pure_motion_sha256':sha(output/'pure-motion.mp4'),'pure_motion_resolution':[int(baseline.shape[1]),int(baseline.shape[0])],'motion_map_sha256':sha(output/'motion-map.png'),'mask_polygon':mask_polygon,'mask_sha256':mask_sha256,'valid_area_fraction':float(np.mean(valid)),'note':'Calibration residual is a fit residual, not an independent accuracy bound. Motion map uses planar visible-marker calibration; elevated bodies shift in ground projection. Pure motion is a native-resolution delayed-difference display and contains no RGB background or persistent change.'}
     write_json(output/'metadata.json',meta);return meta
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--video',required=True);p.add_argument('--calibration',required=True);p.add_argument('--settings',required=True);p.add_argument('--output',required=True);a=p.parse_args();print(extract(a.video,a.calibration,a.settings,a.output))
+    p=argparse.ArgumentParser();p.add_argument('--video',required=True);p.add_argument('--calibration',required=True);p.add_argument('--settings',required=True);p.add_argument('--output',required=True);p.add_argument('--mask');a=p.parse_args();print(extract(a.video,a.calibration,a.settings,a.output,a.mask))

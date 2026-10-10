@@ -87,4 +87,16 @@ describe('AlertsFeed', () =>
         fireEvent.click(screen.getByRole('radio', { name: 'Inactive (0)' }));
         expect(screen.getByText('No inactive sites.')).toBeTruthy();
     });
+
+    it('filters activities independently and keeps the list scrollable', () =>
+    {
+        const crawl = siteAlert('crawl', {}, { kind: 'TRACK_ONLY', message: 'Crawl tracked; digging not observed.' });
+        render(<AlertsFeed alerts={[alerts[0], crawl]} onSelect={vi.fn()} />);
+        const list = screen.getByRole('list', { name: 'Active sites' });
+        expect(list.className).toContain('overflow-y-auto');
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Digging' }));
+        expect(screen.queryByRole('button', { name: /Digging activity detected/ })).toBeNull();
+        expect(screen.getByRole('button', { name: /Crawl tracked/ })).toBeTruthy();
+        expect(screen.getByRole('radio', { name: 'Active (1)' })).toBeTruthy();
+    });
 });

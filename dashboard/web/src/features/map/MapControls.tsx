@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 
-export type LayerKey = 'zones' | 'cameras' | 'alerts' | 'trails';
+export type LayerKey = 'zones' | 'cameras' | 'alerts' | 'motion' | 'trails';
 
 interface MapControlsProps
 {
@@ -19,7 +19,7 @@ interface MapControlsProps
     onToggleEdit?: () => void;
 }
 
-const layerLabels: Record<LayerKey, string> = { zones: 'Zones', cameras: 'Cameras', alerts: 'Alerts', trails: 'Trails' };
+const layerLabels: Record<LayerKey, string> = { zones: 'Zones', cameras: 'Cameras', alerts: 'Alerts', motion: 'Motion heatmap', trails: 'Trails' };
 const buttonClass = 'grid h-9 w-9 place-items-center text-ink-muted transition-colors hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber aria-expanded:bg-white/10 aria-expanded:text-ink';
 
 export function MapControls({ onZoomIn, onZoomOut, onFit, layers, onToggleLayer, editing = false, onToggleEdit }: MapControlsProps)

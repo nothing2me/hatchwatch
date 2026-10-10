@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { outcomesFromStatusCounts, toMapSnapshot, type SnapshotRows } from '@/server/snapshot';
+import { distanceBetween } from '@/lib/geo';
 
 const rows: SnapshotRows = {
     zones: [{ id: 'z1', code: 'B', name: 'Holiday', activityLevel: 'HIGH',
@@ -29,6 +30,23 @@ describe('toMapSnapshot', () =>
         expect(snapshot.cameras[0].video).toEqual({ id: 'v9', source: 'SIMULATION', durationS: 61.5, hasMotion: true, simRunId: 'R' });
         expect(snapshot.cameras[1]).toMatchObject({ calibrated: true, status: 'OFFLINE' });
         expect(snapshot.cameras[1].video).toBeNull();
+    });
+
+    it('places a public motion image at its declared ground scale', () =>
+    {
+        const frameRows: SnapshotRows = { ...rows,
+            zones: [{ ...rows.zones[0], outline: { type: 'Polygon', coordinates: [[[-80, 25], [-79.999, 25], [-79.999, 25.001], [-80, 25.001], [-80, 25]]] } }],
+            cameras: [{ ...rows.cameras[0], videos: [{ ...rows.cameras[0].videos[0], motionMapPath: 'live/live-000007-abc12/view-0/motion-map.png', motionFitRmseM: 0.12, liveChunk: { groundBounds: [-12, 12, -8, 8] } }] }],
+        };
+        const overlay = toMapSnapshot(frameRows).cameras[0].video?.motionMap;
+        expect(overlay?.url).toBe('/api/media/motion-map/v9');
+        expect(overlay?.fitRmseM).toBe(0.12);
+        expect(distanceBetween(overlay!.corners[0], overlay!.corners[1])).toBeCloseTo(24, 1);
+        expect(distanceBetween(overlay!.corners[1], overlay!.corners[2])).toBeCloseTo(16, 1);
+        const shiftedRows: SnapshotRows = { ...frameRows, cameras: [{ ...frameRows.cameras[0], videos: [{ ...frameRows.cameras[0].videos[0], liveChunk: { groundBounds: [-12, 12, -8, 8], placementOffsetM: 40 } }] }] };
+        const shifted = toMapSnapshot(shiftedRows).cameras[0].video?.motionMap;
+        expect(distanceBetween(overlay!.corners[0], shifted!.corners[0])).toBeCloseTo(40, 1);
+        expect(distanceBetween(shifted!.corners[0], shifted!.corners[1])).toBeCloseTo(24, 1);
     });
 
     it('counts cameras online and carries no NEW-alert count', () =>

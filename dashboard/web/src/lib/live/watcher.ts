@@ -139,6 +139,20 @@ export async function pruneMedia(prisma: PrismaClient, settings: LiveSettings): 
     return stale.length;
 }
 
+// A forced stop can land after an import commits but before its media folder is renamed.
+// Retire those rows so the camera falls back to its last playable recording.
+export async function retireMissingMedia(prisma: PrismaClient, settings: LiveSettings): Promise<number>
+{
+    const chunks = await prisma.liveChunk.findMany({ where: { mediaPruned: false }, select: { id: true } });
+    const missing = chunks.filter(({ id }) => !existsSync(join(settings.mediaRoot, 'live', id)));
+    if (missing.length)
+    {
+        await prisma.liveChunk.updateMany({ where: { id: { in: missing.map(chunk => chunk.id) } }, data: { mediaPruned: true } });
+        publishChange('live-missing-media');
+    }
+    return missing.length;
+}
+
 const globalWatcher = globalThis as unknown as { __nesttraceLiveWatcher?: () => void };
 
 export function startLiveWatcher(prisma: PrismaClient, settings: LiveSettings): () => void
@@ -158,6 +172,7 @@ export function startLiveWatcher(prisma: PrismaClient, settings: LiveSettings): 
         try
         {
             await scanOnce(prisma, settings);
+            await retireMissingMedia(prisma, settings);
             await ageSites(prisma, settings);
             await pruneMedia(prisma, settings);
         }

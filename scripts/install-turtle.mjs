@@ -1,0 +1,21 @@
+import { readFile, copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve, extname } from 'node:path';
+
+const source = resolve(process.argv[2] || '');
+if (!process.argv[2]) throw new Error('Usage: node scripts/install-turtle.mjs <folder containing Turtle Sea.gltf>');
+const gltf = JSON.parse(await readFile(join(source, 'Turtle Sea.gltf'), 'utf8'));
+if (gltf.buffers?.length !== 1 || gltf.images?.length !== 1) throw new Error('Expected one mesh buffer and one texture');
+const originalBuffer = gltf.buffers[0].uri;
+const originalImage = gltf.images[0].uri;
+if (!originalBuffer || !originalImage || [originalBuffer, originalImage].some(name => name.includes('/') || name.includes('\\') || name.includes('..'))) throw new Error('Expected local companion files');
+const imageExtension = extname(originalImage).toLowerCase();
+if (!['.png', '.jpg', '.jpeg'].includes(imageExtension)) throw new Error('Expected a PNG or JPEG texture');
+const destination = resolve('web/local-models');
+await mkdir(destination, { recursive: true });
+await copyFile(join(source, originalBuffer), join(destination, 'turtle.bin'));
+await copyFile(join(source, originalImage), join(destination, `turtle${imageExtension}`));
+gltf.buffers[0].uri = 'turtle.bin';
+gltf.images[0].uri = `turtle${imageExtension}`;
+gltf.images[0].mimeType = imageExtension === '.png' ? 'image/png' : 'image/jpeg';
+await writeFile(join(destination, 'turtle.gltf'), JSON.stringify(gltf));
+console.log(`Installed local turtle model in ${destination}`);

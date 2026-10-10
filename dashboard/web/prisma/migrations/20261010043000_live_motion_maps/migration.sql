@@ -1,0 +1,3 @@
+ALTER TABLE "Video" ADD COLUMN "motionMapPath" TEXT;
+ALTER TABLE "Video" ADD COLUMN "motionFitRmseM" DOUBLE PRECISION;
+ALTER TABLE "LiveChunk" ADD COLUMN "groundBounds" JSONB;
