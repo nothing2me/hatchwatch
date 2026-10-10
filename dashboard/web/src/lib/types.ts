@@ -152,6 +152,10 @@ export interface MapSnapshot
     dangerCount: number;      // DANGER alerts not yet resolved
     dangerTotal: number;      // every DANGER alert in the log
     outcomes: { saved: number; notSaved: number; pending: number };
+    /** True when any logged patrol entry (whole log) was written by the demo patrol. */
+    demoPatrol?: boolean;
+    /** True when a site listed in this snapshot carries a demo patrol entry. */
+    demoPatrolOnMap?: boolean;
     fadeMinutes: number;
     /** ISO time the server built this snapshot; the client re-applies time rules (30-min Not saved) from here. */
     generatedAt?: string;

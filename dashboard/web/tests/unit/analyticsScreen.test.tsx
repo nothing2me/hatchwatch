@@ -59,6 +59,32 @@ describe('AnalyticsScreen', () =>
         expect(within(screen.getByRole('table')).getByText('Oct 9, 2026, 12:00 AM')).toBeTruthy();
     });
 
+    it('notes demo patrol entries on the tiles and outcomes only when present', () =>
+    {
+        const { unmount } = render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        expect(screen.queryByText('Includes demo patrol (simulated)')).toBeNull();
+        unmount();
+        render(<AnalyticsScreen snapshot={{ ...snapshot, demoPatrol: true, demoPatrolOnMap: true }} user={viewer} />);
+        expect(screen.getAllByText('Includes demo patrol (simulated)').length).toBe(2);
+        expect(within(screen.getByRole('region', { name: 'Outcomes' })).getByText('Includes demo patrol (simulated)')).toBeTruthy();
+        expect(within(tile('Patrol visited')).getByTestId('value')).toBeTruthy();
+    });
+
+    it('notes demo patrol entries on the historical record only when the window has them', async () =>
+    {
+        const body = { range: '30d', bucket: 'day', from: '2026-10-01T00:00:00.000Z', to: '2026-10-10T00:00:00.000Z', firstLoggedAt: null, rows: [] };
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...body, includesDemoPatrol: true }) }));
+        const { unmount } = render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        fireEvent.click(screen.getByRole('radio', { name: 'Historical record' }));
+        await waitFor(() => expect(screen.getByText('Includes demo patrol (simulated)')).toBeTruthy());
+        unmount();
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...body, includesDemoPatrol: false }) }));
+        render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        fireEvent.click(screen.getByRole('radio', { name: 'Historical record' }));
+        await waitFor(() => expect(screen.getByText('No records in this window.')).toBeTruthy());
+        expect(screen.queryByText('Includes demo patrol (simulated)')).toBeNull();
+    });
+
     it('draws the three bar charts as labelled SVG images listing every zone', () =>
     {
         render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);

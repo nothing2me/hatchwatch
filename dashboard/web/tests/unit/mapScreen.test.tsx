@@ -129,7 +129,7 @@ describe('MapScreen', () =>
         fireEvent.click(screen.getByText('cam B1'));
         expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(screen.queryByText('No footage yet')).toBeNull();
-        expect(screen.queryByText(/Simulated/)).toBeNull();
+        expect(screen.getByText('Simulated footage · pins placed approximately')).toBeTruthy();
         expect(screen.queryByText(/Calibrate this camera/)).toBeNull();
     });
 

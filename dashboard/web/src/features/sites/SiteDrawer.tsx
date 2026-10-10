@@ -53,6 +53,8 @@ export function relativeTime(iso: string, now: number): string
 
 function sourceLabel(alert: AlertView): string
 {
+    if (alert.simRunId?.startsWith('live-')) return 'Live simulator feed';
+    if (alert.simulated) return 'Simulated run';
     return alert.simRunId ? 'Recorded clip' : 'Camera footage';
 }
 

@@ -101,6 +101,11 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
                 playsInline
                 onLoadedMetadata={restore}
             />
+            {video.source === 'SIMULATION' && (
+                <span className="absolute top-2 left-2 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-amber uppercase ring-1 ring-amber/40">
+                    Simulated
+                </span>
+            )}
             {variant === 'raw' && mask && (
                 <svg viewBox="0 0 1280 720" className="pointer-events-none absolute inset-0 h-full w-full" aria-label="Watch mask">
                     <polygon

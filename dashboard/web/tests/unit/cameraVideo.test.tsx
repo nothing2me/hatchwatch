@@ -8,13 +8,19 @@ const video = { id: 'v1', source: 'SIMULATION' as const, durationS: 60, hasMotio
 
 describe('CameraVideo', () =>
 {
-    it('loops the camera feed muted without an origin badge', () =>
+    it('loops the raw feed muted with a Simulated badge', () =>
     {
         render(<CameraVideo video={video} />);
         const element = screen.getByTestId('camera-video') as HTMLVideoElement;
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(element.loop).toBe(true);
         expect(element.muted).toBe(true);
+        expect(screen.getByText('Simulated')).toBeTruthy();
+    });
+
+    it('shows no Simulated badge on real footage', () =>
+    {
+        render(<CameraVideo video={{ ...video, source: 'UPLOAD' as never }} />);
         expect(screen.queryByText('Simulated')).toBeNull();
     });
 

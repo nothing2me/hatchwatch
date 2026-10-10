@@ -1,6 +1,7 @@
 import { Prisma } from '@/generated/prisma/client';
 import { currentUserOrNull } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
+import { DEMO_PATROL_AUTHOR } from '@/lib/live/demoPatrol';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,7 @@ export async function GET(request: Request): Promise<Response>
             COUNT(*) FILTER (WHERE category = 'protected')::int AS protected,
             COUNT(*) FILTER (WHERE category = 'noNest')::int AS "noNest"
         FROM logged GROUP BY 1 ORDER BY 1 DESC`);
-    return Response.json({ range, bucket, from: from.toISOString(), to: now.toISOString(), firstLoggedAt: firstLoggedAt?.toISOString() ?? null,
+    const demo = await prisma.siteEvent.count({ where: { author: DEMO_PATROL_AUTHOR, createdAt: { gte: from, lte: now } } });
+    return Response.json({ range, includesDemoPatrol: demo > 0, bucket, from: from.toISOString(), to: now.toISOString(), firstLoggedAt: firstLoggedAt?.toISOString() ?? null,
         rows: rows.map(row => ({ ...row, window: row.window.toISOString() })) }, { headers: { 'Cache-Control': 'no-store' } });
 }

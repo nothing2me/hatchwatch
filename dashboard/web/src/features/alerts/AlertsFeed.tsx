@@ -220,7 +220,7 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                                 </span>
                                 {alert.evidenceTier && (
                                     <span className="mt-1 block text-[11px] text-ink-muted/80">
-                                        Approximate position{tierNote[alert.evidenceTier]}
+                                        {alert.simulated ? 'Simulated · approximate position' : 'Approximate position'}{tierNote[alert.evidenceTier]}
                                     </span>
                                 )}
                             </button>

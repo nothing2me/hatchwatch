@@ -1,6 +1,7 @@
 import 'server-only';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
+import { DEMO_PATROL_AUTHOR } from '@/lib/live/demoPatrol';
 import { outcomeCounts } from '@/lib/sites/outcomes';
 import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, securedOf, summarizeSite } from '@/lib/sites/summary';
 import { shiftedZoneFrame, simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
@@ -48,6 +49,7 @@ export interface SnapshotRows
     tracks?: TrackRow[];
     inactiveCount?: number;
     outcomes?: MapSnapshot['outcomes'];
+    demoPatrol?: boolean;
     dangerCount?: number;
     dangerTotal?: number;
     now?: Date;
@@ -250,6 +252,8 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         inactiveCount: rows.inactiveCount ?? alerts.filter(alert => INACTIVE_SITE_STATUSES.includes(alert.status) || (alert.kind === 'DANGER' && !alert.site.active)).length,
         outcomes: rows.outcomes ?? outcomeCounts(sites.map(alert => alert.site), rows.now ?? Date.now()),
         tracks,
+        demoPatrolOnMap: rows.alerts.some(alert => alert.events.some(event => event.author === DEMO_PATROL_AUTHOR)),
+        demoPatrol: rows.demoPatrol ?? rows.alerts.some(alert => alert.events.some(event => event.author === DEMO_PATROL_AUTHOR)),
         dangerCount: rows.dangerCount ?? dangers.filter(alert => alert.site.active).length,
         dangerTotal: rows.dangerTotal ?? dangers.length,
         fadeMinutes: fadeMinutes(),
@@ -280,7 +284,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
 {
     const recent = await client.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 100, select: { id: true } });
     const since = new Date(now.getTime() - RECENT_ENTRY_HOURS * 3600_000);
-    const [zones, cameras, alerts, inactiveCount, statusCounts, dangerCount, dangerTotal, dangerMissed] = await Promise.all([
+    const [zones, cameras, alerts, inactiveCount, statusCounts, dangerCount, dangerTotal, dangerMissed, demoEntries] = await Promise.all([
         client.zone.findMany({ orderBy: { code: 'asc' } }),
         client.camera.findMany({
             orderBy: { code: 'asc' },
@@ -313,6 +317,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
         client.alert.count({ where: { kind: 'DANGER', status: 'NEW' } }),
         client.alert.count({ where: { kind: 'DANGER' } }),
         countDangerMissed(client, now),
+        client.siteEvent.count({ where: { author: DEMO_PATROL_AUTHOR } }),
     ]);
 
     // Trails of the listed sites, plus unmatched trails of the clips the cameras are showing now.
@@ -326,7 +331,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
     // Resolutions logged on any danger alert of a listed site secure it, even when that alert is not listed.
     const dangerResolutions = await loadDangerResolutions(client, alerts.filter(alert => alert.kind !== 'DANGER').map(alert => alert.id));
 
-    return toMapSnapshot({ zones, cameras, alerts, tracks, dangerResolutions, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts, dangerMissed), dangerCount, dangerTotal, now });
+    return toMapSnapshot({ zones, cameras, alerts, tracks, dangerResolutions, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts, dangerMissed), dangerCount, dangerTotal, demoPatrol: demoEntries > 0, now });
 }
 
 export async function loadDangerResolutions(client: PrismaClient, siteIds: string[]): Promise<DangerResolutionRow[]>

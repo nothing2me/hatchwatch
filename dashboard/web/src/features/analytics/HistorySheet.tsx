@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 
 type Range = '24h' | '7d' | '30d' | 'all';
 type Row = { window: string; videos: number; digging: number; crawl: number; danger: number; patrol: number; protected: number; noNest: number };
-type History = { range: Range; bucket: 'hour' | 'day' | 'month'; from: string; to: string; firstLoggedAt: string | null; rows: Row[] };
+type History = { includesDemoPatrol?: boolean; range: Range; bucket: 'hour' | 'day' | 'month'; from: string; to: string; firstLoggedAt: string | null; rows: Row[] };
 const ranges: { key: Range; label: string }[] = [{ key: '24h', label: '24 hours' }, { key: '7d', label: '7 days' }, { key: '30d', label: '30 days' }, { key: 'all', label: 'All time' }];
 const dateTime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
 const month = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -34,6 +34,7 @@ export function HistorySheet()
             <div role="group" aria-label="History time window" className="flex flex-wrap gap-1 rounded-lg bg-night-950/80 p-1">{ranges.map(item => <button key={item.key} type="button" aria-pressed={range === item.key} onClick={() => setRange(item.key)} className={cn('rounded-md px-2.5 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-amber', range === item.key ? 'bg-white/12 text-ink' : 'text-ink-muted hover:text-ink')}>{item.label}</button>)}</div>
         </div>
         {history && <p className="mt-3 text-xs text-ink-muted">{history.firstLoggedAt ? `First record ${dateTime.format(new Date(history.firstLoggedAt))}` : 'No records yet'} · Window {dateTime.format(new Date(history.from))} to {dateTime.format(new Date(history.to))}</p>}
+        {history?.includesDemoPatrol && <p data-testid="demo-patrol-note" className="mt-1 text-xs text-amber">Includes demo patrol (simulated)</p>}
         {loading && <p className="mt-6 text-sm text-ink-muted" role="status">Loading history…</p>}
         {error && <p className="mt-6 text-sm text-alarm" role="alert">{error}</p>}
         {!loading && !error && history && (history.rows.length === 0 ? <p className="mt-6 text-sm text-ink-muted">No records in this window.</p> :

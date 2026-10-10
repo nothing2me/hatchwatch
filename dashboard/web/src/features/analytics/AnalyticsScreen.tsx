@@ -149,7 +149,14 @@ function ChartCard({ title, subtitle, bars, total }: { title: string; subtitle: 
     );
 }
 
-function Outcomes({ outcomes }: { outcomes: { saved: number; notSaved: number; pending: number } })
+const DEMO_NOTE = 'Includes demo patrol (simulated)';
+
+function DemoNote({ className }: { className?: string })
+{
+    return <p data-testid="demo-patrol-note" className={cn('text-xs text-amber', className)}>{DEMO_NOTE}</p>;
+}
+
+function Outcomes({ outcomes, demo = false }: { outcomes: { saved: number; notSaved: number; pending: number }; demo?: boolean })
 {
     const total = outcomes.saved + outcomes.notSaved + outcomes.pending;
     const segments: (Segment & { note: string })[] = [
@@ -160,6 +167,7 @@ function Outcomes({ outcomes }: { outcomes: { saved: number; notSaved: number; p
     return (
         <Card title="Outcomes" subtitle="What happened to each nest site. No-nest findings are left out." labelled>
             <StackedBar title="Outcomes" segments={segments} />
+            {demo && <DemoNote className="mt-3" />}
             <dl className="mt-5 grid grid-cols-3 gap-3 sm:gap-6">
                 {segments.map(segment => (
                     <div key={segment.key} className="min-w-0 border-l border-white/8 pl-3 sm:pl-4">
@@ -237,6 +245,7 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
                     ? <div className="mt-8"><EmptyState title="No sites yet — waiting for the live feed" body="Digging alerts from the beach cameras will show up here as soon as the first one arrives." /></div>
                     : (
                         <>
+                            {snapshot.demoPatrolOnMap && <DemoNote className="mt-6 -mb-5" />}
                             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
                                 <Tile label="Sites" value={String(m.sites)} caption={scope === 'map' ? 'on the live map' : `${activeSites} active · ${m.sites - activeSites} inactive`} icon={<MapPin className={icon} />} />
                                 <Tile label="Unprotected" value={String(m.unprotected)} caption={`${m.unprotectedPct}% of sites`} icon={<ShieldAlert className={icon} />} danger={m.unprotected > 0} meter={{ pct: m.unprotectedPct, color: DANGER }} />
@@ -258,7 +267,7 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
                                 )
                                 : (
                                     <>
-                                        <div className="mt-6"><Outcomes outcomes={m.outcomes} /></div>
+                                        <div className="mt-6"><Outcomes outcomes={m.outcomes} demo={Boolean(snapshot.demoPatrol)} /></div>
                                         <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                                             <ChartCard title="Protection" subtitle="Is a cage or barrier in place?" bars={m.protection} total={m.charted} />
                                             <ChartCard title="Nesting" subtitle="What patrols found on site" bars={m.nesting} total={m.charted} />
