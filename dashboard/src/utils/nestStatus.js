@@ -21,6 +21,7 @@ export function summarizeNestSite(nestSite)
     let arrivedAt = null;
     let departedAt = null;
     let lastPatrolVisitAt = null;
+    let archivedAt = null;
     let nestingStatus = 'unresolved';
     let hasProtection = false;
 
@@ -49,6 +50,10 @@ export function summarizeNestSite(nestSite)
         {
             hasProtection = true;
         }
+        else if (event.type === 'archived')
+        {
+            archivedAt = event.time;
+        }
 
         if (eventType && eventType.meansPatrolOnSite)
         {
@@ -74,6 +79,8 @@ export function summarizeNestSite(nestSite)
         arrivedAt,
         departedAt,
         isOnSite: arrivedAt !== null && departedAt === null,
+        isArchived: archivedAt !== null,
+        archivedAt,
         lastPatrolVisitAt,
         patrolVisited: lastPatrolVisitAt !== null,
         nestingStatus,
@@ -82,11 +89,12 @@ export function summarizeNestSite(nestSite)
     };
 }
 
-// Counts the sites that still need protection set up.
+// Counts the sites still on the live map that need protection set up.
 export function countUnprotectedSites(nestSites)
 {
     return nestSites.filter(function isUnprotected(nestSite)
     {
-        return summarizeNestSite(nestSite).protectionStatus === 'unprotected';
+        const summary = summarizeNestSite(nestSite);
+        return summary.protectionStatus === 'unprotected' && !summary.isArchived;
     }).length;
 }

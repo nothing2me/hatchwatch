@@ -2,7 +2,7 @@
 
 A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 1280 × 720 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 84 × 32 m beach is a two-layer bed of **134,400 physical grains**. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times.
 
-The team’s **real dashboard scaffold** lives in [`dashboard/`](dashboard/README.md) as a separate application with sample data and its own runtime on port 5180. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
+The team’s **real dashboard scaffold** lives in [`dashboard/`](dashboard/README.md) as a separate application with its own runtime on port 5180 and backend on 5182. For the live demo, `node scripts/live-runner.mjs` feeds it an endless stream of six-turtle chunks; see the dashboard README. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
 
 ## Run locally
 

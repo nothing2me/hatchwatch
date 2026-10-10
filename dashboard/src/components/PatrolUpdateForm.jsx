@@ -42,8 +42,9 @@ export default function PatrolUpdateForm({ nestIdentifier, protectionStatus, onA
     const [note, setNote] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [confirmationMessage, setConfirmationMessage] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
-    function handleSubmit(submitEvent)
+    async function handleSubmit(submitEvent)
     {
         submitEvent.preventDefault();
 
@@ -62,12 +63,30 @@ export default function PatrolUpdateForm({ nestIdentifier, protectionStatus, onA
             return;
         }
 
-        onAddPatrolEntry(nestIdentifier, { type: actionType, author: trimmedName, note: trimmedNote });
-        savePatrolName(trimmedName);
+        if (isSaving)
+        {
+            return;
+        }
 
-        setNote('');
-        setErrorMessage('');
-        setConfirmationMessage(`Added "${nestEventTypes[actionType].label}" to ${nestIdentifier}'s log.`);
+        // Keep the typed note if saving fails, so nothing has to be retyped.
+        setIsSaving(true);
+        try
+        {
+            await onAddPatrolEntry(nestIdentifier, { type: actionType, author: trimmedName, note: trimmedNote });
+            savePatrolName(trimmedName);
+            setNote('');
+            setErrorMessage('');
+            setConfirmationMessage(`Added "${nestEventTypes[actionType].label}" to ${nestIdentifier}'s log.`);
+        }
+        catch (error)
+        {
+            setConfirmationMessage('');
+            setErrorMessage(error.message);
+        }
+        finally
+        {
+            setIsSaving(false);
+        }
     }
 
     function clearMessages()
@@ -135,7 +154,7 @@ export default function PatrolUpdateForm({ nestIdentifier, protectionStatus, onA
             {errorMessage && <p className="patrol-form__error" role="alert">{errorMessage}</p>}
             {confirmationMessage && <p className="patrol-form__confirmation" role="status">{confirmationMessage}</p>}
 
-            <button type="submit" className="primary-button">Add to log</button>
+            <button type="submit" className="primary-button">{isSaving ? 'Adding…' : 'Add to log'}</button>
         </form>
     );
 }

@@ -1,4 +1,4 @@
-// Talks to the camera relay in server/server.mjs. Phones send frames with
+// Talks to the camera relay in server/cameraRelay.js. Phones send frames with
 // sendFrame(); the dashboard lists cameras and shows each one's MJPEG stream.
 //
 // The access key is stored in this browser's localStorage so people only

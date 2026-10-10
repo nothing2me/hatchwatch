@@ -1,5 +1,5 @@
 // The Cameras page: a live tile for every camera position on the map.
-// Feeds come from the camera relay (server/server.mjs); any phone that
+// Feeds come from the camera relay (server/cameraRelay.js); any phone that
 // opens /camera and picks a position shows up here within a few seconds.
 
 import { useEffect, useState } from 'react';

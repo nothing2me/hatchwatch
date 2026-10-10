@@ -1,0 +1,18 @@
+{
+  "schema": "nesttrace.live-chunk",
+  "version": 1,
+  "chunk_id": "live-000001-fixture",
+  "sequence": 1,
+  "recording_started_at": "2026-10-09T23:00:00.000Z",
+  "published_at": "2026-10-09T23:02:00.000Z",
+  "clip_seconds": 40,
+  "fps": 8,
+  "rendering": "synthetic-daylight",
+  "ground_bounds_m": [-12, 12, -8, 8],
+  "cameras": [
+    { "index": 0, "end": "x_min", "video": "camera-0.mp4", "calibration": "calibration-0.json" },
+    { "index": 1, "end": "x_max", "video": "camera-1.mp4", "calibration": "calibration-1.json" }
+  ],
+  "pins": "pins/predictions.json",
+  "note": "Test fixture. Pins copied from a real swarm-spread chunk's public pins/predictions.json."
+}

@@ -3,11 +3,15 @@
 
 import NestList from './NestList.jsx';
 import NestDetail from './NestDetail.jsx';
+import NestCharts from './NestCharts.jsx';
+import ResponseTimes from './ResponseTimes.jsx';
 
 export default function NestLogView(
 {
     nestSites,
     zones,
+    dataTag,
+    generatedAt,
     selectedNestIdentifier,
     onSelectNest,
     onAddPatrolEntry,
@@ -36,9 +40,13 @@ export default function NestLogView(
 
     return (
         <main className="nest-log">
+            <NestCharts nestSites={nestSites} zones={zones} />
+            <ResponseTimes nestSites={nestSites} generatedAt={generatedAt} onSelectNest={selectNestFromList} />
+
             <NestList
                 nestSites={nestSites}
                 zones={zones}
+                dataTag={dataTag}
                 selectedNestIdentifier={selectedNestIdentifier}
                 onSelectNest={selectNestFromList}
                 onClearPatrolEntries={onClearPatrolEntries}

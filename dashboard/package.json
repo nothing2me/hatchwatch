@@ -8,7 +8,10 @@
     "dev:phone": "vite --mode phone",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server/server.mjs"
+    "start": "node server/server.js --lan",
+    "server": "node server/server.js",
+    "server:demo": "node server/server.js --demo-patrol",
+    "test": "node --test \"test/*.test.js\""
   },
   "dependencies": {
     "react": "18.3.1",

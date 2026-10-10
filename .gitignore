@@ -12,3 +12,8 @@ artifacts/
 
 # Camera recordings (real footage; never commit)
 dashboard/recordings/
+
+# Local environment files (secrets; never commit)
+.env
+.env.*
+!.env.example

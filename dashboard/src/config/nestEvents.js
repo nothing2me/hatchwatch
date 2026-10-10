@@ -19,6 +19,18 @@ export const nestEventTypes =
         source: 'system',
         meansPatrolOnSite: false,
     },
+    alertRaised:
+    {
+        label: 'Alert raised',
+        source: 'system',
+        meansPatrolOnSite: false,
+    },
+    archived:
+    {
+        label: 'Faded from live map',
+        source: 'system',
+        meansPatrolOnSite: false,
+    },
     patrolVisit:
     {
         label: 'Patrol visited',
