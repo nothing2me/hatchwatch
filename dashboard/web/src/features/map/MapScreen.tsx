@@ -264,7 +264,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
                         {selectedCamera && (
                             <div className="max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:z-10">
-                                <CameraPanel key={selectedCamera.id} camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} />
+                                <CameraPanel key={selectedCamera.id} camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} canEditSource={isAdmin} />
                             </div>
                         )}
                         <MapControls

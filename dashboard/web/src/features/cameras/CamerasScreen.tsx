@@ -3,13 +3,14 @@
 import { Fragment, useState, useTransition } from 'react';
 import { Check, Compass, Merge, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { addCameraPairNewZone, addCameraPairToZone, deleteCamera, faceOcean, mergeZoneInto, updateCamera } from '@/app/(app)/camera-actions';
+import { SourceSelect } from '@/features/phones/SourceSelect';
 import { TopBar } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CameraRow } from '@/lib/cameras/manage';
 import { CAMERA_CODE, CAMERA_LIMITS, rangeError } from '@/lib/cameras/limits';
 import { nextZoneCode } from '@/lib/cameras/placePair';
 import { compassPoint } from '@/lib/geo';
-import type { CameraStatus, LngLat } from '@/lib/types';
+import type { CameraStatus, LiveDeviceView, LngLat } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
 export interface ZoneOption
@@ -26,6 +27,7 @@ interface CamerasScreenProps
     user: SessionUser;
     zones: ZoneOption[];
     cameras: CameraRow[];
+    devices?: LiveDeviceView[];
     bar: { camerasOnline: number; camerasTotal: number; activeSites: number; dangerCount?: number; firstDangerId?: string | null };
 }
 
@@ -90,7 +92,7 @@ function pairsOf(cameras: CameraRow[]): string[][]
     return pairs;
 }
 
-export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
+export function CamerasScreen({ user, zones, cameras, devices = [], bar }: CamerasScreenProps)
 {
     const [pending, startTransition] = useTransition();
     const [notice, setNotice] = useState<Notice>(null);
@@ -227,7 +229,7 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
             </div>
             <div className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-ink">Cameras</h1>
-                <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">New pairs join a zone, or start a new zone on open beach, and face the sea, each turned 20° toward the other. Edit any camera&apos;s position, heading, view or status here, or drag it on the map in edit mode.</p>
+                <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">New pairs join a zone, or start a new zone on open beach, and face the sea, each turned 20° toward the other. Edit any camera&apos;s position, heading, view or status here, or drag it on the map in edit mode. Source: simulation loop or a linked phone.</p>
 
                 <section aria-labelledby="pair-heading" className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] p-4">
                     <h2 id="pair-heading" className="flex items-center gap-2 text-sm font-semibold text-ink"><Plus aria-hidden className="h-4 w-4 text-amber" />Add camera pair</h2>
@@ -321,11 +323,12 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
                                             {NUMBER_FIELDS.map(f => <th key={f.key} scope="col" className="px-3 py-2 font-medium">{f.label}{f.key === 'headingDeg' || f.key === 'fovDeg' ? ' °' : f.key === 'rangeM' ? ' m' : ''}</th>)}
                                             <th scope="col" className="px-3 py-2 font-medium">Status</th>
                                             <th scope="col" className="px-3 py-2 font-medium">Footage</th>
+                                            <th scope="col" className="px-3 py-2 font-medium">Source</th>
                                             <th scope="col" className="px-3 py-2 font-medium"><span className="sr-only">Actions</span></th>
                                         </tr>
                                     </thead>
                                     <tbody className="max-md:block">
-                                        {rows.length === 0 && <tr><td colSpan={9} className="px-3 py-3 text-ink-muted">No cameras in this zone.</td></tr>}
+                                        {rows.length === 0 && <tr><td colSpan={10} className="px-3 py-3 text-ink-muted">No cameras in this zone.</td></tr>}
                                         {rows.map(camera =>
                                         {
                                             const open = editing === camera.code && draft;
@@ -363,6 +366,10 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
                                                         <td className={cn(cell, 'text-ink-muted')}>
                                                             <span className="inline-flex h-9 items-center text-[13px] whitespace-nowrap">{camera.footage} video{camera.footage === 1 ? '' : 's'} · {camera.alerts} alert{camera.alerts === 1 ? '' : 's'}</span>
                                                         </td>
+                                                        <td className={cn(cell, 'max-md:col-span-2')}>
+                                                            <span className="mb-1 block text-xs text-ink-muted md:hidden">Source</span>
+                                                            <SourceSelect cameraCode={camera.code} value={camera.liveDeviceId} devices={devices} label={`Source for ${camera.code}`} hideLabel className="w-52 max-md:w-full" />
+                                                        </td>
                                                         <td className={cell}>
                                                             <div className="flex justify-end gap-1.5 max-md:justify-start">
                                                                 {open
@@ -383,7 +390,7 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
                                                     </tr>
                                                     {open && Object.keys(errors).length > 0 && (
                                                         <tr className="max-md:block">
-                                                            <td colSpan={9} className="px-3 pb-3 max-md:block">
+                                                            <td colSpan={10} className="px-3 pb-3 max-md:block">
                                                                 <ul role="alert" className="space-y-0.5 text-xs text-red-200">
                                                                     {Object.values(errors).map(message => <li key={message}>{message}</li>)}
                                                                 </ul>

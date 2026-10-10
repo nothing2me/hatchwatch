@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, useSyncExternalStore } from 'react';
-import { Activity, LoaderCircle, Maximize2, QrCode, Smartphone, VideoOff, X } from 'lucide-react';
+import { useRef, useState, useSyncExternalStore, useTransition } from 'react';
+import { Activity, LoaderCircle, Maximize2, QrCode, Smartphone, Trash2, VideoOff, X } from 'lucide-react';
+import { removePhone } from '@/app/(app)/live/actions';
 import { TopBar, type TopBarCounts } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import type { LiveDeviceView } from '@/lib/types';
@@ -107,9 +108,69 @@ function Tile({ device }: { device: LiveDeviceView })
     );
 }
 
+function lastSeen(iso: string, now: number): string
+{
+    const seconds = Math.round((now - Date.parse(iso)) / 1000);
+    if (seconds < 45) return 'last seen just now';
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `last seen ${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    return hours < 36 ? `last seen ${hours} h ago` : `last seen ${Math.round(hours / 24)} d ago`;
+}
+
+function PhoneRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: () => void })
+{
+    const [confirming, setConfirming] = useState(false);
+    const [problem, setProblem] = useState<string | null>(null);
+    const [pending, startTransition] = useTransition();
+
+    function remove()
+    {
+        setProblem(null);
+        startTransition(async () =>
+        {
+            const result = await removePhone(device.id);
+            if (result.ok)
+            {
+                setConfirming(false);
+                onRemoved();
+            }
+            else
+            {
+                setProblem(result.error);
+            }
+        });
+    }
+
+    return (
+        <li aria-label={device.name} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+            <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-ink">{device.name}</p>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">by {device.ownerName} · {device.online ? <span className="text-ok">online</span> : lastSeen(device.lastSeenAt, Date.now())}</p>
+            </div>
+            <p className={cn('text-xs', device.cameraCode ? 'font-mono text-amber' : 'text-ink-muted')}>{device.cameraCode ? `Camera ${device.cameraCode}` : 'Not linked'}</p>
+            {confirming
+                ? (
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                        <span className="text-xs text-ink">Remove {device.name}? Its camera returns to the simulation loop.</span>
+                        <button type="button" disabled={pending} onClick={remove} className={cn(action, 'border-danger/40 text-[#F2865A] hover:bg-danger/15 disabled:opacity-50')}>Remove</button>
+                        <button type="button" disabled={pending} onClick={() => setConfirming(false)} className={action}>Cancel</button>
+                    </div>
+                )
+                : (
+                    <button type="button" onClick={() => setConfirming(true)} aria-label={`Remove ${device.name}`} className={action}>
+                        <Trash2 aria-hidden className="h-3.5 w-3.5" />
+                        Remove
+                    </button>
+                )}
+            {problem && <p role="alert" className="w-full text-xs text-[#F2865A]">{problem}</p>}
+        </li>
+    );
+}
+
 export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: TopBarCounts; connect: { url: string | null; qrSvg: string | null } | null })
 {
-    const { devices, error } = useLiveDevices(3000);
+    const { devices, error, refresh } = useLiveDevices(3000);
     const [connecting, setConnecting] = useState(false);
     const host = useSyncExternalStore(noSubscribe, () => window.location.hostname, () => null);
     const isAdmin = user.role === 'ADMIN';
@@ -166,6 +227,16 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                             </p>
                         </div>
                     )}
+
+                {isAdmin && (
+                    <section aria-labelledby="phones-heading" className="mt-10 rounded-2xl border border-white/8 bg-night-900/70 p-4 sm:p-5">
+                        <h2 id="phones-heading" className="text-sm font-semibold text-ink">Phones</h2>
+                        <p className="mt-1 text-xs text-ink-muted">Every phone that has signed up to send. Link one to a map camera from Setup or the camera panel.</p>
+                        {devices.length > 0
+                            ? <ul className="mt-3 divide-y divide-white/8 rounded-xl border border-white/8">{devices.map(device => <PhoneRow key={device.id} device={device} onRemoved={refresh} />)}</ul>
+                            : <p className="mt-3 text-sm text-ink-muted">No phones yet.</p>}
+                    </section>
+                )}
 
                 {isAdmin && <RecordingsPanel />}
             </div>

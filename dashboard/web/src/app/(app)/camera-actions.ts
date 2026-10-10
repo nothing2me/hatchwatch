@@ -13,6 +13,7 @@ import {
     moveZone as shiftZone,
     faceOcean as turnToSea,
     mergeZoneInto as mergeZone,
+    setCameraSource as saveSource,
     updateCamera as saveCamera,
 } from '@/lib/cameras/manage';
 import { prisma } from '@/lib/db';
@@ -160,4 +161,15 @@ export async function mergeZoneInto(sourceCode: string): Promise<MergeActionResu
         return { ok: false, error: 'That zone no longer exists.' };
     }
     return run(actorId => mergeZone(prisma, actorId, parsed.data));
+}
+
+export async function setCameraSource(code: string, deviceId: string | null): Promise<CameraActionResult>
+{
+    await requireCurrentUser('ADMIN');
+    const parsed = z.object({ code: cameraCodeSchema, deviceId: z.string().min(1).max(40).nullable() }).safeParse({ code, deviceId });
+    if (!parsed.success)
+    {
+        return { ok: false, error: 'That source could not be read.' };
+    }
+    return run(actorId => saveSource(prisma, actorId, parsed.data.code, parsed.data.deviceId));
 }

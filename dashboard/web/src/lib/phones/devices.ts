@@ -1,5 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { SessionUser } from '@/lib/auth/session';
+import { CameraEditError } from '@/lib/cameras/manage';
+import { publishChange } from '@/lib/changes';
 import type { LiveDeviceView } from '@/lib/types';
 import type { FrameStore } from './frameStore';
 
@@ -76,4 +78,26 @@ export async function listDevices(prisma: PrismaClient, store: FrameStore, optio
             lastSeenAt: new Date(Math.max(frameAt ?? 0, row.lastSeenAt.getTime())).toISOString(),
         };
     });
+}
+
+// Admin removal: the phone takes no more frames, leaves every list, and its camera returns to the simulation loop.
+export async function removeDevice(prisma: PrismaClient, actorId: string, deviceId: string): Promise<{ unlinked: string | null }>
+{
+    const result = await prisma.$transaction(async tx =>
+    {
+        const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, include: { camera: { select: { id: true, code: true } } } });
+        if (!device || device.disabledAt)
+        {
+            throw new CameraEditError('That phone was already removed.');
+        }
+        if (device.camera)
+        {
+            await tx.camera.update({ where: { id: device.camera.id }, data: { liveDeviceId: null } });
+        }
+        await tx.liveDevice.update({ where: { id: deviceId }, data: { disabledAt: new Date() } });
+        await tx.auditLog.create({ data: { userId: actorId, action: 'device.remove', targetType: 'LiveDevice', targetId: deviceId, details: { name: device.name, unlinked: device.camera?.code ?? null } } });
+        return { unlinked: device.camera?.code ?? null };
+    });
+    publishChange('cameras');
+    return result;
 }

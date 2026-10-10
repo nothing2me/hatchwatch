@@ -76,6 +76,7 @@ export interface CameraView
     status: CameraStatus;
     calibrated: boolean;
     video: FeedVideo | null;
+    liveDevice: { id: string; name: string } | null;
 }
 
 export interface AlertView

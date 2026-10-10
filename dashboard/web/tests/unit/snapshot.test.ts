@@ -5,8 +5,8 @@ const rows: SnapshotRows = {
     zones: [{ id: 'z1', code: 'B', name: 'Holiday', activityLevel: 'HIGH',
         outline: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } }],
     cameras: [
-        { id: 'c1', code: 'B1', zone: { code: 'B' }, lng: 1, lat: 2, headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibration: null, videos: [{ id: 'v9', source: 'SIMULATION', durationS: 61.5, pureMotionPath: 'sim/R/motion-0.mp4', simRunId: 'R' }] },
-        { id: 'c2', code: 'B2', zone: { code: 'B' }, lng: 3, lat: 4, headingDeg: 56, fovDeg: 44, rangeM: 350, status: 'OFFLINE', calibration: { pairs: [] }, videos: [] },
+        { id: 'c1', code: 'B1', zone: { code: 'B' }, lng: 1, lat: 2, headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibration: null, videos: [{ id: 'v9', source: 'SIMULATION', durationS: 61.5, pureMotionPath: 'sim/R/motion-0.mp4', simRunId: 'R' }], liveDevice: null },
+        { id: 'c2', code: 'B2', zone: { code: 'B' }, lng: 3, lat: 4, headingDeg: 56, fovDeg: 44, rangeM: 350, status: 'OFFLINE', calibration: { pairs: [] }, videos: [], liveDevice: null },
     ],
     alerts: [
         { id: 'a1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zone: { code: 'B' }, camera: { code: 'B1' }, lng: 1, lat: 2, radiusM: 0.9, score: 1.6, createdAt: new Date('2026-10-09T18:00:00Z'), videoId: 'v9', video: { simRunId: 'R' }, startT: 12, endT: 30, evidenceTier: 'TWO_CAMERA', simulated: true, events: [{ type: 'detected', at: new Date('2026-10-09T18:00:00Z') }] },

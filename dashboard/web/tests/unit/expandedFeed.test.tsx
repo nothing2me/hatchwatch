@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { CameraPanel } from '@/features/cameras/CameraPanel';
 import type { CameraView } from '@/lib/types';
+
+vi.mock('@/app/(app)/camera-actions', () => ({ setCameraSource: vi.fn() }));
+const { CameraPanel } = await import('@/features/cameras/CameraPanel');
 
 afterEach(() =>
 {

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const findUnique = vi.fn();
 const manage = {
     addCameraPair: vi.fn(), addCameraPairNewZone: vi.fn(), addCameraPairToZone: vi.fn(), moveZone: vi.fn(), deleteZone: vi.fn(),
-    deleteCamera: vi.fn(), faceOcean: vi.fn(), mergeZoneInto: vi.fn(), updateCamera: vi.fn(),
+    deleteCamera: vi.fn(), faceOcean: vi.fn(), mergeZoneInto: vi.fn(), updateCamera: vi.fn(), setCameraSource: vi.fn(),
 };
 let role = 'ADMIN';
 vi.mock('@/lib/db', () => ({ prisma: { user: { findUnique } } }));
@@ -28,6 +28,7 @@ const calls: [string, () => Promise<unknown>][] = [
     ['new zone', () => actions.addCameraPairNewZone(-97.05, 27.83)],
     ['move zone', () => actions.moveZone('E', [-97.05, 27.83], [-97.049, 27.831])],
     ['delete zone', () => actions.deleteZone('E')],
+    ['camera source', () => actions.setCameraSource('B1', 'ck1')],
 ];
 
 describe('camera and zone actions', () =>
@@ -63,5 +64,9 @@ describe('camera and zone actions', () =>
         expect(await actions.moveZone('e!', [0, 0], [0, 0])).toEqual({ ok: false, error: 'That move could not be read.' });
         expect(await actions.deleteZone('EE')).toEqual({ ok: false, error: 'That zone no longer exists.' });
         expect(manage.deleteZone).toHaveBeenCalledTimes(1);
+        manage.setCameraSource.mockResolvedValue({ code: 'B1' });
+        expect(await actions.setCameraSource('B1', null)).toEqual({ ok: true, code: 'B1' });
+        expect(manage.setCameraSource).toHaveBeenCalledWith(expect.anything(), 'u1', 'B1', null);
+        expect(await actions.setCameraSource('B1', 'x'.repeat(41))).toEqual({ ok: false, error: 'That source could not be read.' });
     });
 });

@@ -38,6 +38,7 @@ const deleteZone = vi.fn();
 vi.mock('@/app/(app)/camera-actions', () => ({
     addCameraPair: (...args: unknown[]) => addCameraPair(...args), updateCamera: (...args: unknown[]) => updateCamera(...args),
     moveZone: (...args: unknown[]) => moveZone(...args), deleteZone: (...args: unknown[]) => deleteZone(...args),
+    setCameraSource: vi.fn(),
 }));
 vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-testid="close-up" /> }));
 
@@ -63,7 +64,7 @@ const { MapScreen } = await import('@/features/map/MapScreen');
 
 const snapshot: MapSnapshot = {
     zones: [{ id: 'z', code: 'B', name: 'Holiday', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]] }],
-    cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null }],
+    cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null, liveDevice: null }],
     alerts: [],
     camerasOnline: 1, camerasTotal: 1, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5,
     tracks: [], dangerCount: 0, dangerTotal: 0,

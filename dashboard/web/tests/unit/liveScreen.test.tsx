@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/features/phones/useLiveFrame', () => ({ useLiveFrame: () => ({ url: null, state: 'loading' }) }));
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
+const removePhone = vi.fn();
+vi.mock('@/app/(app)/live/actions', () => ({ removePhone: (...args: unknown[]) => removePhone(...args) }));
 const { LiveScreen } = await import('@/features/phones/LiveScreen');
 const { RecordingsPanel, formatStart } = await import('@/features/phones/RecordingsPanel');
 
@@ -17,7 +19,7 @@ function stubFetch(devices: unknown[])
         ? Response.json({ devices })
         : Response.json({ enabled: true, convertsToMp4: true, recordings: [] })));
 }
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 describe('LiveScreen', () =>
 {
@@ -55,6 +57,33 @@ describe('LiveScreen', () =>
         expect(screen.getByTestId('qr')).toBeTruthy();
         expect(await screen.findByRole('heading', { name: 'Recordings' })).toBeTruthy();
         expect(await screen.findByText('No recordings yet. Phones are recorded while they send.')).toBeTruthy();
+    });
+
+    it('lists every phone for admins and removes one after an inline confirm', async () =>
+    {
+        stubFetch([{ ...phone, online: false, recording: false }]);
+        removePhone.mockResolvedValueOnce({ ok: false, error: 'That phone was already removed.' }).mockResolvedValueOnce({ ok: true });
+        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        const row = await screen.findByRole('listitem', { name: 'Dune phone' });
+        expect(within(row).getByText(/last seen/)).toBeTruthy();
+        expect(within(row).getByText('Camera B1')).toBeTruthy();
+        fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune phone' }));
+        expect(within(row).getByText('Remove Dune phone? Its camera returns to the simulation loop.')).toBeTruthy();
+        fireEvent.click(within(row).getByRole('button', { name: 'Remove' }));
+        expect(await within(row).findByText('That phone was already removed.')).toBeTruthy();
+        fireEvent.click(within(row).getByRole('button', { name: 'Remove' }));
+        await waitFor(() => expect(removePhone).toHaveBeenCalledTimes(2));
+        expect(removePhone).toHaveBeenCalledWith('ck1');
+        await waitFor(() => expect(within(row).queryByText(/Its camera returns/)).toBeNull());
+        expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).startsWith('/api/live/devices')).length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('hides the phones list from viewers', async () =>
+    {
+        stubFetch([phone]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        expect(await screen.findByText('Dune phone')).toBeTruthy();
+        expect(screen.queryByRole('heading', { name: 'Phones' })).toBeNull();
     });
 });
 

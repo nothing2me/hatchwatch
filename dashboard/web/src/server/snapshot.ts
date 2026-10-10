@@ -17,6 +17,7 @@ export interface CameraRow
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
     status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null }[];
+    liveDevice: { id: string; name: string } | null;
 }
 
 export interface AlertRow
@@ -157,6 +158,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
                 simRunId: camera.videos[0].simRunId,
             }
             : null,
+        liveDevice: camera.liveDevice ?? null,
     }));
 
     const tracks: TrackView[] = (rows.tracks ?? []).map(track => ({
@@ -239,6 +241,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
             orderBy: { code: 'asc' },
             include: {
                 zone: { select: { code: true } },
+                liveDevice: { select: { id: true, name: true } },
                 videos: {
                     // Live media that was pruned is skipped; chunks without a live record are unaffected.
                     where: { AND: [{ OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] }, { OR: [{ liveChunkId: null }, { liveChunk: { mediaPruned: false } }] }] },
