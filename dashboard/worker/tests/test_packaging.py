@@ -8,6 +8,12 @@ def test_dockerfile_pins_the_model_release_and_hash():
     assert f'ARG MODEL_URL={MODEL_URL}' in dockerfile
     assert f'ARG MODEL_SHA256={MODEL_SHA256}' in dockerfile
     assert 'sha256sum -c -' in dockerfile
+    assert '|| true' not in dockerfile
+    # the download and the hash check are one && chain, so a mismatch fails the build
+    start = dockerfile.index('RUN mkdir -p /app/models')
+    chain = dockerfile[start:dockerfile.index('\nCOPY . .')]
+    assert chain.index('urlretrieve') < chain.index('sha256sum -c -')
+    assert chain.count('&&') >= 2 and ' ;' not in chain and ';\n' not in chain
 
 
 def test_worker_never_reaches_into_the_research_app():

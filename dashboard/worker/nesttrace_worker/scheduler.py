@@ -1,11 +1,15 @@
+import logging
 import time
 from collections.abc import Callable
 from typing import Protocol
 
 import cv2
+import httpx
 import numpy as np
 
 from .api import InternalApi
+
+log = logging.getLogger('nesttrace_worker')
 
 LOOP_MS = 500
 MIN_FRAME_GAP_MS = 500    # at most 2 frames/s per device
@@ -30,7 +34,11 @@ class Scheduler:
 
     def tick(self) -> list[str]:
         started = self.clock()
-        devices = self.api.devices()
+        try:
+            devices = self.api.devices()
+        except (httpx.HTTPError, KeyError, ValueError) as error:
+            log.warning('device list failed: %s', type(error).__name__)  # class only: never the token or URL
+            return []
         online = {d.id for d in devices}
         for gone in [key for key in self.pipelines if key not in online]:
             self.pipelines.pop(gone)
@@ -50,15 +58,23 @@ class Scheduler:
             if (self.clock() - self.ran_at.get(device_id, float('-inf'))) * 1000 < MIN_FRAME_GAP_MS:
                 continue
             self.ran_at[device_id] = self.clock()
-            frame = self.api.frame(device_id)
-            if frame is None:
-                continue
-            self.done_at[device_id] = frame.at
-            picture = cv2.imdecode(np.frombuffer(frame.jpeg, np.uint8), cv2.IMREAD_COLOR)
-            if picture is None:
-                continue
-            pipeline = self.pipelines.setdefault(device_id, self.make_pipeline())
-            self.api.post_detections(device_id, pipeline.process(picture, frame.at))
-            served.append(device_id)
-            self.last_served = device_id
+            try:
+                if self.serve(device_id):
+                    served.append(device_id)
+            except (httpx.HTTPError, KeyError, ValueError) as error:
+                log.warning('device %s failed: %s', device_id, type(error).__name__)  # class only: never the token or URL
+            self.last_served = device_id  # a failing device must not starve the ones after it
         return served
+
+    def serve(self, device_id: str) -> bool:
+        frame = self.api.frame(device_id)
+        if frame is None:
+            return False
+        self.done_at[device_id] = frame.at
+        picture = cv2.imdecode(np.frombuffer(frame.jpeg, np.uint8), cv2.IMREAD_COLOR)
+        if picture is None:
+            return False
+        if device_id not in self.pipelines:
+            self.pipelines[device_id] = self.make_pipeline()
+        self.api.post_detections(device_id, self.pipelines[device_id].process(picture, frame.at))
+        return True

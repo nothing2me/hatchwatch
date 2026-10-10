@@ -21,6 +21,7 @@ class FakeWeb:
         self.devices: dict[str, int] = {}
         self.requests: list[tuple[str, str, str | None]] = []
         self.posted: dict[str, list[dict]] = {}
+        self.failing_posts: set[str] = set()
         fake = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -58,6 +59,8 @@ class FakeWeb:
                     return
                 device = self.path.removeprefix('/api/internal/detections/')
                 body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                if device in fake.failing_posts:
+                    return self._send(500)
                 fake.posted.setdefault(device, []).append(body)
                 self._send(200 if device in fake.devices else 404, b'{}', {'Content-Type': 'application/json'})
 
@@ -67,6 +70,7 @@ class FakeWeb:
 
     def close(self):
         self.server.shutdown()
+        self.server.server_close()
 
 
 @pytest.fixture
@@ -74,6 +78,19 @@ def web():
     fake = FakeWeb()
     yield fake
     fake.close()
+
+
+@pytest.fixture
+def make_api(web):
+    apis = []
+
+    def make(token: str = TOKEN) -> InternalApi:
+        apis.append(InternalApi(web.url, token))
+        return apis[-1]
+
+    yield make
+    for api in apis:
+        api.close()
 
 
 class FakeClock:
@@ -93,9 +110,9 @@ class CountingPipeline:
         return {'at': at_ms, 'dark': False, 'width': bgr.shape[1], 'height': bgr.shape[0], 'objects': [], 'trails': []}
 
 
-def test_client_sends_the_bearer_token_and_reads_frames(web):
+def test_client_sends_the_bearer_token_and_reads_frames(web, make_api):
     web.devices = {'d1': 1_000}
-    api = InternalApi(web.url, TOKEN)
+    api = make_api()
     assert api.devices() == [DeviceRef('d1', 1_000)]
     frame = api.frame('d1')
     assert frame.at == 1_000 and frame.jpeg == JPEG
@@ -105,10 +122,10 @@ def test_client_sends_the_bearer_token_and_reads_frames(web):
     assert {auth for _, _, auth in web.requests} == {f'Bearer {TOKEN}'}
 
 
-def test_wrong_token_raises(web):
+def test_wrong_token_raises(web, make_api):
     import httpx
     with pytest.raises(httpx.HTTPStatusError):
-        InternalApi(web.url, 'wrong').devices()
+        make_api('wrong').devices()
 
 
 def test_config_refuses_a_missing_token():
@@ -118,11 +135,11 @@ def test_config_refuses_a_missing_token():
     assert config.web_url == 'http://web:3000' and config.model_path == '/app/models/yolox_nano.onnx'
 
 
-def test_loop_skips_unchanged_frames_and_caps_two_per_second(web):
+def test_loop_skips_unchanged_frames_and_caps_two_per_second(web, make_api):
     web.devices = {'d1': 1_000}
     clock = FakeClock()
     runs: list[int] = []
-    scheduler = Scheduler(InternalApi(web.url, TOKEN), lambda: CountingPipeline(runs), clock)
+    scheduler = Scheduler(make_api(), lambda: CountingPipeline(runs), clock)
     assert scheduler.tick() == ['d1']
     clock.now = 0.5
     assert scheduler.tick() == []                 # same frame time: nothing to do
@@ -138,7 +155,7 @@ def test_loop_skips_unchanged_frames_and_caps_two_per_second(web):
     assert [p['at'] for p in web.posted['d1']] == runs
 
 
-def test_round_robin_when_a_pass_runs_out_of_time(web):
+def test_round_robin_when_a_pass_runs_out_of_time(web, make_api):
     web.devices = {'a': 1, 'b': 1, 'c': 1}
     clock = FakeClock()
 
@@ -148,7 +165,7 @@ def test_round_robin_when_a_pass_runs_out_of_time(web):
             return super().process(bgr, at_ms)
 
     runs: list[int] = []
-    scheduler = Scheduler(InternalApi(web.url, TOKEN), lambda: SlowPipeline(runs), clock)
+    scheduler = Scheduler(make_api(), lambda: SlowPipeline(runs), clock)
     assert scheduler.tick() == ['a', 'b']
     for key in web.devices:
         web.devices[key] = 2
@@ -157,12 +174,42 @@ def test_round_robin_when_a_pass_runs_out_of_time(web):
     assert scheduler.tick() == ['b']
 
 
-def test_devices_that_go_offline_lose_their_state(web):
+def test_devices_that_go_offline_lose_their_state(web, make_api):
     web.devices = {'d1': 1}
     clock = FakeClock()
-    scheduler = Scheduler(InternalApi(web.url, TOKEN), lambda: CountingPipeline([]), clock)
+    scheduler = Scheduler(make_api(), lambda: CountingPipeline([]), clock)
     scheduler.tick()
     assert 'd1' in scheduler.pipelines
     web.devices = {}
     scheduler.tick()
     assert scheduler.pipelines == {}
+
+
+def test_a_failing_device_does_not_starve_the_others(web, make_api):
+    web.devices = {'a': 1, 'b': 1, 'c': 1}
+    web.failing_posts = {'a'}
+    clock = FakeClock()
+    scheduler = Scheduler(make_api(), lambda: CountingPipeline([]), clock)
+    assert scheduler.tick() == ['b', 'c']         # a's POST returns 500; b and c are still served
+    for key in web.devices:
+        web.devices[key] = 2
+    clock.now += 1.0
+    assert scheduler.tick() == ['b', 'c']         # a is tried first again, still failing, without blocking the rest
+    assert len(web.posted['b']) == 2 and 'a' not in web.posted
+
+
+def test_a_failing_device_list_skips_the_pass(web, make_api):
+    scheduler = Scheduler(make_api('wrong'), lambda: CountingPipeline([]), FakeClock())
+    assert scheduler.tick() == []
+
+
+def test_the_pipeline_is_built_once_per_device(web, make_api):
+    web.devices = {'d1': 1}
+    clock = FakeClock()
+    built = []
+    scheduler = Scheduler(make_api(), lambda: built.append(1) or CountingPipeline([]), clock)
+    for at in (1, 2, 3):
+        web.devices['d1'] = at
+        clock.now += 1.0
+        assert scheduler.tick() == ['d1']
+    assert len(built) == 1

@@ -1,11 +1,11 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
 class Config:
     web_url: str
-    token: str
+    token: str = field(repr=False)
     model_path: str
 
 
