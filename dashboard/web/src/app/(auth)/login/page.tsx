@@ -1,15 +1,17 @@
 'use client';
 
-import { useActionState } from 'react';
+import { use, useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { loginAction, type LoginState } from './actions';
 
 const initialState: LoginState = { error: null };
 
-export default function LoginPage()
+export default function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> })
 {
     const [state, formAction, pending] = useActionState(loginAction, initialState);
+    // Pages that send people here (the phone camera page) ask to come back afterwards; the action re-checks it.
+    const next = use(searchParams).next;
 
     return (
         <main className="relative grid min-h-full place-items-center overflow-hidden bg-night-950 p-4">
@@ -21,6 +23,7 @@ export default function LoginPage()
                 <p className="mt-1 text-sm text-ink-muted">Port Aransas beach monitoring</p>
 
                 <form action={formAction} className="mt-6 space-y-4">
+                    {typeof next === 'string' && <input type="hidden" name="next" value={next} />}
                     <label className="block text-sm">
                         <span className="text-ink-muted">Email</span>
                         <input name="email" type="email" autoComplete="email" required
