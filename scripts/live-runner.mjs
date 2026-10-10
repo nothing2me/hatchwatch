@@ -269,7 +269,7 @@ async function analyzeAndPublish(chunk)
 
     const manifest =
     {
-        schema: 'nesttrace.live-chunk',
+        schema: 'hatchwatch.live-chunk',
         version: 1,
         chunk_id: chunk.chunkId,
         sequence: chunk.sequence,

@@ -78,7 +78,7 @@ def test_decimated_and_schema_shape():
         jsonschema.validate(doc, schema)
     except ImportError:
         assert set(doc) == set(schema['required'])
-        assert doc['schema'] == 'nesttrace.tracks' and doc['version'] == 1
+        assert doc['schema'] == 'hatchwatch.tracks' and doc['version'] == 1
         assert isinstance(doc['note'], str)
         for tr in doc['tracks']:
             assert set(tr) == {'id', 'pin_id', 'points'}

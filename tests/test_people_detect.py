@@ -105,7 +105,7 @@ def test_schema_shape():
         jsonschema.validate(doc, schema)
     except ImportError:
         assert set(doc) == set(schema['required'])
-        assert doc['schema'] == 'nesttrace.people' and doc['version'] == 1
+        assert doc['schema'] == 'hatchwatch.people' and doc['version'] == 1
         assert isinstance(doc['note'], str)
         for p in doc['people']:
             assert set(p) == {'id', 'points', 'max_height_m'}

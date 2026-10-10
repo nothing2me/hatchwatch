@@ -135,7 +135,7 @@ def build_tracks(signals, calibration, pins, timestamps, motion_threshold):
             if i in pin_of or max(y for _, _, y in tr) >= UNMATCHED_MIN_INLAND_Y]
     tracks = [{'id': f'track-{n + 1}', 'pin_id': pin_of.get(i), 'points': _decimate(kept[i])}
               for n, i in enumerate(keep)]
-    return {'schema': 'nesttrace.tracks', 'version': 1, 'tracks': tracks, 'note': NOTE}
+    return {'schema': 'hatchwatch.tracks', 'version': 1, 'tracks': tracks, 'note': NOTE}
 
 
 def _refuse_private(run_dir):

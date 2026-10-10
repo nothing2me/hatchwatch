@@ -361,7 +361,7 @@ def detect_in_frames(views, times):
                'points': _decimate([(t, x, z) for t, x, z, _ in tr]),
                'max_height_m': round(float(max(hm for *_, hm in tr)), 2)}
               for n, tr in enumerate(kept)]
-    return {'schema': 'nesttrace.people', 'version': 1, 'people': people, 'note': NOTE}
+    return {'schema': 'hatchwatch.people', 'version': 1, 'people': people, 'note': NOTE}
 
 
 def _video_frames(path):

@@ -27,7 +27,7 @@ def run(run_id, variant):
     for motion_threshold, pixel_threshold in itertools.product((7, 10, 14, 18, 22, 28, 36), (14, 22, 30, 40)):
         cfg = dict(base, motion_threshold=motion_threshold, pixel_threshold=pixel_threshold)
         row = {'motion_threshold': motion_threshold, 'pixel_threshold': pixel_threshold, 'views': {}}
-        with tempfile.TemporaryDirectory(prefix='nesttrace-lowlight-grid-') as temp:
+        with tempfile.TemporaryDirectory(prefix='hatchwatch-lowlight-grid-') as temp:
             work = Path(temp)
             settings = work / 'settings.json'
             write_json(settings, cfg)

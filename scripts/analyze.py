@@ -19,7 +19,7 @@ def run(run_id, cameras=(0,), settings=None, evaluate=True, mask=None):
         cmd=[sys.executable,str(ROOT/'pipeline/extract.py'),'--video',str(public/f'camera-{view}.mp4'),'--calibration',str(public/f'calibration-{view}.json'),'--settings',str(settings),'--output',str(signal)]
         if mask: cmd+=['--mask',str(mask)]
         subprocess.run(cmd,check=True)
-        with tempfile.TemporaryDirectory(prefix='nesttrace-blind-') as tmp:
+        with tempfile.TemporaryDirectory(prefix='hatchwatch-blind-') as tmp:
             stage=Path(tmp)
             for src,name in [(signal/'signals.npz','signals.npz'),(public/f'calibration-{view}.json','calibration.json'),(settings,'settings.json'),(ROOT/'pipeline/detect.py','detect.py'),(ROOT/'pipeline/common.py','common.py')]:shutil.copy2(src,stage/name)
             subprocess.run([sys.executable,'detect.py','--signals','signals.npz','--calibration','calibration.json','--settings','settings.json','--output','output'],cwd=stage,check=True)

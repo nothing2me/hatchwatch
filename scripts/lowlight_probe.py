@@ -93,7 +93,7 @@ def run(run_id, view, variants):
             raise RuntimeError(f'Could not encode {variant}')
         signals = folder / 'signals'
         subprocess.run([sys.executable, str(ROOT / 'pipeline/extract.py'), '--video', str(folder / 'enhanced.mp4'), '--calibration', str(calibration), '--settings', str(settings), '--output', str(signals)], check=True)
-        with tempfile.TemporaryDirectory(prefix='nesttrace-night-probe-') as temp:
+        with tempfile.TemporaryDirectory(prefix='hatchwatch-night-probe-') as temp:
             stage = Path(temp)
             for file, name in [(signals / 'signals.npz', 'signals.npz'), (calibration, 'calibration.json'), (settings, 'settings.json'), (ROOT / 'pipeline/detect.py', 'detect.py'), (ROOT / 'pipeline/common.py', 'common.py')]:
                 shutil.copy2(file, stage / name)
