@@ -31,6 +31,7 @@ describe('CameraPanel feeds', () =>
         expect(screen.queryByTestId('camera-video')).toBeNull();
         expect(screen.queryByLabelText('Expand camera view')).toBeNull();
         expect(screen.getByText(/view only, not recorded or analysed/)).toBeTruthy();
+        expect(screen.getByRole('link', { name: 'Motion view' }).getAttribute('href')).toBe('/motion?camera=B1');
     });
 
     it('keeps the loop when no feed is given', () =>
@@ -38,6 +39,7 @@ describe('CameraPanel feeds', () =>
         render(panel());
         expect(screen.getByTestId('camera-video')).toBeTruthy();
         expect(screen.queryByText(/LIVE/)).toBeNull();
+        expect(screen.queryByRole('link', { name: 'Motion view' })).toBeNull();
     });
 
     it('says which device is offline while the loop plays', () =>

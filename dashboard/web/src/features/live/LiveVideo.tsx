@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { cn } from '@/lib/cn';
 import { openSignalClient } from './signalClient';
 
@@ -14,9 +14,11 @@ const MESSAGES: Record<Exclude<State, 'live'>, string> = {
 
 // Plays one device's camera straight from the device over WebRTC. The server only relays signalling.
 // `badge` sits over the top-left of the picture (the map panel's header has no room for it).
-export function LiveVideo({ deviceId, large = false, badge }: { deviceId: string; large?: boolean; badge?: ReactNode })
+// `videoRef` hands the playing element to callers that read its frames (the motion view).
+export function LiveVideo({ deviceId, large = false, badge, videoRef }: { deviceId: string; large?: boolean; badge?: ReactNode; videoRef?: RefObject<HTMLVideoElement | null> })
 {
-    const ref = useRef<HTMLVideoElement>(null);
+    const ownRef = useRef<HTMLVideoElement>(null);
+    const ref = videoRef ?? ownRef;
     const [state, setState] = useState<State>('connecting');
 
     useEffect(() =>

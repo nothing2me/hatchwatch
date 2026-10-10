@@ -1,6 +1,7 @@
 'use client';
 
-import { VideoOff } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, VideoOff } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { isNestSite } from '@/lib/danger';
 import type { SessionUser } from '@/lib/auth/session';
@@ -40,6 +41,11 @@ function CameraCard({ camera, feed }: { camera: CameraView; feed: Feed })
                 : feed.kind === 'sim'
                 ? <CameraVideo key={feed.video.id} video={feed.video} />
                 : <div className="mt-2 grid aspect-video place-content-center gap-2 rounded-lg bg-night-950 text-center text-sm text-ink-muted"><VideoOff aria-hidden className="mx-auto h-6 w-6" />{camera.status === 'ONLINE' ? 'No footage yet' : 'Camera offline'}</div>}
+            {feed.kind === 'live' && (
+                <Link href={`/motion?camera=${encodeURIComponent(camera.code)}`} className="mt-2 inline-flex items-center gap-1.5 px-1 text-xs text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">
+                    <Activity aria-hidden className="h-3.5 w-3.5 text-amber" />Motion view
+                </Link>
+            )}
             {feed.kind !== 'live' && feed.deviceOffline && <p className="mt-2 px-1 text-xs text-ink-muted">{feed.deviceOffline} offline{feed.kind === 'sim' ? ' · showing simulation' : ''}</p>}
         </GlassPanel>
     );

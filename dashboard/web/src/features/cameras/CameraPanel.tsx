@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from 'react';
-import { Info, Maximize2, VideoOff, X } from 'lucide-react';
+import { Activity, Info, Maximize2, VideoOff, X } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { assignCameraSource } from '@/app/(app)/live-actions';
 import { LiveVideo } from '@/features/live/LiveVideo';
@@ -206,7 +207,14 @@ export function CameraPanel({ camera, feed, isAdmin = false, devices = [], onClo
                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Range</dt><dd className="mt-0.5 font-mono tabular-nums">{Math.round(camera.rangeM)} m</dd></div>
             </dl>
             {isAdmin && <SourcePicker camera={camera} devices={devices} />}
-            {live && <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">Live from {live.deviceName} over Wi-Fi · view only, not recorded or analysed.</p>}
+            {live && (
+                <div className="mt-3 flex items-start gap-3">
+                    <p className="flex-1 text-[11px] leading-relaxed text-ink-muted">Live from {live.deviceName} over Wi-Fi · view only, not recorded or analysed.</p>
+                    <Link href={`/motion?camera=${encodeURIComponent(camera.code)}`} className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 text-xs hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-amber">
+                        <Activity aria-hidden className="h-3.5 w-3.5 text-amber" />Motion view
+                    </Link>
+                </div>
+            )}
             {playable?.motionMap && <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">Projected motion covers the calibrated ground area. Marker fit RMSE: {playable.motionMap.fitRmseM?.toPrecision(2) ?? 'unavailable'} m. Independent pin location accuracy has not been measured.</p>}
             {!live && !camera.calibrated && !camera.video?.motionMap && (
                 <p className="mt-3 flex gap-2 border-t border-white/8 pt-2.5 text-xs leading-relaxed text-ink-muted">
