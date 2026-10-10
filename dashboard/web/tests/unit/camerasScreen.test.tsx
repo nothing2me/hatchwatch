@@ -20,7 +20,7 @@ const zones = [
     { code: 'B', name: 'Zone B', suggested: [-97.0645, 27.8166] as [number, number], mergeable: false },
     { code: 'D', name: 'Zone D', suggested: [-97.059, 27.8227] as [number, number], mergeable: true },
 ];
-const row = { fovDeg: 44, rangeM: 350, status: 'ONLINE' as const, footage: 1, alerts: 0, liveDeviceId: null, liveDeviceName: null };
+const row = { fovDeg: 44, rangeM: 350, status: 'ONLINE' as const, footage: 1, alerts: 0, liveDeviceId: null, liveDeviceName: null, mask: null };
 const cameras = [
     { ...row, code: 'B1', zoneCode: 'B', lng: -97.062796, lat: 27.81816, headingDeg: 203, liveSlot: true },
     { ...row, code: 'B2', zoneCode: 'B', lng: -97.065525, lat: 27.815179, headingDeg: 56, liveSlot: true },
@@ -130,5 +130,21 @@ describe('CamerasScreen', () =>
         fireEvent.click(within(zoneD).getByRole('button', { name: 'Merge zone' }));
         expect(mergeZoneInto).toHaveBeenCalledWith('D');
         expect(await screen.findByText('Zone D merged into Zone B: D3 → B3')).toBeTruthy();
+    });
+
+    it('offers a watch mask on every camera, not only the live slots', () =>
+    {
+        const more = [
+            ...cameras,
+            { ...row, code: 'C3', zoneCode: 'D', lng: -97.0572, lat: 27.8242, headingDeg: 149, liveSlot: false },
+            { ...row, code: 'E1', zoneCode: 'D', lng: -97.0573, lat: 27.8243, headingDeg: 149, liveSlot: false, mask: [[0.1, 0.1], [0.9, 0.1], [0.5, 0.9]] as [number, number][] },
+        ];
+        render(<CamerasScreen user={admin} zones={zones} cameras={more} bar={bar} />);
+        for (const code of ['B1', 'B2', 'D3', 'C3', 'E1'])
+        {
+            expect(screen.getByRole('button', { name: `Edit watch mask for ${code}` })).toBeTruthy();
+        }
+        expect(screen.getByRole('button', { name: 'Edit watch mask for E1' }).textContent).toBe('Mask · set');
+        expect(screen.getByRole('button', { name: 'Edit watch mask for C3' }).textContent).toBe('Mask');
     });
 });

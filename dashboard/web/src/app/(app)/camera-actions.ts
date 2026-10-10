@@ -16,7 +16,9 @@ import {
     setCameraSource as saveSource,
     updateCamera as saveCamera,
 } from '@/lib/cameras/manage';
+import { syncResearchMasks } from '@/lib/cameras/researchMasks';
 import { prisma } from '@/lib/db';
+import { liveSettings } from '@/lib/live/watcher';
 import type { LngLat } from '@/lib/types';
 
 export type PairActionResult = { ok: true; codes: [string, string]; zoneCode: string; newZone: boolean } | { ok: false; error: string };
@@ -127,7 +129,13 @@ export async function updateCamera(code: string, patch: { code?: string; lng?: n
     {
         return { ok: false, error: 'That edit could not be read.' };
     }
-    return run(actorId => saveCamera(prisma, actorId, parsedCode.data, parsedPatch.data));
+    const result = await run(actorId => saveCamera(prisma, actorId, parsedCode.data, parsedPatch.data));
+    if (result.ok && result.code !== parsedCode.data)
+    {
+        // The research mask file is keyed by camera code; its result is ignored, the edit already saved.
+        await syncResearchMasks(prisma, liveSettings().root);
+    }
+    return result;
 }
 
 export async function deleteCamera(code: string): Promise<CameraActionResult>
@@ -138,7 +146,12 @@ export async function deleteCamera(code: string): Promise<CameraActionResult>
     {
         return { ok: false, error: 'That camera no longer exists.' };
     }
-    return run(async actorId => { await removeCamera(prisma, actorId, parsed.data); return { code: parsed.data }; });
+    const result = await run(async actorId => { await removeCamera(prisma, actorId, parsed.data); return { code: parsed.data }; });
+    if (result.ok)
+    {
+        await syncResearchMasks(prisma, liveSettings().root);
+    }
+    return result;
 }
 
 export async function faceOcean(code: string): Promise<FaceOceanResult>
@@ -160,7 +173,13 @@ export async function mergeZoneInto(sourceCode: string): Promise<MergeActionResu
     {
         return { ok: false, error: 'That zone no longer exists.' };
     }
-    return run(actorId => mergeZone(prisma, actorId, parsed.data));
+    const result = await run(actorId => mergeZone(prisma, actorId, parsed.data));
+    if (result.ok && result.moved.length > 0)
+    {
+        // Merged cameras get new codes.
+        await syncResearchMasks(prisma, liveSettings().root);
+    }
+    return result;
 }
 
 export async function setCameraSource(code: string, deviceId: string | null): Promise<CameraActionResult>

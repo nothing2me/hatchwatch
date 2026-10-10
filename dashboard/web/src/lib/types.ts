@@ -1,3 +1,5 @@
+import type { MaskPoint } from '@/lib/cameras/masks';
+
 export type Role = 'ADMIN' | 'VOLUNTEER' | 'VIEWER';
 export type ActivityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type CameraStatus = 'ONLINE' | 'OFFLINE';
@@ -83,6 +85,8 @@ export interface CameraView
     calibrated: boolean;
     video: FeedVideo | null;
     liveDevice: { id: string; name: string; kind?: LiveDeviceKind } | null;   // kind defaults to PHONE when absent
+    /** Watch area in normalised 0-1 picture coordinates; null or absent: the whole picture counts. */
+    mask?: MaskPoint[] | null;
 }
 
 export interface AlertView

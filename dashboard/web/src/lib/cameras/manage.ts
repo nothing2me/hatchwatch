@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
 import type { CameraStatus, LngLat, ZoneView } from '@/lib/types';
 import { CAMERA_CODE, type CAMERA_LIMITS, rangeError } from './limits';
+import { asCameraMask, type MaskPoint } from './masks';
 import { checkZoneClear, distanceToZone, nearestZone, nextCameraCodes, partnerCode, placementFor, planNewZone, planPairOnZone, PlacementError, seawardToward, translateZone, zoneOrientation } from './placePair';
 
 export class CameraEditError extends Error {}
@@ -425,10 +426,12 @@ export interface CameraRow
     footage: number;
     alerts: number;
     liveSlot: boolean;
-    /** Latest simulation clip: the mask editor draws its polygon over this feed. */
+    /** Latest simulation clip: the mask editor draws over it when no live device is linked. */
     video?: { id: string; maskPolygon: [number, number][] | null } | null;
     liveDeviceId: string | null;
     liveDeviceName: string | null;
+    /** This camera's watch area (normalised 0-1); null: the whole picture counts. */
+    mask: MaskPoint[] | null;
 }
 
 // Every camera with its footage, alert counts and latest pickup, for Setup → Cameras.
@@ -455,6 +458,7 @@ export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code
             liveSlot: isLiveSlot(camera.code, camera.zone.code),
             video: camera.videos[0] ? { id: camera.videos[0].id, maskPolygon: Array.isArray(camera.videos[0].maskPolygon) ? camera.videos[0].maskPolygon as [number, number][] : null } : null,
             liveDeviceId: camera.liveDevice?.id ?? null, liveDeviceName: camera.liveDevice?.name ?? null,
+            mask: asCameraMask(camera.maskPolygon),
         })),
     };
 }

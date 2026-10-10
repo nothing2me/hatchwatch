@@ -112,6 +112,9 @@ model Camera {
   /// Phone whose live picture this camera shows; a phone feeds at most one camera.
   liveDeviceId String?      @unique
   liveDevice   LiveDevice?  @relation(fields: [liveDeviceId], references: [id], onDelete: SetNull)
+  /// Watch area in normalised 0–1 picture coordinates [[x, y], …], 3–64 points, implicitly closed. Null: the whole picture counts.
+  maskPolygon   Json?
+  maskUpdatedAt DateTime?
 }
 
 model Video {

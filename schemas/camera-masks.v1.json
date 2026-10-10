@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "hatchwatch.camera_masks v1",
+  "description": "Operator-drawn camera watch areas in 1280x720 source-frame pixels, written by the HatchWatch dashboard to MASKS_ROOT/camera-masks.json (artifacts/operator). pipeline/extract.py (frozen) reads only cameras[]: it picks the entry whose integer camera equals the runner's camera slot (0 or 1). The dashboard derives cameras[] from its per-camera masks (slot 0 = newest odd-numbered camera mask, slot 1 = newest even-numbered one, else the repository default from config/camera-masks.json). by_code holds each dashboard camera's own mask and is ignored by the runner. Operator configuration, never simulator truth; registered experiments must be re-validated after any mask change.",
+  "type": "object",
+  "required": ["schema", "version", "cameras"],
+  "properties": {
+    "schema": {"enum": ["hatchwatch.camera_masks", "nesttrace.camera_masks"]},
+    "version": {"const": 1},
+    "note": {"type": "string"},
+    "cameras": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["camera", "polygon"],
+        "properties": {
+          "camera": {"type": "integer", "minimum": 0},
+          "label": {"type": "string"},
+          "polygon": {"$ref": "#/$defs/polygon"}
+        }
+      }
+    },
+    "by_code": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["polygon", "updated_at"],
+        "properties": {
+          "polygon": {"$ref": "#/$defs/polygon"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}
+    }
+  }
+}

@@ -1,13 +1,13 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import 'server-only';
+import { DEFAULT_MASK } from './masks';
 
-// Camera masks are operator configuration shared with the research runner. Admins
-// edit them here; the runner applies them at extraction. Never private truth.
-//
-// Saved to MASKS_ROOT (artifacts/operator, mounted writable in Compose), so the
-// simulator's public output folder can stay read-only for the dashboard. Reads
-// fall back to the older shared location in the public folder, then the repo default.
+// The research runner's camera-masks.json: operator configuration the runner applies
+// at extraction, never private truth. The dashboard writes it from per-camera masks
+// (researchMasks.ts) to MASKS_ROOT (artifacts/operator, mounted writable in Compose), so
+// the simulator's public output folder can stay read-only for the dashboard. Reads fall
+// back to the older shared location in the public folder, then the repo default.
 
 const fallbackConfig = resolve(process.cwd(), '../../config/camera-masks.json');
 const MASKS_FILE = 'camera-masks.json';
@@ -30,17 +30,40 @@ export interface MaskEntry
     polygon: [number, number][];
 }
 
+export interface CodeMaskEntry
+{
+    polygon: [number, number][];
+    updated_at: string;
+}
+
 export interface MasksFile
 {
     cameras: MaskEntry[];
+    /** Per dashboard camera code, in source-frame pixels; empty in files written before per-camera masks. */
+    byCode: Record<string, CodeMaskEntry>;
     source: 'public' | 'default';
 }
 
-function parseMasksFile(path: string): MaskEntry[]
+function parseByCode(data: { by_code?: unknown }): Record<string, CodeMaskEntry>
 {
-    const data = JSON.parse(readFileSync(path, 'utf8')) as { cameras?: unknown };
+    if (!data.by_code || typeof data.by_code !== 'object' || Array.isArray(data.by_code))
+    {
+        return {};
+    }
+    return Object.fromEntries(Object.entries(data.by_code as Record<string, unknown>).flatMap(([code, entry]) =>
+    {
+        const candidate = entry as { polygon?: unknown; updated_at?: unknown };
+        return Array.isArray(candidate?.polygon) && typeof candidate.updated_at === 'string'
+            ? [[code, { polygon: candidate.polygon as [number, number][], updated_at: candidate.updated_at }]]
+            : [];
+    }));
+}
+
+function parseMasksFile(path: string): Omit<MasksFile, 'source'>
+{
+    const data = JSON.parse(readFileSync(path, 'utf8')) as { cameras?: unknown; by_code?: unknown };
     const cameras = Array.isArray(data.cameras) ? data.cameras : [];
-    return cameras.flatMap((entry) =>
+    const entries = cameras.flatMap((entry) =>
     {
         const candidate = entry as { camera?: unknown; polygon?: unknown; label?: unknown };
         if (typeof candidate?.camera !== 'number' || !Array.isArray(candidate.polygon)) return [];
@@ -50,6 +73,18 @@ function parseMasksFile(path: string): MaskEntry[]
             polygon: candidate.polygon as [number, number][],
         }];
     });
+    return { cameras: entries, byCode: parseByCode(data) };
+}
+
+/** The repository default per-slot masks (config/camera-masks.json, read only); the same strip built in when the repo is not mounted (Docker). */
+export function readDefaultMasks(): MaskEntry[]
+{
+    if (existsSync(fallbackConfig))
+    {
+        return parseMasksFile(fallbackConfig).cameras;
+    }
+    // Live chunks need at least one cameras[] entry, so both slots always have one.
+    return [0, 1].map(camera => ({ camera, label: `Repository default for camera ${camera}`, polygon: DEFAULT_MASK.map(([x, y]) => [x, y] as [number, number]) }));
 }
 
 /** The active mask set: the admin-saved file, else the older public copy, else the repo default. */
@@ -59,32 +94,8 @@ export function readMasks(liveRoot: string, root: string = masksRoot(liveRoot)):
     {
         if (existsSync(file))
         {
-            return { cameras: parseMasksFile(file), source: 'public' };
+            return { ...parseMasksFile(file), source: 'public' };
         }
     }
-    if (existsSync(fallbackConfig))
-    {
-        return { cameras: parseMasksFile(fallbackConfig), source: 'default' };
-    }
-    return { cameras: [], source: 'default' };
-}
-
-/** Atomically updates one camera's mask in the saved file (tmp + rename), starting from the active set. */
-export function writeMask(liveRoot: string, camera: number, polygon: [number, number][], label?: string, root: string = masksRoot(liveRoot)): { ok: true; cameras: MaskEntry[] }
-{
-    const file = resolve(root, MASKS_FILE);
-    const current = readMasks(liveRoot, root).cameras;
-    const others = current.filter(entry => entry.camera !== camera);
-    const next: MaskEntry[] = [...others, { camera, label, polygon }].sort((a, b) => a.camera - b.camera);
-    const payload = {
-        schema: 'nesttrace.camera_masks',
-        version: 1,
-        note: 'Operator-drawn per-camera watch areas in source-frame pixels (1280x720). The runner applies these at extraction: everything outside the polygon is excluded from the motion-signal grid (skies, surf, water, dune edges) while the raw camera feed is unchanged. This is operator configuration, never simulator truth. Changing a mask changes the video-to-signal distribution: registered experiments must be re-validated after any mask change.',
-        cameras: next,
-    };
-    mkdirSync(root, { recursive: true });
-    const temporary = resolve(root, `${MASKS_FILE}.tmp-${process.pid}`);
-    writeFileSync(temporary, JSON.stringify(payload, null, 2));
-    renameSync(temporary, file);
-    return { ok: true, cameras: next };
+    return { cameras: readDefaultMasks(), byCode: {}, source: 'default' };
 }

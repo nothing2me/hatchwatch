@@ -1,6 +1,7 @@
 import 'server-only';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
+import { asCameraMask } from '@/lib/cameras/masks';
 import { DEMO_PATROL_AUTHOR } from '@/lib/live/demoPatrol';
 import { outcomeCounts } from '@/lib/sites/outcomes';
 import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, securedOf, summarizeSite } from '@/lib/sites/summary';
@@ -20,6 +21,7 @@ export interface CameraRow
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
     status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown; placementOffsetM?: number | null } | null }[];
     liveDevice: { id: string; name: string; kind?: LiveDeviceKind } | null;
+    maskPolygon?: unknown;
 }
 
 export interface AlertRow
@@ -171,6 +173,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
             }
             : null,
         liveDevice: camera.liveDevice ?? null,
+        mask: asCameraMask(camera.maskPolygon),
         };
     });
 

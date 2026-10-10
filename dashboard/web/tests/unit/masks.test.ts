@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MASK_FRAME, MAX_MASK_POINTS, clampPolygon, toNormalized, toPixels, validMaskPoints } from '@/lib/cameras/masks';
+import { DEFAULT_CAMERA_MASK, DEFAULT_MASK, MASK_FRAME, MAX_MASK_POINTS, asCameraMask, cleanCameraMask, clampPolygon, openRing, polygonArea, toNormalized, toPixels, validCameraMask, validMaskPoints } from '@/lib/cameras/masks';
 
 describe('camera mask geometry', () =>
 {
@@ -9,7 +9,7 @@ describe('camera mask geometry', () =>
         expect(clamped).toEqual([[0, 40], [1280, 720], [640, 360]]);
     });
 
-    it('accepts a 3-32 point in-frame polygon and rejects degenerate ones', () =>
+    it('accepts a 3 to MAX_MASK_POINTS point in-frame polygon and rejects degenerate ones', () =>
     {
         expect(validMaskPoints([[0, 0], [1280, 0], [1280, 720]])).toBe(true);
         expect(validMaskPoints([[0, 0], [1280, 0]])).toBe(false);
@@ -23,5 +23,65 @@ describe('camera mask geometry', () =>
         const normalized = toNormalized(pixels);
         expect(normalized[0][0]).toBeCloseTo(70 / MASK_FRAME[0], 6);
         expect(toPixels(normalized)).toEqual(pixels);
+    });
+});
+
+describe('per-camera masks (normalised 0-1)', () =>
+{
+    const triangle: [number, number][] = [[0.1, 0.1], [0.9, 0.1], [0.5, 0.9]];
+    const ring = (n: number): [number, number][] => Array.from({ length: n }, (_, i) =>
+        [0.5 + 0.4 * Math.cos((2 * Math.PI * i) / n), 0.5 + 0.4 * Math.sin((2 * Math.PI * i) / n)] as [number, number]);
+
+    it('allows 64 points for pixel masks too', () =>
+    {
+        expect(MAX_MASK_POINTS).toBe(64);
+    });
+
+    it('accepts a triangle, 64 points and a closing repeat', () =>
+    {
+        expect(validCameraMask(triangle)).toBe(true);
+        expect(validCameraMask(ring(64))).toBe(true);
+        expect(validCameraMask([...ring(64), ring(64)[0]])).toBe(true);
+        expect(validCameraMask([...triangle, triangle[0]])).toBe(true);
+    });
+
+    it('refuses too few or too many points, out-of-range, NaN, zero area and non-arrays', () =>
+    {
+        expect(validCameraMask([[0.1, 0.1], [0.9, 0.1]])).toBe(false);
+        expect(validCameraMask(ring(65))).toBe(false);
+        expect(validCameraMask([[0.1, 0.1], [1.0001, 0.1], [0.5, 0.9]])).toBe(false);
+        expect(validCameraMask([[0.1, 0.1], [Number.NaN, 0.1], [0.5, 0.9]])).toBe(false);
+        expect(validCameraMask([[0.1, 0.1], [0.5, 0.5], [0.9, 0.9]])).toBe(false);
+        expect(validCameraMask('x')).toBe(false);
+        expect(validCameraMask(null)).toBe(false);
+        expect(validCameraMask([[0.1, 0.1, 0.2], [0.9, 0.1], [0.5, 0.9]])).toBe(false);
+    });
+
+    it('drops a repeated closing point and measures the area', () =>
+    {
+        expect(openRing([...triangle, triangle[0]])).toEqual(triangle);
+        expect(openRing(triangle)).toEqual(triangle);
+        expect(polygonArea([[0, 0], [1, 0], [1, 1], [0, 1]])).toBeCloseTo(1, 9);
+        expect(polygonArea([[0, 1], [1, 1], [1, 0], [0, 0]])).toBeCloseTo(1, 9);
+    });
+
+    it('rounds to 4 decimals and opens the ring when cleaning', () =>
+    {
+        expect(cleanCameraMask([[0.123456, 0.987654], [0.9, 0.1], [0.5, 0.900049], [0.123456, 0.987654]]))
+            .toEqual([[0.1235, 0.9877], [0.9, 0.1], [0.5, 0.9]]);
+    });
+
+    it('reads a stored value as a mask or null', () =>
+    {
+        expect(asCameraMask('x')).toBeNull();
+        expect(asCameraMask(null)).toBeNull();
+        expect(asCameraMask([[0, 0], [1, 1]])).toBeNull();
+        expect(asCameraMask([...triangle, triangle[0]])).toEqual(triangle);
+    });
+
+    it('defaults to the repository beach strip in normalised form', () =>
+    {
+        expect(DEFAULT_CAMERA_MASK).toEqual(toNormalized(DEFAULT_MASK));
+        expect(validCameraMask(DEFAULT_CAMERA_MASK)).toBe(true);
     });
 });

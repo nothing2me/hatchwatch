@@ -1,12 +1,15 @@
-// Per-camera watch-mask geometry (source-frame pixels, 1280x720).
+// Camera watch-mask geometry. Pure helpers (no I/O), safe in the browser.
 //
-// A mask is the operator-drawn beach area a camera should watch: motion signals
-// are computed only inside it at extraction. Pure helpers here (no I/O) are
-// unit-testable; the shared file lives in the PUBLIC artifacts dir
-// artifacts/public/camera-masks.json, read by the runner and edited by admins.
+// Each dashboard camera stores its own mask in normalised 0-1 picture coordinates
+// (Camera.maskPolygon). The research runner's file and runner chunks use
+// source-frame pixels (1280x720); the pixel helpers below convert between the two.
+
+export type MaskPoint = [number, number];
 
 export const MASK_FRAME: [number, number] = [1280, 720];
-export const MAX_MASK_POINTS = 32;
+export const MAX_MASK_POINTS = 64;
+/** Smallest mask area, as a fraction of the picture. */
+export const MIN_MASK_AREA = 0.0001;
 
 /** Keeps a polygon inside the source frame; pixels rounded to integers. */
 export function clampPolygon(points: readonly [number, number][], frame: readonly [number, number] = MASK_FRAME): [number, number][]
@@ -44,3 +47,55 @@ export function toPixels(points: readonly [number, number][], frame: readonly [n
 {
     return clampPolygon(points.map(([x, y]) => [x * frame[0], y * frame[1]]));
 }
+
+/** Drops a repeated closing point, so [a, b, c, a] and [a, b, c] are the same mask. */
+export function openRing(points: readonly MaskPoint[]): MaskPoint[]
+{
+    const first = points[0];
+    const last = points[points.length - 1];
+    const closed = points.length > 1 && first[0] === last[0] && first[1] === last[1];
+    return (closed ? points.slice(0, -1) : points).map(([x, y]) => [x, y] as MaskPoint);
+}
+
+/** Shoelace area, always positive whatever the winding. */
+export function polygonArea(points: readonly MaskPoint[]): number
+{
+    let twice = 0;
+    points.forEach(([x1, y1], index) =>
+    {
+        const [x2, y2] = points[(index + 1) % points.length];
+        twice += x1 * y2 - x2 * y1;
+    });
+    return Math.abs(twice) / 2;
+}
+
+/** A per-camera mask: 3-64 finite points inside 0-1 (closing repeat allowed) enclosing a non-zero area. */
+export function validCameraMask(value: unknown): value is MaskPoint[]
+{
+    if (!Array.isArray(value) || !value.every(point => Array.isArray(point)
+        && point.length === 2
+        && typeof point[0] === 'number' && Number.isFinite(point[0]) && point[0] >= 0 && point[0] <= 1
+        && typeof point[1] === 'number' && Number.isFinite(point[1]) && point[1] >= 0 && point[1] <= 1))
+    {
+        return false;
+    }
+    const ring = openRing(value as MaskPoint[]);
+    return ring.length >= 3 && ring.length <= MAX_MASK_POINTS && polygonArea(ring) >= MIN_MASK_AREA;
+}
+
+const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
+
+/** The stored form: open ring, coordinates rounded to 4 decimals. */
+export function cleanCameraMask(points: readonly MaskPoint[]): MaskPoint[]
+{
+    return openRing(points).map(([x, y]) => [round4(x), round4(y)] as MaskPoint);
+}
+
+/** A stored Camera.maskPolygon as a mask, or null (whole picture) when absent or invalid. */
+export function asCameraMask(value: unknown): MaskPoint[] | null
+{
+    return validCameraMask(value) ? openRing(value) : null;
+}
+
+/** Starting outline for a new mask: the repository default beach strip, normalised. */
+export const DEFAULT_CAMERA_MASK: MaskPoint[] = toNormalized(DEFAULT_MASK);

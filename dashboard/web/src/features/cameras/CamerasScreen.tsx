@@ -9,6 +9,7 @@ import { TopBar } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CameraRow } from '@/lib/cameras/manage';
 import { CAMERA_CODE, CAMERA_LIMITS, rangeError } from '@/lib/cameras/limits';
+import type { MaskPoint } from '@/lib/cameras/masks';
 import { nextZoneCode } from '@/lib/cameras/placePair';
 import { compassPoint } from '@/lib/geo';
 import type { CameraStatus, LiveDeviceView, LngLat } from '@/lib/types';
@@ -49,16 +50,6 @@ const button = 'inline-flex h-8 items-center justify-center gap-1.5 rounded-lg b
 const cell = 'px-3 py-2.5 max-md:p-0';
 
 const fixed = (value: number, digits: number) => Number(value.toFixed(digits)).toString();
-
-// Live chunks map their manifest camera 0/1 onto a zone's <zone>1/<zone>2 slots, so
-// the runner's mask index for a dashboard camera is its trailing code number minus one.
-function runnerCameraIndex(code: string): number | null
-{
-    const match = /^[A-Z](\d+)$/.exec(code);
-    if (!match) return null;
-    const number = Number(match[1]);
-    return number === 1 ? 0 : number === 2 ? 1 : null;
-}
 
 function draftOf(camera: CameraRow): Draft
 {
@@ -117,6 +108,9 @@ export function CamerasScreen({ user, zones, cameras, devices = [], bar }: Camer
     const [pairLat, setPairLat] = useState(firstZone?.suggested ? fixed(firstZone.suggested[1], 6) : '');
     const [pairLng, setPairLng] = useState(firstZone?.suggested ? fixed(firstZone.suggested[0], 6) : '');
     const [maskCode, setMaskCode] = useState<string | null>(null);
+    // Masks saved here since the page loaded (the masks API does not refresh the page).
+    const [savedMasks, setSavedMasks] = useState<Record<string, MaskPoint[] | null>>({});
+    const maskOf = (camera: CameraRow) => (camera.code in savedMasks ? savedMasks[camera.code] : camera.mask);
 
     function run<T extends object>(work: () => Promise<({ ok: true } & T) | { ok: false; error: string }>, done: (result: T) => string, after?: () => void)
     {
@@ -394,9 +388,7 @@ export function CamerasScreen({ user, zones, cameras, devices = [], bar }: Camer
                                                                     : (
                                                                         <>
                                                                             <button type="button" disabled={pending} className={button} onClick={() => startEdit(camera)} aria-label={`Edit ${camera.code}`}><Pencil aria-hidden className="h-3.5 w-3.5" />Edit</button>
-                                                                            {runnerCameraIndex(camera.code) !== null && (
-                                                                                <button type="button" disabled={pending} className={cn(button, maskCode === camera.code && 'border-amber/50 bg-amber/10 text-amber')} onClick={() => setMaskCode(maskCode === camera.code ? null : camera.code)} aria-label={`Edit watch mask for ${camera.code}`} aria-pressed={maskCode === camera.code}><Crop aria-hidden className="h-3.5 w-3.5" />Mask</button>
-                                                                            )}
+                                                                            <button type="button" disabled={pending} className={cn(button, maskCode === camera.code && 'border-amber/50 bg-amber/10 text-amber')} onClick={() => setMaskCode(maskCode === camera.code ? null : camera.code)} aria-label={`Edit watch mask for ${camera.code}`} aria-pressed={maskCode === camera.code}><Crop aria-hidden className="h-3.5 w-3.5" />{maskOf(camera) ? 'Mask · set' : 'Mask'}</button>
                                                                             <button type="button" disabled={pending} className={cn(button, 'hover:border-[#E2581F]/50 hover:bg-[#E2581F]/15')} onClick={() => run(() => deleteCamera(camera.code), ({ code }: { code: string }) => `${code} removed`)} aria-label={`Delete ${camera.code}`}><Trash2 aria-hidden className="h-3.5 w-3.5" /></button>
                                                                         </>
                                                                     )}
@@ -412,13 +404,16 @@ export function CamerasScreen({ user, zones, cameras, devices = [], bar }: Camer
                                                             </td>
                                                         </tr>
                                                     )}
-                                                    {maskCode === camera.code && runnerCameraIndex(camera.code) !== null && (
+                                                    {maskCode === camera.code && (
                                                         <tr className="max-md:block">
                                                             <td colSpan={10} className="px-3 pt-0 pb-5 max-md:block">
                                                                 <MaskEditor
-                                                                    cameraIndex={runnerCameraIndex(camera.code)!}
+                                                                    key={camera.code}
                                                                     code={camera.code}
-                                                                    videoUrl={camera.video ? `/api/media/video/${camera.video.id}?variant=raw` : null}
+                                                                    liveDeviceId={camera.liveDeviceId}
+                                                                    videoId={camera.video?.id ?? null}
+                                                                    initial={maskOf(camera)}
+                                                                    onSaved={mask => setSavedMasks(current => ({ ...current, [camera.code]: mask }))}
                                                                 />
                                                             </td>
                                                         </tr>

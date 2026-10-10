@@ -1,0 +1,31 @@
+{
+  "schema": "hatchwatch.camera_masks",
+  "version": 1,
+  "note": "Written by the HatchWatch dashboard from per-camera watch areas. by_code: each dashboard camera's mask in 1280x720 source-frame pixels. cameras[]: the per-slot masks older runners read (slot 0 = newest odd-numbered camera mask, slot 1 = newest even-numbered one, else the repository default). Operator configuration, never simulator truth. Changing a mask changes the video-to-signal distribution: registered experiments must be re-validated after any mask change.",
+  "cameras": [
+    {
+      "camera": 0,
+      "label": "From camera B1 (newest odd-numbered camera mask)",
+      "polygon": [[256, 288], [1024, 288], [640, 648]]
+    },
+    {
+      "camera": 1,
+      "label": "From camera B2 (newest even-numbered camera mask)",
+      "polygon": [[0, 432], [1280, 432], [1280, 720], [0, 720]]
+    }
+  ],
+  "by_code": {
+    "A1": {
+      "polygon": [[128, 360], [1152, 360], [1152, 684], [128, 684]],
+      "updated_at": "2026-10-10T12:00:00.000Z"
+    },
+    "B1": {
+      "polygon": [[256, 288], [1024, 288], [640, 648]],
+      "updated_at": "2026-10-10T12:05:00.000Z"
+    },
+    "B2": {
+      "polygon": [[0, 432], [1280, 432], [1280, 720], [0, 720]],
+      "updated_at": "2026-10-10T12:01:00.000Z"
+    }
+  }
+}
