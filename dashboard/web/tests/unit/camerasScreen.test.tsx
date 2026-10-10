@@ -2,12 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const addCameraPairToZone = vi.fn();
+const addCameraPairNewZone = vi.fn();
 const updateCamera = vi.fn();
 const deleteCamera = vi.fn();
 const faceOcean = vi.fn();
 const mergeZoneInto = vi.fn();
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
-vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPairToZone, updateCamera, deleteCamera, faceOcean, mergeZoneInto }));
+vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPairToZone, addCameraPairNewZone, updateCamera, deleteCamera, faceOcean, mergeZoneInto }));
 
 const { CamerasScreen } = await import('@/features/cameras/CamerasScreen');
 
@@ -80,6 +81,27 @@ describe('CamerasScreen', () =>
         fireEvent.click(screen.getByRole('button', { name: 'Add pair' }));
         expect(addCameraPairToZone).toHaveBeenCalledWith('D', -97.059, 27.8227);
         expect(await screen.findByText('D4 · D5 added to Zone D, facing the sea')).toBeTruthy();
+    });
+
+    it('makes a new zone at a typed point when that is chosen, and shows refusals', async () =>
+    {
+        addCameraPairNewZone.mockResolvedValueOnce({ ok: true, codes: ['E1', 'E2'], zoneCode: 'E', newZone: true });
+        render(<CamerasScreen user={admin} zones={zones} cameras={cameras} bar={bar} />);
+        expect((screen.getByRole('radio', { name: 'Add to zone' }) as HTMLInputElement).checked).toBe(true);
+        fireEvent.click(screen.getByRole('radio', { name: 'New zone at this location' }));
+        expect(screen.queryByLabelText('Zone')).toBeNull();
+        expect(screen.getByTestId('next-zone').textContent).toBe('Zone E');
+        fireEvent.change(screen.getByLabelText('Centre latitude'), { target: { value: '27.8312' } });
+        fireEvent.change(screen.getByLabelText('Centre longitude'), { target: { value: '-97.0512' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Add pair' }));
+        expect(addCameraPairNewZone).toHaveBeenCalledWith(-97.0512, 27.8312);
+        expect(addCameraPairToZone).not.toHaveBeenCalled();
+        expect(await screen.findByText('New Zone E · E1 · E2 facing the sea')).toBeTruthy();
+        addCameraPairNewZone.mockResolvedValueOnce({ ok: false, error: 'Too close to Zone D — click inside it to join, or further away for a new zone' });
+        await waitFor(() => expect((screen.getByRole('button', { name: 'Add pair' }) as HTMLButtonElement).disabled).toBe(false));
+        fireEvent.click(screen.getByRole('button', { name: 'Add pair' }));
+        expect(addCameraPairNewZone).toHaveBeenCalledTimes(2);
+        expect(await screen.findByText(/Too close to Zone D/)).toBeTruthy();
     });
 
     it('turns a pair to face the ocean and shows refusals', async () =>

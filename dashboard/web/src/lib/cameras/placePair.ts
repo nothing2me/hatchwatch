@@ -11,8 +11,14 @@ export interface PairPlan
 // Cameras in a new pair stand this far apart along the shore, centred on the click.
 const PAIR_SPACING_M = 40;
 export const MAX_CLICK_DISTANCE_M = 2000;
+// A click this close to a zone (or inside it) adds a pair to that zone; farther from every zone it starts a new one.
+export const JOIN_DISTANCE_M = 150;
+// A zone made from a click: this long along the shore, this deep toward the sea, land edge centred on the click.
+export const NEW_ZONE_LENGTH_M = 120;
+export const NEW_ZONE_DEPTH_M = 60;
 // Holiday Beach runs about 39° with the Gulf to the south-east (used only for a degenerate ring).
 const DEFAULT_ALONG = 39;
+const DEFAULT_SEAWARD = 129;
 // Cameras look out to sea, turned this far toward their partner (spec §7: seaward ± 20°).
 const TOE_IN_DEG = 20;
 const EARTH_RADIUS_M = 6371008.8;
@@ -138,4 +144,111 @@ export function partnerCode(code: string): string | null
     }
     const n = Number(match[2]);
     return `${match[1]}${n % 2 === 1 ? n + 1 : n - 1}`;
+}
+
+export type Placement = { kind: 'join'; zone: ZoneView } | { kind: 'new' };
+
+// Join the closest zone when the click is inside it or within 150 m of its outline; otherwise make a new zone there.
+export function placementFor(click: LngLat, zones: ZoneView[]): Placement
+{
+    const [closest] = zones
+        .map(zone => ({ zone, distance: distanceToZone(click, zone) }))
+        .sort((a, b) => a.distance - b.distance || a.zone.code.localeCompare(b.zone.code));
+    return closest && closest.distance <= JOIN_DISTANCE_M ? { kind: 'join', zone: closest.zone } : { kind: 'new' };
+}
+
+// The letter after the highest single-letter zone code (A–D gives E); multi-letter codes are ignored.
+export function nextZoneCode(zoneCodes: string[]): string
+{
+    const letters = zoneCodes.filter(code => /^[A-Z]$/.test(code)).map(code => code.charCodeAt(0));
+    const highest = letters.length > 0 ? Math.max(...letters) : 'A'.charCodeAt(0) - 1;
+    if (highest >= 'Z'.charCodeAt(0))
+    {
+        throw new PlacementError('Zone Z already exists, so there is no letter left for a new zone. Merge or delete a map-made zone first.');
+    }
+    return String.fromCharCode(highest + 1);
+}
+
+function edges(ring: LngLat[]): [LngLat, LngLat][]
+{
+    const points = corners(ring);
+    return points.map((point, i) => [point, points[(i + 1) % points.length]] as [LngLat, LngLat]);
+}
+
+function crosses([a, b]: [LngLat, LngLat], [c, d]: [LngLat, LngLat]): boolean
+{
+    const side = (p: LngLat, q: LngLat, r: LngLat) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
+}
+
+function inside(point: LngLat, ring: LngLat[]): boolean
+{
+    const points = corners(ring);
+    let result = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++)
+    {
+        const [a, b] = [points[i], points[j]];
+        if ((a[1] > point[1]) !== (b[1] > point[1]) && point[0] < ((b[0] - a[0]) * (point[1] - a[1])) / (b[1] - a[1]) + a[0])
+        {
+            result = !result;
+        }
+    }
+    return result;
+}
+
+// Whether two zone outlines share any ground: crossing edges, or one inside the other.
+export function zonesOverlap(a: LngLat[], b: LngLat[]): boolean
+{
+    if (corners(a).length < 3 || corners(b).length < 3)
+    {
+        return false;
+    }
+    return edges(a).some(edge => edges(b).some(other => crosses(edge, other)))
+        || corners(a).some(point => inside(point, b))
+        || corners(b).some(point => inside(point, a));
+}
+
+export interface NewZonePlan extends PairPlan
+{
+    code: string;
+    ring: LngLat[];
+}
+
+function overlapCheck(ring: LngLat[], zones: ZoneView[])
+{
+    const hit = zones.find(zone => zonesOverlap(ring, zone.ring));
+    if (hit)
+    {
+        throw new PlacementError(`Too close to Zone ${hit.code} — click inside it to join, or further away for a new zone`);
+    }
+}
+
+// A new zone at a click: a 120 m × 60 m rectangle with its land edge centred on the click, shore and sea directions
+// copied from the nearest zone (Holiday Beach's 39°/129° with none). Ring: land-north, land-south, sea-south,
+// sea-north, land-north, like the seeded zones. Its cameras <code>1 and <code>2 stand on the land edge 40 m apart.
+export function planNewZone(click: LngLat, zones: ZoneView[], zoneCodes: string[], cameraCodes: string[]): NewZonePlan
+{
+    const [nearest] = [...zones].sort((a, b) => distanceToZone(click, a) - distanceToZone(click, b));
+    const { along, seaward } = nearest ? zoneOrientation(nearest) : { along: DEFAULT_ALONG, seaward: DEFAULT_SEAWARD };
+    const landNorth = destinationPoint(click, along, NEW_ZONE_LENGTH_M / 2);
+    const landSouth = destinationPoint(click, along + 180, NEW_ZONE_LENGTH_M / 2);
+    const ring: LngLat[] = [landNorth, landSouth, destinationPoint(landSouth, seaward, NEW_ZONE_DEPTH_M), destinationPoint(landNorth, seaward, NEW_ZONE_DEPTH_M), landNorth];
+    overlapCheck(ring, zones);
+    const code = nextZoneCode(zoneCodes);
+    const pair = planPairOnZone(click, { id: '', code, name: '', activityLevel: 'LOW', ring }, cameraCodes);
+    return { code, ring, cameras: pair.cameras };
+}
+
+// Moves a zone outline and its cameras by the offset between two points (degrees; metres barely change over a beach).
+export function translateZone(ring: LngLat[], points: LngLat[], from: LngLat, to: LngLat): { ring: LngLat[]; points: LngLat[] }
+{
+    const [dLng, dLat] = [to[0] - from[0], to[1] - from[1]];
+    const shift = ([lng, lat]: LngLat): LngLat => [lng + dLng, lat + dLat];
+    return { ring: ring.map(shift), points: points.map(shift) };
+}
+
+// Refuses a moved outline that would overlap another zone.
+export function checkZoneClear(ring: LngLat[], others: ZoneView[])
+{
+    overlapCheck(ring, others);
 }

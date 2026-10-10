@@ -34,6 +34,14 @@ export interface SiteSummary
     danger: DangerState;
     /** ISO time the site counts as Not saved unless protection is logged first (first danger + 30 min); null = no deadline. */
     dangerDeadline: string | null;
+    /** Nest sites: who secured the site and when (see securedOf); null while unsecured. Always null on DANGER alerts. */
+    secured: Secured | null;
+}
+
+export interface Secured
+{
+    by: string;
+    at: string;              // ISO
 }
 
 export interface ZoneView
@@ -43,6 +51,8 @@ export interface ZoneView
     name: string;
     activityLevel: ActivityLevel;
     ring: LngLat[];          // closed ring, first point repeated last
+    /** Added on the map by an admin (can be moved and deleted there); seeded zones are not. */
+    editable?: boolean;
 }
 
 export interface FeedVideo

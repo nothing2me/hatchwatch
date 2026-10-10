@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dangerPins, pinFeatures } from '@/features/map/pins';
+import { dangerPins, pinFeatures, SECURED_RADIUS_M, securedAreaFeatures, securedLabels } from '@/features/map/pins';
+import { destinationPoint, distanceBetween } from '@/lib/geo';
 import { siteAlert } from './siteFixtures';
 
 const now = Date.parse('2026-10-09T01:00:00.000Z');
@@ -95,3 +96,49 @@ describe('dangerPins', () =>
     });
 });
 
+
+describe('securedAreaFeatures', () =>
+{
+    const secured = { by: 'Ada', at: '2026-10-09T00:30:00.000Z' };
+    const origin: [number, number] = [-97.0635, 27.8165];
+
+    it('draws a 3 m circle around each active, secured nest site', () =>
+    {
+        const features = securedAreaFeatures([
+            siteAlert('a', { secured }, { position: origin }),
+            siteAlert('b'),
+            siteAlert('c', { secured, active: false }, { position: origin }),
+            siteAlert('d', { secured }, { position: null }),
+            siteAlert('e', { secured }, { kind: 'DANGER', position: origin }),
+        ]);
+        expect(features.map(feature => feature.properties)).toEqual([{ id: 'a', by: 'Ada', at: secured.at }]);
+        const ring = features[0].geometry.coordinates[0];
+        expect(ring[0]).toEqual(ring[ring.length - 1]);
+        expect(ring.length).toBeGreaterThan(32);
+        for (const point of ring)
+        {
+            expect(distanceBetween(origin, point as [number, number])).toBeCloseTo(SECURED_RADIUS_M, 3);
+        }
+        expect(SECURED_RADIUS_M).toBe(3);
+    });
+});
+
+describe('securedLabels', () =>
+{
+    it('puts one label under each circle, skipping circles that overlap an already labelled one', () =>
+    {
+        const secured = { by: 'Ada', at: '2026-10-09T00:30:00.000Z' };
+        const a: [number, number] = [-97.0635, 27.8165];
+        const near = destinationPoint(a, 90, 4);
+        const far = destinationPoint(a, 90, 20);
+        const labels = securedLabels(securedAreaFeatures([
+            siteAlert('a', { secured }, { position: a }),
+            siteAlert('b', { secured }, { position: near }),
+            siteAlert('c', { secured }, { position: far }),
+        ]));
+        expect(labels.map(label => label.id)).toEqual(['a', 'c']);
+        // Anchored at the circle's south edge, 3 m below its centre.
+        expect(distanceBetween(a, labels[0].position)).toBeCloseTo(3, 3);
+        expect(labels[0].position[1]).toBeLessThan(a[1]);
+    });
+});

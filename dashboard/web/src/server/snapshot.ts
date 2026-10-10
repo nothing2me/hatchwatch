@@ -2,7 +2,7 @@ import 'server-only';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
 import { outcomeCounts } from '@/lib/sites/outcomes';
-import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, summarizeSite } from '@/lib/sites/summary';
+import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, securedOf, summarizeSite } from '@/lib/sites/summary';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
 import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, MotionCandidateView, SiteEventType, TrackView, VideoSource } from '@/lib/types';
 
@@ -10,6 +10,7 @@ export interface ZoneRow
 {
     id: string; code: string; name: string; activityLevel: ActivityLevel;
     outline: unknown;
+    createdById?: string | null;
 }
 
 export interface CameraRow
@@ -49,7 +50,11 @@ export interface SnapshotRows
     dangerCount?: number;
     dangerTotal?: number;
     now?: Date;
+    /** `dangerResolved` entries of DANGER alerts, by nest site; derived from `alerts` when not given. */
+    dangerResolutions?: DangerResolutionRow[];
 }
+
+export interface DangerResolutionRow { siteId: string; at: Date; createdAt?: Date; author: string }
 
 /** Hours a site stays in the snapshot after a person's last entry, however old it is. */
 export const RECENT_ENTRY_HOURS = 6;
@@ -104,7 +109,14 @@ function trackPoints(points: unknown): TrackView['points']
         : [];
 }
 
-const toEvents = (events: { type: string; at: Date; createdAt?: Date }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date }[];
+const toEvents = (events: { type: string; at: Date; createdAt?: Date; author?: string }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date; author?: string }[];
+
+// Resolutions logged on danger alerts, from the loaded rows (a danger alert outside the snapshot is missed).
+function resolutionsIn(alerts: AlertRow[]): DangerResolutionRow[]
+{
+    return alerts.filter(alert => alert.kind === 'DANGER' && alert.siteId)
+        .flatMap(alert => alert.events.filter(event => event.type === 'dangerResolved').map(event => ({ siteId: alert.siteId!, at: event.at, createdAt: event.createdAt, author: event.author ?? '' })));
+}
 
 // Who resolved a danger alert: its latest `dangerResolved` entry (null for sites and open dangers).
 function resolution(alert: AlertRow): { resolvedBy: string | null; resolvedAt: string | null }
@@ -171,6 +183,18 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         }
     }
 
+    const resolutionsBySite = new Map<string, DangerResolutionRow[]>();
+    for (const row of rows.dangerResolutions ?? resolutionsIn(rows.alerts))
+    {
+        resolutionsBySite.set(row.siteId, [...(resolutionsBySite.get(row.siteId) ?? []), row]);
+    }
+    const siteSummary = (alert: AlertRow) =>
+    {
+        const summary = summarizeSite(toEvents(alert.events), alert.kind);
+        const resolutions = alert.kind === 'DANGER' ? [] : resolutionsBySite.get(alert.id) ?? [];
+        return resolutions.length === 0 ? summary : { ...summary, secured: securedOf([...toEvents(alert.events), ...resolutions.map(row => ({ ...row, type: 'dangerResolved' as const }))]) };
+    };
+
     const alerts = rows.alerts.map(alert => ({
         id: alert.id,
         kind: alert.kind,
@@ -192,7 +216,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         siteId: alert.siteId ?? null,
         colorIndex: colorBySite.get(alert.id) ?? null,
         ...resolution(alert),
-        site: summarizeSite(toEvents(alert.events), alert.kind),
+        site: siteSummary(alert),
     }));
     const sites = alerts.filter(alert => alert.kind !== 'DANGER');
     const dangers = alerts.filter(alert => alert.kind === 'DANGER');
@@ -211,7 +235,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
     });
 
     return {
-        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline) })),
+        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline), editable: Boolean(zone.createdById) })),
         cameras,
         alerts,
         motionCandidates,
@@ -292,7 +316,23 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
         select: { id: true, alertId: true, colorIndex: true, videoId: true, points: true, video: { select: { simRunId: true } } },
     });
 
-    return toMapSnapshot({ zones, cameras, alerts, tracks, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts, dangerMissed), dangerCount, dangerTotal, now });
+    // Resolutions logged on any danger alert of a listed site secure it, even when that alert is not listed.
+    const dangerResolutions = await loadDangerResolutions(client, alerts.filter(alert => alert.kind !== 'DANGER').map(alert => alert.id));
+
+    return toMapSnapshot({ zones, cameras, alerts, tracks, dangerResolutions, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts, dangerMissed), dangerCount, dangerTotal, now });
+}
+
+export async function loadDangerResolutions(client: PrismaClient, siteIds: string[]): Promise<DangerResolutionRow[]>
+{
+    if (siteIds.length === 0)
+    {
+        return [];
+    }
+    const rows = await client.siteEvent.findMany({
+        where: { type: 'dangerResolved', alert: { kind: 'DANGER', siteId: { in: siteIds } } },
+        select: { at: true, createdAt: true, author: true, alert: { select: { siteId: true } } },
+    });
+    return rows.map(row => ({ siteId: row.alert.siteId!, at: row.at, createdAt: row.createdAt, author: row.author }));
 }
 
 export function getMapSnapshot(): Promise<MapSnapshot>

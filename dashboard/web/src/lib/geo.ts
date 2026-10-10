@@ -63,3 +63,10 @@ export function distanceBetween([lng1, lat1]: LngLat, [lng2, lat2]: LngLat): num
     const a = Math.sin(toRad(lat2 - lat1) / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(toRad(lng2 - lng1) / 2) ** 2;
     return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)));
 }
+
+// Closed ring approximating a circle of a real radius in metres around a point.
+export function circleRing(centre: LngLat, radiusM: number, steps = 48): LngLat[]
+{
+    const ring = Array.from({ length: steps }, (_, i) => destinationPoint(centre, (360 * i) / steps, radiusM));
+    return [...ring, ring[0]];
+}

@@ -1,6 +1,6 @@
 import type { AlertView, SiteSummary } from '@/lib/types';
 
-export const openSite: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null };
+export const openSite: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null };
 
 export function siteAlert(id: string, site: Partial<SiteSummary> = {}, extra: Partial<AlertView> = {}): AlertView
 {

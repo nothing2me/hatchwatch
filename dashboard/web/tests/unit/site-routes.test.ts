@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const currentUserOrNull = vi.fn();
 const addSiteEvent = vi.fn();
 const findUnique = vi.fn();
+const findManyEvents = vi.fn(async () => [] as unknown[]);
 
 class FakeSiteEventError extends Error
 {
@@ -15,7 +16,7 @@ vi.mock('@/lib/auth/guard', async () =>
     return { currentUserOrNull, hasRole: (user: { role: string } | null, role: string) => user !== null && rank[user.role] >= rank[role] };
 });
 vi.mock('@/lib/sites/events', () => ({ addSiteEvent, SiteEventError: FakeSiteEventError }));
-vi.mock('@/lib/db', () => ({ prisma: { alert: { findUnique } } }));
+vi.mock('@/lib/db', () => ({ prisma: { alert: { findUnique }, siteEvent: { findMany: findManyEvents } } }));
 
 const { GET } = await import('@/app/api/sites/[alertId]/route');
 const { POST } = await import('@/app/api/sites/[alertId]/events/route');
@@ -96,5 +97,20 @@ describe('GET /api/sites/[alertId]', () =>
         expect(body.site).toMatchObject({ id: 'a1', zoneCode: 'B', position: [1, 2] });
         expect(body.summary.detectedAt).toBe('2026-10-09T20:00:00.000Z');
         expect(body.events[0]).toMatchObject({ id: 'e1', author: 'Camera' });
+        expect(body.summary.secured).toBeNull();
+    });
+    it('marks the site secured by a resolution logged on one of its danger alerts', async () =>
+    {
+        findUnique.mockResolvedValue({
+            id: 'a1', kind: 'DIGGING', message: 'm', status: 'NEW', zone: { code: 'B' }, camera: { code: 'B1' }, lng: 1, lat: 2,
+            createdAt: new Date('2026-10-09T20:00:00Z'), videoId: 'v', simulated: true,
+            events: [
+                { id: 'e1', type: 'detected', author: 'Camera', note: null, at: new Date('2026-10-09T20:00:00Z') },
+                { id: 'e2', type: 'danger', author: 'Camera', note: null, at: new Date('2026-10-09T20:01:00Z') },
+            ],
+        });
+        findManyEvents.mockResolvedValueOnce([{ at: new Date('2026-10-09T20:05:00Z'), createdAt: new Date('2026-10-09T20:05:00Z'), author: 'Vera', alert: { siteId: 'a1' } }]);
+        const body = await (await GET(new Request('http://x'), ctx)).json();
+        expect(body.summary.secured).toEqual({ by: 'Vera', at: '2026-10-09T20:05:00.000Z' });
     });
 });

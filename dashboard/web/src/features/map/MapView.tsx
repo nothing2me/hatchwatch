@@ -2,7 +2,7 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as maplibre from 'maplibre-gl';
-import { ImageOff } from 'lucide-react';
+import { GripVertical, ImageOff, X } from 'lucide-react';
 import { forwardRef, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
@@ -11,8 +11,9 @@ import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
 import type { LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
+import { isMarkerClick } from './markerClick';
 import type { Playback } from './playback';
-import { dangerPins, pinFeatures } from './pins';
+import { dangerPins, pinFeatures, SECURED_GREEN, securedAreaFeatures, securedLabels } from './pins';
 import { trailFeatures } from './trails';
 import type { LayerKey } from './MapControls';
 
@@ -33,11 +34,14 @@ interface MapViewProps
     now?: number;
     selectedAlertId?: string | null;
     onSelectAlert?: (alertId: string) => void;
-    // Admin edit mode: map clicks place a camera pair on the nearest zone; camera markers can be dragged.
+    // Admin edit mode: a click joins a zone within 150 m or starts a new zone there; camera markers can be dragged.
     editing?: boolean;
     onMapClick?: (at: LngLat) => void;
     // Resolves false when the server refused the move; the marker then returns to its saved spot.
     onMoveCamera?: (code: string, to: LngLat) => Promise<boolean>;
+    // Map-made zones only: drag the zone label to move the outline with its cameras; × deletes an unused zone.
+    onMoveZone?: (code: string, from: LngLat, to: LngLat) => Promise<boolean>;
+    onDeleteZone?: (code: string) => Promise<boolean>;
 }
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
@@ -60,8 +64,10 @@ const haloRadius = ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 15, 20, 22] 
 const trailWidth = ['interpolate', ['linear'], ['zoom'], 14, 1.5, 18, 2.75, 20, 4] as unknown as number;
 const casingWidth = ['interpolate', ['linear'], ['zoom'], 14, 3, 18, 5, 20, 7] as unknown as number;
 const ALARM = '#FF4D5E';
+// "Secured" labels appear once a 3 m circle is big enough on screen to carry one.
+const SECURED_LABEL_ZOOM = 18.5;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera }, ref)
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
     const [pinHover, setPinHover] = useState(false);
@@ -72,25 +78,37 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
     {
         setDropped({ cameras: snapshot.cameras, at: {} });
     }
-    const positionOf = (camera: MapSnapshot['cameras'][number]): LngLat => dropped.at[camera.id] ?? camera.position;
+    // A dragged zone (outline and cameras) is drawn at its new place until the next snapshot, or put back if refused.
+    const [zoneShift, setZoneShift] = useState<{ zones: MapSnapshot['zones']; code: string | null; by: LngLat }>({ zones: snapshot.zones, code: null, by: [0, 0] });
+    if (zoneShift.zones !== snapshot.zones)
+    {
+        setZoneShift({ zones: snapshot.zones, code: null, by: [0, 0] });
+    }
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    if (!editing && confirmDelete)
+    {
+        setConfirmDelete(null);
+    }
+    const shift = (code: string, [lng, lat]: LngLat): LngLat => (zoneShift.code === code ? [lng + zoneShift.by[0], lat + zoneShift.by[1]] : [lng, lat]);
+    const positionOf = (camera: MapSnapshot['cameras'][number]): LngLat => dropped.at[camera.id] ?? shift(camera.zoneCode, camera.position);
 
     const zonesGeoJson = useMemo<FeatureCollection>(() => ({
         type: 'FeatureCollection',
         features: snapshot.zones.map(zone => ({
             type: 'Feature',
             properties: { code: zone.code, level: zone.activityLevel },
-            geometry: { type: 'Polygon', coordinates: [zone.ring] },
+            geometry: { type: 'Polygon', coordinates: [zone.code === zoneShift.code ? zone.ring.map(([lng, lat]) => [lng + zoneShift.by[0], lat + zoneShift.by[1]]) : zone.ring] },
         })),
-    }), [snapshot.zones]);
+    }), [snapshot.zones, zoneShift]);
 
     const conesGeoJson = useMemo<FeatureCollection>(() => ({
         type: 'FeatureCollection',
         features: snapshot.cameras.map(camera => ({
             type: 'Feature',
             properties: { selected: camera.id === selectedCameraId },
-            geometry: { type: 'Polygon', coordinates: [viewCone(dropped.at[camera.id] ?? camera.position, camera.headingDeg, camera.fovDeg, camera.rangeM)] },
+            geometry: { type: 'Polygon', coordinates: [viewCone(dropped.at[camera.id] ?? (zoneShift.code === camera.zoneCode ? [camera.position[0] + zoneShift.by[0], camera.position[1] + zoneShift.by[1]] : camera.position), camera.headingDeg, camera.fovDeg, camera.rangeM)] },
         })),
-    }), [snapshot.cameras, selectedCameraId, dropped]);
+    }), [snapshot.cameras, selectedCameraId, dropped, zoneShift]);
 
     // Rebuild (and so MapLibre setData) only when a pin's look changes, not on every clock tick.
     const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
@@ -116,6 +134,9 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
         features: visibleCandidates.map(candidate => ({ type: 'Feature', properties: { id: candidate.id, color: candidate.cameraCode.endsWith('1') ? '#1b9767' : '#e68f32' }, geometry: { type: 'Polygon', coordinates: [Array.from({ length: 33 }, (_, index) => destinationPoint(candidate.position, index * 360 / 32, candidate.radiusM))] } })),
     }), [JSON.stringify(visibleCandidates)]);
     const dangers = dangerPins(snapshot.alerts);
+    const securedKey = JSON.stringify(securedAreaFeatures(snapshot.alerts));
+    const securedAreas = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(securedKey) }), [securedKey]);
+    const [securedLabelsOn, setSecuredLabelsOn] = useState(false);
 
     // Trails change only when the clock passes a recorded point; key on what is drawn, not on every tick.
     const trailKey = JSON.stringify(trailFeatures(snapshot.tracks ?? [], snapshot.alerts, playback));
@@ -141,15 +162,16 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                 attributionControl={{ compact: true }}
                 interactiveLayerIds={!editing && layers.alerts && onSelectAlert ? ['alert-ring'] : []}
                 cursor={editing ? 'crosshair' : pinHover ? 'pointer' : undefined}
+                onZoom={event => setSecuredLabelsOn(event.viewState.zoom >= SECURED_LABEL_ZOOM)}
                 onMouseEnter={() => setPinHover(true)}
                 onMouseLeave={() => setPinHover(false)}
                 onClick={event =>
                 {
                     if (editing)
                     {
-                        // Clicks on markers (cameras, zone labels) bubble to the map; they are not placements.
-                        const target = event.originalEvent?.target;
-                        if (!(target instanceof Element && target.closest('.maplibregl-marker')))
+                        // Clicks on markers (cameras, zone labels) bubble to the map; they are not placements. React handles a
+                        // marker's own click first (markers are portals) and may already have swapped the clicked element out.
+                        if (!isMarkerClick(event.originalEvent?.target))
                         {
                             onMapClick?.([event.lngLat.lng, event.lngLat.lat]);
                         }
@@ -195,6 +217,11 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                     <Layer id="zone-fill" type="fill" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'fill-color': levelColor, 'fill-opacity': 0.22 }} />
                     <Layer id="zone-line" type="line" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'line-color': levelColor, 'line-width': 2 }} />
                 </Source>
+                {/* Secured areas: above zone fills, below trails, pins and danger rings. Shown with the sites layer. */}
+                <Source id="secured" type="geojson" data={securedAreas}>
+                    <Layer id="secured-fill" type="fill" layout={{ visibility: layers.alerts ? 'visible' : 'none' }} paint={{ 'fill-color': SECURED_GREEN, 'fill-opacity': 0.18 }} />
+                    <Layer id="secured-line" type="line" layout={{ visibility: layers.alerts ? 'visible' : 'none' }} paint={{ 'line-color': SECURED_GREEN, 'line-width': 1.5, 'line-opacity': 0.9 }} />
+                </Source>
                 {/* Trails sit under the pins; hidden by layout so toggling keeps them below. */}
                 <Source id="trails" type="geojson" data={trailLines}>
                     <Layer id="trail-casing" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round', visibility: trailVisibility }} paint={{ 'line-color': '#04080C', 'line-width': casingWidth, 'line-opacity': ['*', 0.55, ['get', 'opacity']] as unknown as number }} />
@@ -238,16 +265,82 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                 {layers.zones && snapshot.zones.filter(zone => zone.ring.length > 0).map(zone =>
                 {
                     const [[w, s], [e, n]] = boundsOf(zone.ring);
-                    // Set beside the centre so digging pins near the middle of a zone are not covered.
+                    const centre: LngLat = [(w + e) / 2, (s + n) / 2];
+                    const [lng, lat] = shift(zone.code, centre);
+                    const editable = editing && zone.editable === true && Boolean(onMoveZone);
+                    const tag = (
+                        <>
+                            <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', levelDot[zone.activityLevel])} />
+                            <span className="max-md:sr-only">ZONE </span>{zone.code}
+                        </>
+                    );
+                    if (!editable)
+                    {
+                        // Set beside the centre so digging pins near the middle of a zone are not covered; map-made zones
+                        // put it seaward, clear of the cameras on their land edge.
+                        return (
+                            <Marker key={`label-${zone.id}`} longitude={lng} latitude={lat} anchor={zone.editable ? 'left' : 'right'} offset={zone.editable ? [10, 0] : [-14, 0]} style={{ pointerEvents: 'none' }}>
+                                <span className="flex items-center gap-1.5 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 ring-white/10 backdrop-blur-sm">{tag}</span>
+                            </Marker>
+                        );
+                    }
+                    const asking = confirmDelete === zone.code;
                     return (
-                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} anchor="right" offset={[-14, 0]} style={{ pointerEvents: 'none' }}>
-                            <span className="flex items-center gap-1.5 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 ring-white/10 backdrop-blur-sm">
-                                <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', levelDot[zone.activityLevel])} />
-                                <span className="max-md:sr-only">ZONE </span>{zone.code}
+                        // Seaward of the centre: a map-made zone's cameras stand on its land edge, so the tag must not cover them.
+                        // Its own key: react-map-gl keeps style keys a marker once had, so reusing the read-only tag's marker
+                        // would keep its pointer-events: none.
+                        <Marker
+                            key={`label-edit-${zone.id}`}
+                            longitude={lng}
+                            latitude={lat}
+                            anchor="left"
+                            offset={[10, 0]}
+                            style={{ zIndex: 3, pointerEvents: 'auto' }}
+                            draggable={!asking}
+                            onDrag={event => setZoneShift(current => ({ ...current, code: zone.code, by: [event.lngLat.lng - centre[0], event.lngLat.lat - centre[1]] }))}
+                            onDragEnd={event =>
+                            {
+                                const to: LngLat = [event.lngLat.lng, event.lngLat.lat];
+                                setZoneShift(current => ({ ...current, code: zone.code, by: [to[0] - centre[0], to[1] - centre[1]] }));
+                                void onMoveZone?.(zone.code, centre, to).then(saved =>
+                                {
+                                    if (!saved)
+                                    {
+                                        setZoneShift(current => ({ ...current, code: null, by: [0, 0] }));
+                                    }
+                                });
+                            }}
+                        >
+                            <span
+                                title={`Drag to move Zone ${zone.code} with its cameras`}
+                                className="flex cursor-move items-center gap-1.5 rounded-md bg-night-950/90 py-0.5 pr-0.5 pl-1 text-[10px] font-semibold tracking-[0.14em] text-ink shadow-lg shadow-black/50 ring-2 ring-amber/60 backdrop-blur-sm"
+                            >
+                                <GripVertical aria-hidden className="h-3 w-3 text-amber/80" />
+                                {tag}
+                                {asking
+                                    ? (
+                                        <span role="group" aria-label={`Delete Zone ${zone.code}`} className="ml-1 flex items-center gap-1 border-l border-white/10 pl-1.5 font-sans text-[11px] font-medium tracking-normal">
+                                            Delete Zone {zone.code} and its cameras?
+                                            <button type="button" onClick={() => setConfirmDelete(null)} className="rounded px-1.5 py-0.5 text-ink-muted hover:bg-white/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">Keep</button>
+                                            <button type="button" onClick={() => { setConfirmDelete(null); void onDeleteZone?.(zone.code); }} className="rounded bg-[#E2581F] px-1.5 py-0.5 font-semibold text-white hover:bg-[#ef6a33] focus-visible:outline-2 focus-visible:outline-white">Delete</button>
+                                        </span>
+                                    )
+                                    : onDeleteZone && (
+                                        <button type="button" onClick={() => setConfirmDelete(zone.code)} aria-label={`Delete Zone ${zone.code}`} className="ml-0.5 grid h-4 w-4 place-items-center rounded text-ink-muted hover:bg-[#E2581F]/25 hover:text-white focus-visible:outline-2 focus-visible:outline-amber">
+                                            <X aria-hidden className="h-3 w-3" />
+                                        </button>
+                                    )}
                             </span>
                         </Marker>
                     );
                 })}
+
+                {layers.alerts && securedLabelsOn && securedLabels(securedAreas.features as ReturnType<typeof securedAreaFeatures>).map(label => (
+                    // Under the circle's south edge, so it never covers the pin.
+                    <Marker key={`secured-${label.id}`} longitude={label.position[0]} latitude={label.position[1]} anchor="top" offset={[0, 3]} style={{ pointerEvents: 'none' }}>
+                        <span className="rounded-full bg-night-950/80 px-1.5 py-px font-mono text-[9px] font-semibold tracking-[0.16em] text-[#6EE7B7] uppercase ring-1 ring-[#34D399]/45 backdrop-blur-sm">Secured</span>
+                    </Marker>
+                ))}
 
                 {layers.cameras && snapshot.cameras.map(camera =>
                 {

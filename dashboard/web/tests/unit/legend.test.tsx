@@ -49,3 +49,14 @@ describe('Legend', () =>
         expect(screen.getByText('Danger — person near a site')).toBeTruthy();
     });
 });
+
+describe('Legend secured area', () =>
+{
+    it('explains the green secured circle', () =>
+    {
+        render(<Legend />);
+        expect(screen.getByText('Secured area (3 m)')).toBeTruthy();
+        cleanup();
+        localStorage.clear();
+    });
+});

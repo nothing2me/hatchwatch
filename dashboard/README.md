@@ -75,6 +75,8 @@ Every request checks the database-backed role, so a role change or a disabled ac
 
 Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site reaches the archive time with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
 
+A nest site is **secured** once someone logs protection on it or resolves a danger (on the site or any of its danger alerts); a newer danger clears that until it is resolved again. Active secured sites get a soft green 3 m circle on the map (with a Secured tag when zoomed in), and the site drawer names who secured it and when.
+
 Active sites are open ones still on the live map. Inactive sites have an outcome (hatched or lost), a no-nest finding, or were archived.
 
 Saved and not saved, shown on Analytics ("Everything logged"):
@@ -96,7 +98,7 @@ Seaward runs (`--layout seaward`, see the root README) record footage facing the
 
 ## Editing cameras
 
-Admins click the pencil on the map to enter edit mode. Esc or Done leaves edit mode. A click near a zone adds a camera pair to the nearest existing zone, facing the sea; no zone is created. Drag a camera to move it; a move the server refuses snaps back. Setup > Cameras lists every pair: edit latitude, longitude, heading, view, range and status, add a pair on any existing zone, delete a camera, or use Face ocean to turn a pair toward the sea. Merging a zone into its nearest neighbour is only offered for zones added on the map; the merged cameras keep their footage and sit just outside the receiving zone's outline. Volunteers and viewers do not see the edit button.
+Admins click the pencil on the map to enter edit mode. Esc or Done leaves edit mode. A click inside a zone or within 150 m of its outline adds a camera pair to that zone, facing the sea. A click farther than 150 m from every zone creates a new zone there (next free letter: E, F, …): a 120 m × 60 m rectangle with its land edge centred on the click, lined up with the nearest zone, and cameras `<code>1`/`<code>2` 40 m apart on that edge facing the sea; it is refused if the rectangle would overlap a zone. Drag a camera to move it; a move the server refuses snaps back. Zones made on the map show a grip and × on their tag in edit mode: drag the tag to move the zone with its cameras, or delete a zone that has no footage, alerts or live chunks. The seeded zones A–D cannot be moved or deleted. Setup > Cameras lists every pair: edit latitude, longitude, heading, view, range and status, add a pair to a chosen zone or as a new zone at typed coordinates, delete a camera, or use Face ocean to turn a pair toward the sea. Merging a zone into its nearest neighbour is only offered for zones added on the map; the merged cameras keep their footage and sit just outside the receiving zone's outline. Volunteers and viewers do not see the edit button.
 
 Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
 

@@ -11,7 +11,7 @@ vi.mock('@/features/map/MapView', async () =>
     const { visibleAlerts } = await import('@/features/map/playback');
     return {
         initialBounds: () => [[0, 0], [1, 1]],
-        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onMoveCamera?: (code: string, to: [number, number]) => Promise<boolean> }, ref)
+        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onMoveCamera?: (code: string, to: [number, number]) => Promise<boolean>; onMoveZone?: (code: string, from: [number, number], to: [number, number]) => Promise<boolean>; onDeleteZone?: (code: string) => Promise<boolean> }, ref)
         {
             React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn(), flyTo: vi.fn() }));
             const visible = visibleAlerts(props.snapshot.alerts, props.playback).map(alert => alert.id).join(',');
@@ -23,6 +23,8 @@ vi.mock('@/features/map/MapView', async () =>
                     <button onClick={() => props.onMapClick?.([-97.05, 27.82])}>map click</button>
                     <button onClick={() => { props.onMapClick?.([-97.05, 27.82]); props.onMapClick?.([-97.05, 27.82]); }}>map double click</button>
                     <button onClick={() => { void props.onMoveCamera?.('B1', [-97.06, 27.81]).then(saved => { document.body.dataset.moveSaved = String(saved); }); }}>drag B1</button>
+                    <button onClick={() => { void props.onMoveZone?.('E', [-97.05, 27.83], [-97.049, 27.831]).then(saved => { document.body.dataset.zoneSaved = String(saved); }); }}>drag zone E</button>
+                    <button onClick={() => { void props.onDeleteZone?.('E'); }}>delete zone E</button>
                 </div>
             );
         }),
@@ -31,7 +33,12 @@ vi.mock('@/features/map/MapView', async () =>
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
 const addCameraPair = vi.fn();
 const updateCamera = vi.fn();
-vi.mock('@/app/(app)/camera-actions', () => ({ addCameraPair: (...args: unknown[]) => addCameraPair(...args), updateCamera: (...args: unknown[]) => updateCamera(...args) }));
+const moveZone = vi.fn();
+const deleteZone = vi.fn();
+vi.mock('@/app/(app)/camera-actions', () => ({
+    addCameraPair: (...args: unknown[]) => addCameraPair(...args), updateCamera: (...args: unknown[]) => updateCamera(...args),
+    moveZone: (...args: unknown[]) => moveZone(...args), deleteZone: (...args: unknown[]) => deleteZone(...args),
+}));
 vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-testid="close-up" /> }));
 
 class FakeEventSource
@@ -69,6 +76,8 @@ beforeEach(() =>
     fetchMock.mockClear();
     addCameraPair.mockReset();
     updateCamera.mockReset();
+    moveZone.mockReset();
+    deleteZone.mockReset();
     vi.stubGlobal('EventSource', FakeEventSource);
     vi.stubGlobal('fetch', fetchMock);
 });
@@ -127,7 +136,7 @@ describe('MapScreen', () =>
         id, kind: 'DIGGING', message: `Digging activity detected; nesting unresolved.`, status: 'NEW', zoneCode: 'B', cameraCode,
         position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `video-${runId}`,
         simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: null,
-        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null },
+        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null },
     });
     const twoRuns: MapSnapshot = {
         ...snapshot,
@@ -231,10 +240,10 @@ describe('MapScreen', () =>
         {
             render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
-            expect(screen.getByText('Click near a zone to add a camera pair facing the sea · drag a camera to move it · Esc to finish')).toBeTruthy();
+            expect(screen.getByText('Click a zone to add a pair · open beach starts a new zone · drag cameras or new zones')).toBeTruthy();
             expect(screen.getByTestId('editing').textContent).toBe('true');
             fireEvent.keyDown(window, { key: 'Escape' });
-            expect(screen.queryByText(/Click near a zone/)).toBeNull();
+            expect(screen.queryByText(/open beach starts a new zone/)).toBeNull();
             expect(screen.getByTestId('editing').textContent).toBe('false');
         });
 
@@ -247,12 +256,50 @@ describe('MapScreen', () =>
 
         it('adds a camera pair where the map is clicked and confirms it', async () =>
         {
-            addCameraPair.mockResolvedValue({ ok: true, codes: ['B3', 'B4'], zoneCode: 'B' });
+            addCameraPair.mockResolvedValue({ ok: true, codes: ['B3', 'B4'], zoneCode: 'B', newZone: false });
             render(<MapScreen snapshot={snapshot} user={admin} />);
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
             fireEvent.click(screen.getByText('map click'));
             expect(addCameraPair).toHaveBeenCalledWith([-97.05, 27.82]);
             expect(await screen.findByText('B3 · B4 added to Zone B')).toBeTruthy();
+        });
+
+        it('announces a new zone made from an open-beach click', async () =>
+        {
+            addCameraPair.mockResolvedValue({ ok: true, codes: ['E1', 'E2'], zoneCode: 'E', newZone: true });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
+            fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
+            fireEvent.click(screen.getByText('map click'));
+            expect(await screen.findByText('New Zone E · E1 · E2 facing the sea')).toBeTruthy();
+        });
+
+        it('moves and deletes map-made zones only in edit mode', async () =>
+        {
+            moveZone.mockResolvedValue({ ok: true, code: 'E' });
+            deleteZone.mockResolvedValue({ ok: true, code: 'E' });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
+            fireEvent.click(screen.getByText('drag zone E'));
+            fireEvent.click(screen.getByText('delete zone E'));
+            expect(moveZone).not.toHaveBeenCalled();
+            expect(deleteZone).not.toHaveBeenCalled();
+            fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
+            fireEvent.click(screen.getByText('drag zone E'));
+            expect(moveZone).toHaveBeenCalledWith('E', [-97.05, 27.83], [-97.049, 27.831]);
+            expect(await screen.findByText('Zone E moved with its cameras')).toBeTruthy();
+            await waitFor(() => expect(document.body.dataset.zoneSaved).toBe('true'));
+            fireEvent.click(screen.getByText('delete zone E'));
+            expect(deleteZone).toHaveBeenCalledWith('E');
+            expect(await screen.findByText('Zone E and its cameras removed')).toBeTruthy();
+        });
+
+        it('puts a zone back when its move is refused', async () =>
+        {
+            moveZone.mockResolvedValue({ ok: false, error: 'Too close to Zone D — click inside it to join, or further away for a new zone' });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
+            fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
+            fireEvent.click(screen.getByText('drag zone E'));
+            expect(await screen.findByText(/Too close to Zone D/)).toBeTruthy();
+            await waitFor(() => expect(document.body.dataset.zoneSaved).toBe('false'));
         });
 
         it('places one pair for a double click while the first is still saving', async () =>
@@ -304,7 +351,7 @@ describe('MapScreen', () =>
     describe('trails and dangers', () =>
     {
         const site = { id: 's1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1', position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: 'v', simRunId: 'R', startT: 8, endT: 20, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: 0,
-            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null } } as AlertView;
+            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null, secured: null } } as AlertView;
         const danger = { ...site, id: 'd1', kind: 'DANGER', message: 'Danger · person near an active nest site — immediate action', level: 1, siteId: 's1', colorIndex: null, startT: 14, endT: 15 } as AlertView;
         const withDanger: MapSnapshot = { ...snapshot, alerts: [site, danger], dangerCount: 1, dangerTotal: 1 };
 

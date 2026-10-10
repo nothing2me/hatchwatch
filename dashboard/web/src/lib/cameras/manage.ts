@@ -2,7 +2,7 @@ import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
 import type { CameraStatus, LngLat, ZoneView } from '@/lib/types';
 import { CAMERA_CODE, type CAMERA_LIMITS, rangeError } from './limits';
-import { distanceToZone, nearestZone, nextCameraCodes, partnerCode, planPairOnZone, PlacementError, seawardToward, zoneOrientation } from './placePair';
+import { checkZoneClear, distanceToZone, nearestZone, nextCameraCodes, partnerCode, placementFor, planNewZone, planPairOnZone, PlacementError, seawardToward, translateZone, zoneOrientation } from './placePair';
 
 export class CameraEditError extends Error {}
 
@@ -70,43 +70,67 @@ async function uniqueCodes<T>(work: Promise<T>): Promise<T>
     {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
         {
-            throw new CameraEditError('That camera code is already taken; try again.');
+            throw new CameraEditError('That camera or zone code was just taken; try again.');
         }
         throw error;
     }
 }
 
-async function addPair(prisma: PrismaClient, actorId: string, click: LngLat, pickZone: (zones: ZoneView[]) => ZoneView): Promise<{ codes: [string, string]; zoneCode: string }>
+export type PairResult = { codes: [string, string]; zoneCode: string; newZone: boolean };
+type ZoneList = Awaited<ReturnType<typeof zoneViews>>;
+
+async function pairOnZone(tx: Tx, actorId: string, click: LngLat, zone: ZoneView): Promise<PairResult>
 {
-    const result = await uniqueCodes(prisma.$transaction(async tx =>
-    {
-        const zone = pickZone(await zoneViews(tx));
-        const codes = (await tx.camera.findMany({ select: { code: true } })).map(camera => camera.code);
-        const plan = placement(() => planPairOnZone(click, zone, codes));
-        await tx.camera.createMany({
-            data: plan.cameras.map(camera => ({ code: camera.code, zoneId: zone.id, lng: camera.position[0], lat: camera.position[1], headingDeg: camera.headingDeg, ...NEW_CAMERA })),
-        });
-        await tx.auditLog.create({
-            data: { userId: actorId, action: 'camera.pair.add', targetType: 'Zone', targetId: zone.id, details: { zone: zone.code, click, cameras: plan.cameras.map(camera => ({ code: camera.code, position: camera.position, headingDeg: camera.headingDeg })) } },
-        });
-        return { codes: [plan.cameras[0].code, plan.cameras[1].code] as [string, string], zoneCode: zone.code };
-    }));
+    const codes = (await tx.camera.findMany({ select: { code: true } })).map(camera => camera.code);
+    const plan = placement(() => planPairOnZone(click, zone, codes));
+    await tx.camera.createMany({
+        data: plan.cameras.map(camera => ({ code: camera.code, zoneId: zone.id, lng: camera.position[0], lat: camera.position[1], headingDeg: camera.headingDeg, ...NEW_CAMERA })),
+    });
+    await tx.auditLog.create({
+        data: { userId: actorId, action: 'camera.pair.add', targetType: 'Zone', targetId: zone.id, details: { zone: zone.code, click, cameras: plan.cameras.map(camera => ({ code: camera.code, position: camera.position, headingDeg: camera.headingDeg })) } },
+    });
+    return { codes: [plan.cameras[0].code, plan.cameras[1].code], zoneCode: zone.code, newZone: false };
+}
+
+// A new zone at the click (rectangle on the shore, made by this admin) with its first pair, audited as one entry.
+async function pairOnNewZone(tx: Tx, actorId: string, click: LngLat, zones: ZoneList): Promise<PairResult>
+{
+    const codes = (await tx.camera.findMany({ select: { code: true } })).map(camera => camera.code);
+    const plan = placement(() => planNewZone(click, zones, zones.map(zone => zone.code), codes));
+    const zone = await tx.zone.create({ data: { code: plan.code, name: `Zone ${plan.code}`, activityLevel: 'LOW', createdById: actorId, outline: { type: 'Polygon', coordinates: [plan.ring] } } });
+    await tx.camera.createMany({
+        data: plan.cameras.map(camera => ({ code: camera.code, zoneId: zone.id, lng: camera.position[0], lat: camera.position[1], headingDeg: camera.headingDeg, ...NEW_CAMERA })),
+    });
+    await tx.auditLog.create({
+        data: { userId: actorId, action: 'zone.create', targetType: 'Zone', targetId: zone.id, details: { zone: plan.code, click, ring: plan.ring, cameras: plan.cameras.map(camera => ({ code: camera.code, position: camera.position, headingDeg: camera.headingDeg })) } },
+    });
+    return { codes: [plan.cameras[0].code, plan.cameras[1].code], zoneCode: plan.code, newZone: true };
+}
+
+async function inTransaction<T>(prisma: PrismaClient, work: (tx: Tx) => Promise<T>): Promise<T>
+{
+    const result = await uniqueCodes(prisma.$transaction(work));
     publishChange('cameras');
     return result;
 }
 
-// A camera pair on the existing zone nearest the click; no zone is created.
-export function addCameraPair(prisma: PrismaClient, actorId: string, click: LngLat)
+// A map click: inside or within 150 m of a zone adds a pair to it; farther from every zone makes a new zone there.
+export function addCameraPair(prisma: PrismaClient, actorId: string, click: LngLat): Promise<PairResult>
 {
-    return addPair(prisma, actorId, click, zones => placement(() => nearestZone(click, zones)));
+    return inTransaction(prisma, async tx =>
+    {
+        const zones = await zoneViews(tx);
+        const choice = placementFor(click, zones);
+        return choice.kind === 'join' ? pairOnZone(tx, actorId, click, choice.zone) : pairOnNewZone(tx, actorId, click, zones);
+    });
 }
 
 // A camera pair on a named zone, centred on the given point (Setup → Cameras).
-export function addCameraPairToZone(prisma: PrismaClient, actorId: string, zoneCode: string, at: LngLat)
+export function addCameraPairToZone(prisma: PrismaClient, actorId: string, zoneCode: string, at: LngLat): Promise<PairResult>
 {
-    return addPair(prisma, actorId, at, zones =>
+    return inTransaction(prisma, async tx =>
     {
-        const zone = zones.find(candidate => candidate.code === zoneCode);
+        const zone = (await zoneViews(tx)).find(candidate => candidate.code === zoneCode);
         if (!zone)
         {
             throw new CameraEditError('That zone no longer exists.');
@@ -115,7 +139,90 @@ export function addCameraPairToZone(prisma: PrismaClient, actorId: string, zoneC
         {
             throw new CameraEditError(`That point is more than 2 km from Zone ${zone.code}.`);
         }
-        return zone;
+        return pairOnZone(tx, actorId, at, zone);
+    });
+}
+
+// Always a new zone at the point (Setup → Cameras); refused when its rectangle would overlap a zone.
+export function addCameraPairNewZone(prisma: PrismaClient, actorId: string, at: LngLat): Promise<PairResult>
+{
+    return inTransaction(prisma, async tx => pairOnNewZone(tx, actorId, at, await zoneViews(tx)));
+}
+
+async function mapMadeZone(tx: Tx, code: string, verb: 'moved' | 'deleted')
+{
+    const zones = await zoneViews(tx);
+    const zone = zones.find(candidate => candidate.code === code);
+    if (!zone)
+    {
+        throw new CameraEditError('That zone no longer exists.');
+    }
+    // Seeded zones carry the simulation import pairs and the live slots.
+    if (!zone.addedByAdmin)
+    {
+        throw new CameraEditError(`Zone ${zone.code} is a built-in zone; only zones added on the map can be ${verb}.`);
+    }
+    return { zone, others: zones.filter(candidate => candidate.code !== code) };
+}
+
+async function zoneHasData(tx: Tx, zoneId: string): Promise<boolean>
+{
+    const [videos, alerts, chunks] = await Promise.all([
+        tx.video.count({ where: { camera: { zoneId } } }),
+        tx.alert.count({ where: { OR: [{ zoneId }, { camera: { zoneId } }] } }),
+        tx.liveChunk.count({ where: { zoneId } }),
+    ]);
+    return videos + alerts + chunks > 0;
+}
+
+// Drags a map-made zone: its outline and cameras shift by the same offset (from → to), headings kept.
+export function moveZone(prisma: PrismaClient, actorId: string, code: string, from: LngLat, to: LngLat): Promise<{ code: string }>
+{
+    return inTransaction(prisma, async tx =>
+    {
+        const { zone, others } = await mapMadeZone(tx, code, 'moved');
+        // Sites, trails and danger points store absolute positions; moving would strand them.
+        if (await zoneHasData(tx, zone.id))
+        {
+            throw new CameraEditError(`Zone ${zone.code} has footage, alerts or live chunks; it can't be moved.`);
+        }
+        const cameras = await tx.camera.findMany({ where: { zoneId: zone.id }, orderBy: { code: 'asc' } });
+        const moved = translateZone(zone.ring, cameras.map(camera => [camera.lng, camera.lat] as LngLat), from, to);
+        placement(() => checkZoneClear(moved.ring, others));
+        for (const [point, label] of [[moved.ring[0], 'zone'] as const, ...moved.points.map(point => [point, 'camera'] as const)])
+        {
+            if (rangeError('lng', point[0]) || rangeError('lat', point[1]))
+            {
+                throw new CameraEditError(`That would put the ${label} off the map.`);
+            }
+        }
+        await tx.zone.update({ where: { id: zone.id }, data: { outline: { type: 'Polygon', coordinates: [moved.ring] } } });
+        for (const [i, camera] of cameras.entries())
+        {
+            await tx.camera.update({ where: { id: camera.id }, data: { lng: moved.points[i][0], lat: moved.points[i][1] } });
+        }
+        await tx.auditLog.create({
+            data: { userId: actorId, action: 'zone.move', targetType: 'Zone', targetId: zone.id, details: { zone: zone.code, from, to, before: zone.ring, after: moved.ring, cameras: cameras.map(camera => camera.code) } },
+        });
+        return { code: zone.code };
+    });
+}
+
+// Removes a map-made zone and its cameras when nothing was ever recorded there.
+export function deleteZone(prisma: PrismaClient, actorId: string, code: string): Promise<{ code: string }>
+{
+    return inTransaction(prisma, async tx =>
+    {
+        const { zone } = await mapMadeZone(tx, code, 'deleted');
+        if (await zoneHasData(tx, zone.id))
+        {
+            throw new CameraEditError(`Zone ${zone.code} has footage, alerts or live chunks; merge it into a neighbour instead.`);
+        }
+        const cameras = await tx.camera.findMany({ where: { zoneId: zone.id }, orderBy: { code: 'asc' }, select: { code: true } });
+        await tx.camera.deleteMany({ where: { zoneId: zone.id } });
+        await tx.zone.delete({ where: { id: zone.id } });
+        await tx.auditLog.create({ data: { userId: actorId, action: 'zone.delete', targetType: 'Zone', targetId: zone.id, details: { zone: zone.code, ring: zone.ring, cameras: cameras.map(camera => camera.code) } } });
+        return { code: zone.code };
     });
 }
 
