@@ -64,6 +64,25 @@ describe('summarizeSite', () =>
     });
 });
 
+describe('nest found damaged', () =>
+{
+    it('confirms the nest, tags it damaged and keeps it active and unprotected', () =>
+    {
+        const s = summarizeSite([e('detected', 0), e('patrolVisit', 3), e('nestDamaged', 4)]);
+        expect(s).toMatchObject({ damaged: true, nesting: 'confirmed', protection: 'unprotected', active: true, patrolVisited: true, personActed: true });
+        expect(statusFor(s, [{ type: 'nestDamaged' }])).toBe('FIELD_CONFIRMED');
+    });
+    it('stays tagged after protection is set up, and corrects an earlier no-nest finding', () =>
+    {
+        expect(summarizeSite([e('detected', 0), e('nestDamaged', 3), e('protectionInstalled', 5)])).toMatchObject({ damaged: true, protection: 'protected' });
+        expect(summarizeSite([e('detected', 0), e('noNestFound', 3), e('nestDamaged', 6)])).toMatchObject({ damaged: true, nesting: 'confirmed', protection: 'unprotected', active: true });
+    });
+    it('answers a person-near-site danger like any on-site visit', () =>
+    {
+        expect(summarizeSite([e('detected', 0), e('danger', 2), e('nestDamaged', 4)]).danger).toBe('resolved');
+    });
+});
+
 describe('danger lifecycle', () =>
 {
     it('a danger entry is active until a resolve, protection, patrol or note follows', () =>

@@ -9,6 +9,11 @@ export async function register()
         const { prisma } = await import('@/lib/db');
         const { liveSettings, startLiveWatcher } = await import('@/lib/live/watcher');
         startLiveWatcher(prisma, liveSettings());
+        if (process.env.DEMO_PATROL === '1')
+        {
+            const { startDemoPatrol } = await import('@/lib/live/demoPatrol');
+            startDemoPatrol(prisma);
+        }
     }
     const { recorderSettings, startRecorder } = await import('@/lib/phones/recorder');
     const settings = recorderSettings();

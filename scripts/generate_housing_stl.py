@@ -214,7 +214,7 @@ def main():
         print(f"{name}: {triangles // 3} triangles, {size_kb} kB")
 
     size_mm = (BODY_W, BODY_H, BODY_D)
-    print(f"Body bounding box (WÃ—HÃ—D): {size_mm[0]} Ã— {size_mm[1]} Ã— {size_mm[2]} mm")
+    print(f"Body bounding box (W×H×D): {size_mm[0]} × {size_mm[1]} × {size_mm[2]} mm")
     print("Artifacts in:", OUT_DIR)
 
 

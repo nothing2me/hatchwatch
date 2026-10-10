@@ -130,7 +130,7 @@ for (const zone of zones)
 
 // --- default admin-placed pair: 120 m along beach, 60 m seaward --------------
 // Local frame: land edge along x from (0,0)=(landNorth) to (120,0)=(landSouth),
-// seaward = -y (south). Cameras at the land corners, each heading = seaward Â± 20Â°
+// seaward = -y (south). Cameras at the land corners, each heading = seaward ± 20°
 // choosing the side nearer the zone centre (placePair.seawardToward).
 function adminPairReport()
 {
