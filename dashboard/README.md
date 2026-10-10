@@ -108,9 +108,9 @@ Signed-in volunteers and admins can turn a phone on the same Wi-Fi into a live c
 
 1. Set `LAN_HOST` in `dashboard/.env` to the laptop's LAN IP (`ipconfig getifaddr en0`), not `localhost` or `127.0.0.1`, then run `docker compose up -d --build`. Caddy serves `https://localhost:3443` and `https://LAN_HOST:3443`; port 3443 is the only port open to the LAN (`web` and `db` stay on loopback).
 2. Admins open **Live cameras > Connect phone** and scan the QR code. On the phone, accept the one-time certificate warning (it is Caddy's own CA; to remove it, run `docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .` and install that file on the phone), sign in as a volunteer or admin, and press Start.
-3. The **Live cameras** page shows one tile per online phone, with Expand and a **Motion view**. The motion view is a viewing aid, not the detector. Admins link a phone to a camera with the **Source** picker (Setup > Cameras, or the camera panel on the map); the panel then shows LIVE, and falls back to "Phone offline" and the simulation loop when the phone stops. Admins can **Remove** a phone: that stops this phone, but the person can start again with a new phone name; to block a person, disable their account on the Users page.
+3. The **Live cameras** page shows one tile per online phone, with Expand and a **Motion view**. The motion view is a viewing aid, not the digging detector. Admins link a phone to a camera with the **Source** picker (Setup > Cameras, or the camera panel on the map); the panel then shows LIVE, and falls back to "Phone offline" and the simulation loop when the phone stops. Admins can **Remove** a phone: that stops this phone, but the person can start again with a new phone name; to block a person, disable their account on the Users page.
 4. Recording: every phone is recorded as 10-minute mp4 segments (5 fps) under `RECORDINGS_ROOT` (`./recordings`, git-ignored; Compose mounts it at `/recordings`). Segments are deleted after `RECORDING_RETENTION_HOURS` (default 72, swept hourly). `RECORDING=off` turns recording off, and `FFMPEG_PATH` overrides the `ffmpeg` binary (the web image includes ffmpeg; without it segments stay as `.avi`). Admins see the Recordings list on **Live cameras** with Play and Download; a new recording can take up to about 45 s to appear and be playable.
-5. Limits: one `web` instance holds the newest frames in memory, about 6 phones at once, no audio, LAN only. Phone footage is real beach footage: it stays on local disk, is never committed, and never reaches the detector.
+5. Limits: one `web` instance holds the newest frames in memory, about 6 phones at once, no audio, LAN only. Phone footage is real beach footage: it stays on local disk, is never committed, and never reaches the digging detector.
 
 ## ESP32 camera boards
 
@@ -119,8 +119,29 @@ An ESP32-S3 camera board (`firmware/esp32s3-cam`) can send its picture to the da
 1. An admin opens **Live cameras > Add board camera** and names the board. The dialog shows the device id and a token **once**, as `secrets.h` lines with `DASHBOARD_URL` from `LAN_HOST`. Only a SHA-256 hash of the token is stored. **Rotate token** in the Devices list issues a new one (the old one stops working), and **Remove** stops the board. All three are audited (`device.create`, `device.rotate`, `device.remove`) without the token.
 2. In `firmware/esp32s3-cam/secrets.h`, replace the existing `DASHBOARD_URL`, `DEVICE_ID` and `DEVICE_TOKEN` lines with the ones shown, paste Caddy's root certificate (`docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt`) into the existing `DASHBOARD_CA` block, and upload the firmware (see `firmware/esp32s3-cam/README.md`).
 3. The board POSTs JPEGs to `/api/live/frame/<id>` with `Authorization: Bearer <token>` and the `X-NestTrace-Motion` header (`schemas/esp32-frame.v1.md`), at most 5 per second. It then behaves like a phone: tile, Motion view, recording, Source linking.
-4. Board tiles show **Moving x%** / **Still** and the motion box, labelled "Motion measured on the camera board". It is a viewing aid: no alerts, never the detector. The badge refreshes with the device list (about every 3 s).
+4. Board tiles show **Moving x%** / **Still** and the motion box, labelled "Motion measured on the camera board". It is a viewing aid: no alerts, never reaches the digging detector. The badge refreshes with the device list (about every 3 s).
 5. Board, laptop and phones must share one 2.4 GHz-capable network. `LAN_HOST` must be the laptop's address on it.
+
+## Live detection
+
+The `worker` service looks at live phone and board pictures and draws boxes on them.
+
+1. What it does: it finds **people** (YOLOX-nano, Apache-2.0, score at least 0.40) and **possible turtles**. A possible turtle comes from a rule (a slow, wide moving shape), never from a turtle model, and it is never a confirmed turtle; it has no score. Each box has a track id (`P1`, `T1`, ...) and a trail of the last 30 s. The **Detections** button on **Live cameras** turns boxes, counts and trails on or off, and each browser remembers the choice. The map's camera panel shows the same boxes for a linked live camera. It is a viewing aid: it can miss people and mistake objects.
+2. Setup: put `WORKER_TOKEN=$(openssl rand -hex 32)` in `dashboard/.env` (run the `openssl` command and paste its output), then `docker compose up -d --build`. The `worker` image downloads the model once at build time and checks its SHA-256; the build fails on a mismatch. At runtime the worker is on an internal-only network (no internet, no published port). `/api/internal/*` is for the worker only: Caddy answers 404 to the LAN, and the routes refuse any request without the token. Without `WORKER_TOKEN` the worker exits and tiles say "Detection off".
+3. Restarts: Compose restarts the worker with `restart: on-failure:3`. After three crashes in a row (for example, `WORKER_TOKEN` unset) it stays down. Fix the cause, then run `docker compose up -d worker` (or `docker compose restart worker`). `docker compose ps` and `docker compose logs worker` show its state; the logs carry status codes and error class names only, never frames or the token.
+4. Camera alert: when a person is seen for 2 s (score at least 0.50) on a phone or board **linked to a map camera**, and that camera's zone has an active unprotected nest site, a red level-1 card appears first in the Active list, labelled **"Camera alert · person detected (not measured distance)"**, with the message "Danger · person seen on camera `<code>` near active nest sites — check now". The top-bar danger chip counts it and the map shows a pulsing marker at the camera. There is one per camera until a volunteer or admin resolves it (**Resolve danger**), and the next one comes at least 10 minutes after the resolve. Repeat sightings are logged on it at most once a minute. It is not tied to one nest, does not change any site's Saved/Not saved status, is not counted in outcomes, and is not a measured distance. Devices that are not linked to a map camera never raise one.
+5. Deleting: a camera alert stays attached to its camera and zone after it is resolved, so, like other alerts, it blocks deleting that camera or zone. A zone added on the map can still be merged into a neighbour (its alerts move with it).
+6. Limits: CPU only, at most 2 frames/s per device, about 6 devices. Below 25/255 mean brightness the tile says "Too dark to detect"; night or infrared detection is out of scope. Boxes refresh about every second and can lag the picture by up to about 1.5 s. The worker keeps frames and results in memory only; it never writes them to disk.
+7. Worker tests on the host (Python 3.12):
+
+   ```bash
+   cd dashboard/worker && python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+   mkdir -p models && curl -fsSL -o models/yolox_nano.onnx https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_nano.onnx
+   echo "c789161ed43c8269fcd4e67c67eeeb4e80c622da2eb296a20bc6007bd18a0b7d  models/yolox_nano.onnx" | shasum -a 256 -c -
+   .venv/bin/pytest -q
+   ```
+
+   `models/` and `.venv/` are git-ignored. Inside the image: `docker compose run --rm --no-deps worker python -m pytest -q`.
 
 ## Limits
 
