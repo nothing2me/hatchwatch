@@ -13,6 +13,10 @@ Standalone camera firmware for field tests. The board serves a camera page, a JP
 
 
 
+## Privacy
+
+The pages and the stream have no password: anyone on the same Wi-Fi can watch. Use the board only on a trusted network, and never share footage of a nesting beach publicly.
+
 ## Build and upload
 
 1. Copy `secrets.example.h` to `secrets.h` (git-ignored) and set `WIFI_SSID` and `WIFI_PASSWORD`. The board joins 2.4 GHz networks only.
