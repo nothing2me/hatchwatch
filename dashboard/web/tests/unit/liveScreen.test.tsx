@@ -11,7 +11,7 @@ const { RecordingsPanel, formatStart } = await import('@/features/phones/Recordi
 const bar = { camerasOnline: 1, camerasTotal: 2, activeSites: 0 };
 const admin = { id: 'a', email: 'a@x.y', name: 'Ad', role: 'ADMIN' as const };
 const viewer = { ...admin, id: 'v', role: 'VIEWER' as const };
-const phone = { id: 'ck1', name: 'Dune phone', ownerName: 'Vo', cameraCode: 'B1', online: true, recording: true, lastSeenAt: '2026-10-10T20:00:00.000Z' };
+const phone = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: 'B1', online: true, recording: true, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null };
 
 function stubFetch(devices: unknown[])
 {

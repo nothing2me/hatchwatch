@@ -4,12 +4,20 @@ export const ONLINE_MS = 10_000;
 export const TOUCH_EVERY_MS = 5_000;
 const PRUNE_MS = 60_000;
 
+export interface BoardMotion
+{
+    percent: number;
+    active: boolean;
+    box: [number, number, number, number];
+}
+
 interface Entry
 {
     jpeg: Buffer;
     at: number;
     recent: number[];
     touchedAt: number;
+    motion: BoardMotion | null;
 }
 
 export type PutResult = { ok: true; at: number; touch: boolean } | { ok: false; reason: 'rate' };
@@ -19,7 +27,7 @@ export class FrameStore
 {
     private entries = new Map<string, Entry>();
 
-    put(deviceId: string, jpeg: Buffer, now: number = Date.now()): PutResult
+    put(deviceId: string, jpeg: Buffer, now: number = Date.now(), motion: BoardMotion | null = null): PutResult
     {
         const entry = this.entries.get(deviceId);
         const recent = (entry?.recent ?? []).filter(t => now - t < 1000);
@@ -34,7 +42,7 @@ export class FrameStore
         recent.push(now);
         const at = entry && now <= entry.at ? entry.at + 1 : now;
         const touch = !entry || now - entry.touchedAt >= TOUCH_EVERY_MS;
-        this.entries.set(deviceId, { jpeg, at, recent, touchedAt: touch || !entry ? now : entry.touchedAt });
+        this.entries.set(deviceId, { jpeg, at, recent, touchedAt: touch || !entry ? now : entry.touchedAt, motion });
         return { ok: true, at, touch };
     }
 
@@ -42,6 +50,13 @@ export class FrameStore
     {
         const entry = this.entries.get(deviceId);
         return entry && now - entry.at <= ONLINE_MS ? { jpeg: entry.jpeg, at: entry.at } : null;
+    }
+
+    // The motion that came with the newest frame, while the device is online.
+    motion(deviceId: string, now: number = Date.now()): (BoardMotion & { at: number }) | null
+    {
+        const entry = this.entries.get(deviceId);
+        return entry?.motion && now - entry.at <= ONLINE_MS ? { ...entry.motion, at: entry.at } : null;
     }
 
     isOnline(deviceId: string, now: number = Date.now()): boolean

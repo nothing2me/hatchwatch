@@ -13,6 +13,11 @@ enum Role {
   VIEWER
 }
 
+enum DeviceKind {
+  PHONE
+  BOARD
+}
+
 enum ActivityLevel {
   LOW
   MEDIUM
@@ -281,12 +286,15 @@ model LiveChunk {
 }
 
 model LiveDevice {
-  id         String    @id @default(cuid())
+  id         String     @id @default(cuid())
   name       String
+  kind       DeviceKind @default(PHONE)
+  /// SHA-256 (hex) of a BOARD's device token; phones never have one. The token itself is never stored.
+  tokenHash  String?    @unique
   ownerId    String
-  owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  lastSeenAt DateTime  @default(now())
-  createdAt  DateTime  @default(now())
+  owner      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime   @default(now())
+  createdAt  DateTime   @default(now())
   /// Set when an admin removes the phone; it then takes no frames and is hidden from lists.
   disabledAt DateTime?
   camera     Camera?

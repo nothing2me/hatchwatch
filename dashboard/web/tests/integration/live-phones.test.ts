@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { SessionUser } from '@/lib/auth/session';
 import { createPrismaClient } from '@/lib/db';
+import { hashDeviceToken, newDeviceToken } from '@/lib/phones/deviceToken';
+import { registerDevice } from '@/lib/phones/devices';
 import { FrameStore } from '@/lib/phones/frameStore';
 import { getDevices, getFrame, postDevice, postFrame, type FrameRecorder } from '@/lib/phones/http';
 import type { LiveDeviceView } from '@/lib/types';
@@ -179,5 +181,115 @@ describe('frames', () =>
         expect((await list(viewer)).map(d => [d.id, d.online, d.ownerName])).toEqual([[online, true, 'vol']]);
         expect((await list(admin)).map(d => [d.id, d.online])).toEqual([[online, true], [silent, false]]);
         expect((await getDevices({ prisma, user: null, store })).status).toBe(401);
+    });
+});
+
+describe('board frames', () =>
+{
+    let now: number;
+    beforeEach(() => { now = T0; });
+    const deps = (user: SessionUser | null, store: FrameStore, recorder: FrameRecorder | null = null) => ({ prisma, user, store, recorder, now: () => (now += 200) });
+    const boardFrame = (token: string | null, motion?: string, body: Uint8Array<ArrayBuffer> = jpeg()) =>
+    {
+        const headers: Record<string, string> = { 'content-type': 'image/jpeg' };
+        if (token !== null) headers.authorization = `Bearer ${token}`;
+        if (motion !== undefined) headers['x-nesttrace-motion'] = motion;
+        return new Request('https://x/api/live/frame/id', { method: 'POST', body, headers });
+    };
+    async function board(name = 'Dune board'): Promise<{ id: string; token: string }>
+    {
+        const { token, hash } = newDeviceToken();
+        const row = await prisma.liveDevice.create({ data: { ownerId: admin.id, name, kind: 'BOARD', tokenHash: hash } });
+        return { id: row.id, token };
+    }
+
+    it('accepts a board with its own token and no session, and records it like a phone', async () =>
+    {
+        const { id, token } = await board();
+        const store = new FrameStore();
+        const added: unknown[] = [];
+        const recorder: FrameRecorder = { addFrame: (_d, _j, _at, meta) => added.push(meta), isRecording: () => true };
+        const response = await postFrame(deps(null, store, recorder), id, boardFrame(token));
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ at: T0 + 200, cameraCode: null, recording: true });
+        expect(store.latest(id, T0 + 200)?.jpeg).toEqual(jpeg());
+        expect(added).toEqual([{ deviceName: 'Dune board', cameraCode: null }]);
+        // A session does not change the outcome when a bearer token is present.
+        expect((await postFrame(deps(viewer, store), id, boardFrame(token))).status).toBe(200);
+    });
+
+    it('answers 401 for every token that is not this board\'s own', async () =>
+    {
+        const first = await board('One');
+        const second = await board('Two');
+        const phone = await register(volunteer);
+        const store = new FrameStore();
+        const status = async (id: string, token: string | null, user: SessionUser | null = null) => (await postFrame(deps(user, store), id, boardFrame(token))).status;
+        expect(await status(first.id, second.token)).toBe(401);
+        expect(await status(first.id, newDeviceToken().token)).toBe(401);
+        expect(await status(first.id, 'not-a-token')).toBe(401);
+        expect(await status(first.id, hashDeviceToken(first.token))).toBe(401);
+        expect(await status(phone, first.token)).toBe(401);
+        expect(await status('no-such-device', first.token)).toBe(401);
+        expect(await status(first.id, null)).toBe(401);
+        expect(await status(first.id, null, admin)).toBe(401);
+        expect(await status(first.id, null, volunteer)).toBe(401);
+        expect(await status(first.id, null, viewer)).toBe(401);
+        await prisma.liveDevice.update({ where: { id: first.id }, data: { disabledAt: new Date() } });
+        expect(await status(first.id, first.token)).toBe(401);
+        expect(store.latest(first.id, now)).toBeNull();
+        expect(await status(second.id, second.token)).toBe(200);
+    });
+
+    it('keeps the phone rules: 413, 415 and 429 apply to boards too', async () =>
+    {
+        const { id, token } = await board();
+        const store = new FrameStore();
+        expect((await postFrame(deps(null, store), id, boardFrame(token, undefined, jpeg(500 * 1024 + 1)))).status).toBe(413);
+        expect((await postFrame(deps(null, store), id, boardFrame(token, undefined, Buffer.from('hello world')))).status).toBe(415);
+        const fast = { prisma, user: null, store, now: () => (now += 50) };
+        const statuses: number[] = [];
+        for (let i = 0; i < 11; i++) statuses.push((await postFrame(fast, id, boardFrame(token))).status);
+        expect(statuses).toEqual([...Array(10).fill(200), 429]);
+    });
+
+    it('stores the motion header for boards, ignores bad ones, and lists it without the token', async () =>
+    {
+        const { id, token } = await board();
+        const phone = await register(volunteer);
+        const store = new FrameStore();
+        await postFrame(deps(null, store), id, boardFrame(token, 'v1;percent=4.2;active=1;box=96,40,64,72'));
+        await postFrame(deps(volunteer, store), phone, new Request('https://x', { method: 'POST', body: jpeg(), headers: { 'content-type': 'image/jpeg', 'x-nesttrace-motion': 'v1;percent=9.9;active=1;box=1,1,1,1' } }));
+        const response = await getDevices({ prisma, user: viewer, store, now: () => T0 + 1_000 });
+        const text = await response.clone().text();
+        expect(text).not.toContain(token);
+        expect(text).not.toContain(hashDeviceToken(token));
+        expect(text).not.toContain('tokenHash');
+        const { devices } = await response.json() as { devices: LiveDeviceView[] };
+        const byKind = Object.fromEntries(devices.map(d => [d.kind, d]));
+        expect(byKind.BOARD.motion).toEqual({ percent: 4.2, active: true, box: [96, 40, 64, 72], at: new Date(T0 + 200).toISOString() });
+        expect(byKind.PHONE.motion).toBeNull();
+
+        expect((await postFrame(deps(null, store), id, boardFrame(token, 'v2;percent=4.2;active=1;box=1,2,3,4'))).status).toBe(200);
+        expect(store.motion(id, now)).toBeNull();
+        expect((await postFrame(deps(null, store), id, boardFrame(token, 'garbage'))).status).toBe(200);
+        expect(store.motion(id, now)).toBeNull();
+    });
+
+    it('never reuses a board when a phone registers under the same owner and name', async () =>
+    {
+        const { id } = await board('Pier');
+        const phone = await registerDevice(prisma, admin.id, 'Pier');
+        expect(phone.id).not.toBe(id);
+        expect(phone.created).toBe(true);
+    });
+
+    it('enforces in the database that only boards have a token hash', async () =>
+    {
+        await expect(prisma.liveDevice.create({ data: { ownerId: volunteer.id, name: 'x', tokenHash: 'a'.repeat(64) } })).rejects.toThrow();
+        await expect(prisma.liveDevice.create({ data: { ownerId: admin.id, name: 'y', kind: 'BOARD' } })).rejects.toThrow();
+        const { hash } = newDeviceToken();
+        await prisma.liveDevice.create({ data: { ownerId: admin.id, name: 'z', kind: 'BOARD', tokenHash: hash } });
+        await expect(prisma.liveDevice.create({ data: { ownerId: admin.id, name: 'w', kind: 'BOARD', tokenHash: hash } })).rejects.toThrow();
     });
 });

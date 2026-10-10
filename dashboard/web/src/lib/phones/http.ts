@@ -1,8 +1,10 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { SessionUser } from '@/lib/auth/session';
 import { isJpeg, readCapped } from './body';
-import { cleanDeviceName, DEVICE_NAME_MAX, frameAccess, listDevices, registerDevice, touchDevice } from './devices';
-import { MAX_FRAME_BYTES, type FrameStore } from './frameStore';
+import { bearerToken } from './deviceToken';
+import { boardAccess, cleanDeviceName, DEVICE_NAME_MAX, frameAccess, listDevices, registerDevice, touchDevice } from './devices';
+import { MAX_FRAME_BYTES, type BoardMotion, type FrameStore } from './frameStore';
+import { MOTION_HEADER, parseMotionHeader } from './motionHeader';
 
 export interface FrameRecorder
 {
@@ -21,6 +23,8 @@ export interface PhoneDeps
 
 export const SIGN_IN_FIRST = 'Sign in first.';
 export const CANNOT_SEND = 'Your account can watch but not send.';
+export const BOARD_REFUSED = 'Device token not accepted.';
+export const BOARD_NEEDS_TOKEN = 'This camera board sends with its device token.';
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
@@ -71,15 +75,32 @@ export async function getDevices(deps: PhoneDeps): Promise<Response>
 
 export async function postFrame(deps: PhoneDeps, deviceId: string, request: Request): Promise<Response>
 {
-    const sender = senderOrRefusal(deps.user);
-    if (sender instanceof Response)
+    const token = bearerToken(request.headers);
+    let device: { id: string; name: string; cameraCode: string | null };
+    let motion: BoardMotion | null = null;
+    if (token !== null)
     {
-        return sender;
+        const board = await boardAccess(deps.prisma, deviceId, token);
+        if (!board.ok)
+        {
+            return json({ error: BOARD_REFUSED }, 401);
+        }
+        device = board.device;
+        motion = parseMotionHeader(request.headers.get(MOTION_HEADER));
     }
-    const access = await frameAccess(deps.prisma, deviceId, sender);
-    if (!access.ok)
+    else
     {
-        return json({ error: access.status === 404 ? 'Unknown phone.' : 'This phone cannot send here.' }, access.status);
+        if (!deps.user)
+        {
+            return json({ error: SIGN_IN_FIRST }, 401);
+        }
+        const access = await frameAccess(deps.prisma, deviceId, deps.user);
+        if (!access.ok)
+        {
+            const error = access.status === 404 ? 'Unknown phone.' : access.status === 401 ? BOARD_NEEDS_TOKEN : 'This phone cannot send here.';
+            return json({ error }, access.status);
+        }
+        device = access.device;
     }
     const body = await readCapped(request, MAX_FRAME_BYTES);
     if (body === 'too-large')
@@ -91,7 +112,7 @@ export async function postFrame(deps: PhoneDeps, deviceId: string, request: Requ
         return json({ error: 'Frames must be JPEG.' }, 415);
     }
     const now = deps.now?.() ?? Date.now();
-    const put = deps.store.put(deviceId, body, now);
+    const put = deps.store.put(deviceId, body, now, motion);
     if (!put.ok)
     {
         return json({ error: 'More than 10 frames a second.' }, 429);
@@ -100,8 +121,8 @@ export async function postFrame(deps: PhoneDeps, deviceId: string, request: Requ
     {
         await touchDevice(deps.prisma, deviceId, new Date(now));
     }
-    deps.recorder?.addFrame(deviceId, body, put.at, { deviceName: access.device.name, cameraCode: access.device.cameraCode });
-    return json({ at: put.at, cameraCode: access.device.cameraCode, recording: deps.recorder?.isRecording(deviceId) ?? false });
+    deps.recorder?.addFrame(deviceId, body, put.at, { deviceName: device.name, cameraCode: device.cameraCode });
+    return json({ at: put.at, cameraCode: device.cameraCode, recording: deps.recorder?.isRecording(deviceId) ?? false });
 }
 
 export function getFrame(deps: Pick<PhoneDeps, 'user' | 'store' | 'now'>, deviceId: string, request: Request): Response

@@ -76,4 +76,19 @@ describe('FrameStore', () =>
         store.onlineIds(60_001);
         expect(store.lastFrameAt('d2')).toBeNull();
     });
+
+    it('keeps the board motion beside the newest frame and drops it with the frame', () =>
+    {
+        const store = new FrameStore();
+        const moving = { percent: 4.2, active: true, box: [1, 2, 3, 4] as [number, number, number, number] };
+        store.put('b1', jpeg(1), 1_000, moving);
+        expect(store.motion('b1', 1_000)).toEqual({ ...moving, at: 1_000 });
+        store.put('b1', jpeg(2), 1_200);
+        expect(store.motion('b1', 1_200)).toBeNull();
+        store.put('b1', jpeg(3), 1_400, moving);
+        expect(store.motion('b1', 1_400 + 10_001)).toBeNull();
+        for (let i = 0; i < 10; i++) store.put('b2', jpeg(i), 2_000 + i, moving);
+        expect(store.put('b2', jpeg(99), 2_050, { ...moving, percent: 50 }).ok).toBe(false);
+        expect(store.motion('b2', 2_050)?.percent).toBe(4.2);
+    });
 });

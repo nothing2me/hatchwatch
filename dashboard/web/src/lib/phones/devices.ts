@@ -3,6 +3,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import { CameraEditError } from '@/lib/cameras/manage';
 import { publishChange } from '@/lib/changes';
 import type { LiveDeviceView } from '@/lib/types';
+import { tokenMatches } from './deviceToken';
 import type { FrameStore } from './frameStore';
 
 export const DEVICE_NAME_MAX = 60;
@@ -24,28 +25,46 @@ export interface RegisteredDevice
 // One phone per owner and name while it is not removed; the phone re-registers on every Start.
 export async function registerDevice(prisma: PrismaClient, ownerId: string, name: string): Promise<RegisteredDevice>
 {
-    const existing = await prisma.liveDevice.findFirst({ where: { ownerId, name, disabledAt: null }, orderBy: { createdAt: 'asc' }, include: { camera: { select: { code: true } } } });
+    const existing = await prisma.liveDevice.findFirst({ where: { ownerId, name, kind: 'PHONE', disabledAt: null }, orderBy: { createdAt: 'asc' }, include: { camera: { select: { code: true } } } });
     if (existing)
     {
         return { id: existing.id, name: existing.name, cameraCode: existing.camera?.code ?? null, created: false };
     }
-    const row = await prisma.liveDevice.create({ data: { ownerId, name } });
+    const row = await prisma.liveDevice.create({ data: { ownerId, name, kind: 'PHONE' } });
     return { id: row.id, name: row.name, cameraCode: null, created: true };
 }
 
-export type FrameAccess = { ok: true; device: { id: string; name: string; cameraCode: string | null } } | { ok: false; status: 403 | 404 };
+export type FrameAccess = { ok: true; device: { id: string; name: string; cameraCode: string | null } } | { ok: false; status: 401 | 403 | 404 };
 
-// The owner or an admin may send for a phone; a removed phone takes no frames.
+// Session senders: a board needs its token (401); otherwise the owner or an admin, never a viewer, and never a removed phone.
 export async function frameAccess(prisma: PrismaClient, deviceId: string, user: SessionUser): Promise<FrameAccess>
 {
-    const row = await prisma.liveDevice.findUnique({ where: { id: deviceId }, select: { id: true, name: true, ownerId: true, disabledAt: true, camera: { select: { code: true } } } });
+    const row = await prisma.liveDevice.findUnique({ where: { id: deviceId }, select: { id: true, name: true, kind: true, ownerId: true, disabledAt: true, camera: { select: { code: true } } } });
     if (!row)
     {
         return { ok: false, status: 404 };
     }
-    if (row.disabledAt || (row.ownerId !== user.id && user.role !== 'ADMIN'))
+    if (row.kind === 'BOARD')
+    {
+        return { ok: false, status: 401 };
+    }
+    if ((user.role !== 'VOLUNTEER' && user.role !== 'ADMIN') || row.disabledAt || (row.ownerId !== user.id && user.role !== 'ADMIN'))
     {
         return { ok: false, status: 403 };
+    }
+    return { ok: true, device: { id: row.id, name: row.name, cameraCode: row.camera?.code ?? null } };
+}
+
+export type BoardAccess = { ok: true; device: { id: string; name: string; cameraCode: string | null } } | { ok: false };
+
+// A bearer token opens only its own BOARD while that board is not removed. The comparison runs even for unknown ids.
+export async function boardAccess(prisma: PrismaClient, deviceId: string, token: string): Promise<BoardAccess>
+{
+    const row = await prisma.liveDevice.findUnique({ where: { id: deviceId }, select: { id: true, name: true, kind: true, tokenHash: true, disabledAt: true, camera: { select: { code: true } } } });
+    const matches = tokenMatches(token, row?.tokenHash ?? null);
+    if (!row || !matches || row.kind !== 'BOARD' || row.disabledAt)
+    {
+        return { ok: false };
     }
     return { ok: true, device: { id: row.id, name: row.name, cameraCode: row.camera?.code ?? null } };
 }
@@ -63,19 +82,22 @@ export async function listDevices(prisma: PrismaClient, store: FrameStore, optio
     const rows = await prisma.liveDevice.findMany({
         where: options.all ? { disabledAt: null } : { disabledAt: null, id: { in: [...online] } },
         orderBy: [{ name: 'asc' }, { createdAt: 'asc' }],
-        include: { owner: { select: { name: true } }, camera: { select: { code: true } } },
+        select: { id: true, name: true, kind: true, lastSeenAt: true, owner: { select: { name: true } }, camera: { select: { code: true } } },
     });
     return rows.map(row =>
     {
         const frameAt = store.lastFrameAt(row.id);
+        const reading = row.kind === 'BOARD' ? store.motion(row.id, now) : null;
         return {
             id: row.id,
             name: row.name,
+            kind: row.kind,
             ownerName: row.owner.name,
             cameraCode: row.camera?.code ?? null,
             online: online.has(row.id),
             recording: options.isRecording?.(row.id) ?? false,
             lastSeenAt: new Date(Math.max(frameAt ?? 0, row.lastSeenAt.getTime())).toISOString(),
+            motion: reading ? { percent: reading.percent, active: reading.active, box: reading.box, at: new Date(reading.at).toISOString() } : null,
         };
     });
 }

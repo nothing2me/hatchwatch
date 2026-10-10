@@ -136,15 +136,28 @@ export interface MapSnapshot
     generatedAt?: string;
 }
 
+export type LiveDeviceKind = 'PHONE' | 'BOARD';
+
+// Motion measured on a camera board, as last reported with a frame (schemas/esp32-frame.v1.md).
+export interface BoardMotionView
+{
+    percent: number;
+    active: boolean;
+    box: [number, number, number, number];
+    at: string;
+}
+
 export interface LiveDeviceView
 {
     id: string;
     name: string;
+    kind: LiveDeviceKind;
     ownerName: string;
     cameraCode: string | null;
     online: boolean;
     recording: boolean;
     lastSeenAt: string;
+    motion: BoardMotionView | null;
 }
 
 export interface RecordingView
