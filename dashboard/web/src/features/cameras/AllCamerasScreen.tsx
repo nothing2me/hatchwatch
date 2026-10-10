@@ -53,7 +53,7 @@ function CameraCard({ camera, device, loaded, detectionsOn }: { camera: CameraVi
                 </span>
             </div>
             {device
-                ? <div className="mt-2"><DeviceTile device={device} detectionsOn={detectionsOn} mask={null} live /></div>
+                ? <div className="mt-2"><DeviceTile device={device} detectionsOn={detectionsOn} mask={camera.mask ?? null} live /></div>
                 : clip
                 ? (
                     <div className="relative">
@@ -145,7 +145,7 @@ export function AllCamerasScreen({ user, initialSnapshot, connect }: { user: Ses
                                     <h2 id={`zone-${zone.code}`} className="text-lg font-semibold text-ink">Zone {zone.code}</h2>
                                     <span className="text-xs text-ink-muted">{zone.name}</span>
                                 </div>
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     {cameras.map(camera => <CameraCard key={camera.id} camera={camera} device={liveFor(camera)} loaded={loaded} detectionsOn={detectionsOn} />)}
                                 </div>
                             </section>
