@@ -33,7 +33,7 @@ export default function LoginPage()
                     </label>
                     {state.error && <p role="alert" className="text-sm text-danger">{state.error}</p>}
                     <Button type="submit" variant="primary" className="w-full" disabled={pending}>
-                        {pending ? 'Signing inâ€¦' : 'Sign in'}
+                        {pending ? 'Signing in…' : 'Sign in'}
                     </Button>
                 </form>
             </GlassPanel>

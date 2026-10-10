@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
 
 export const metadata: Metadata = {
-    title: 'NestTrace',
+    title: 'HatchWatch',
     description: 'Sea turtle crawl and digging activity monitoring, Port Aransas',
 };
 

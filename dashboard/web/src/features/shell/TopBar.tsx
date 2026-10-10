@@ -73,7 +73,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                 })}
             </nav>
 
-            <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas Â· Holiday Beach</span>
+            <span className="hidden truncate text-sm text-ink-muted xl:inline">Port Aransas · Holiday Beach</span>
 
             <div className="ml-auto flex items-center gap-1.5">
                 {dangerCount > 0 && firstDangerId && (
