@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include "camera.h"
+#include "console.h"
 #include "esp_http_server.h"
 #include "web_page.h"
 
@@ -94,7 +95,7 @@ namespace
                 {
                     if (++misses > STREAM_RETRIES)
                     {
-                        Serial.println("Stream: camera stopped delivering frames");
+                        CONSOLE("Stream: camera stopped delivering frames\n");
                         return ESP_FAIL;
                     }
                     delay(50);
@@ -137,7 +138,7 @@ bool webServerBegin()
         || !registerRoute(pageServer, "/capture", sendCapture)
         || !registerRoute(pageServer, "/status", sendStatus))
     {
-        Serial.println("Page server failed to start");
+        CONSOLE("Page server failed to start\n");
         return false;
     }
 
@@ -146,7 +147,7 @@ bool webServerBegin()
     config.ctrl_port += 1;
     if (httpd_start(&streamServer, &config) != ESP_OK || !registerRoute(streamServer, "/stream", sendStream))
     {
-        Serial.println("Stream server failed to start");
+        CONSOLE("Stream server failed to start\n");
         return false;
     }
     return true;

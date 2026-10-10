@@ -39,7 +39,7 @@ Close the IDE's Serial Monitor before uploading from the command line; it holds 
 ## How it picks a mode
 
 1. **Hardware JPEG** (OV2640, OV3660, OV5640): the sensor compresses each frame, 640×480, double-buffered in PSRAM.
-2. **Raw RGB565 + software JPEG** (sensors without JPEG, such as GC2145): one raw frame at up to 320×240 in **internal RAM**, encoded to JPEG on the ESP32.
+2. **Raw RGB565 + software JPEG** (sensors without JPEG, such as GC0308 on this board, or GC2145): one raw frame at up to 320×240 in **internal RAM**, encoded to JPEG on the ESP32.
 
 
 

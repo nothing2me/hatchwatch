@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include "camera.h"
+#include "console.h"
 #include "secrets.h"
 #include "web_server.h"
 
@@ -17,18 +18,18 @@ namespace
     // Tells you up front whether the board can see the network at all (2.4 GHz only).
     void reportNetworkVisibility()
     {
-        Serial.printf("Scanning for \"%s\" ...\n", WIFI_SSID);
+        CONSOLE("Scanning for \"%s\" ...\n", WIFI_SSID);
         const int count = WiFi.scanNetworks();
         for (int i = 0; i < count; i++)
         {
             if (WiFi.SSID(i) == WIFI_SSID)
             {
-                Serial.printf("  found on channel %d, signal %d dBm\n", WiFi.channel(i), WiFi.RSSI(i));
+                CONSOLE("  found on channel %d, signal %d dBm\n", WiFi.channel(i), WiFi.RSSI(i));
                 WiFi.scanDelete();
                 return;
             }
         }
-        Serial.printf("  not found among %d networks. Is the hotspot on and set to 2.4 GHz?\n", count);
+        CONSOLE("  not found among %d networks. Is the hotspot on and set to 2.4 GHz?\n", count);
         WiFi.scanDelete();
     }
 
@@ -42,7 +43,7 @@ namespace
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         {
             const auto reason = static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason);
-            Serial.printf("Wi-Fi not connected: %s (%d). Retrying automatically.\n",
+            CONSOLE("Wi-Fi not connected: %s (%d). Retrying automatically.\n",
                           WiFi.disconnectReasonName(reason), static_cast<int>(reason));
             break;
         }
@@ -64,11 +65,11 @@ namespace
     void announce()
     {
         const String ip = WiFi.localIP().toString();
-        Serial.printf("Wi-Fi connected, signal %d dBm\n", WiFi.RSSI());
-        Serial.printf("Camera page:   http://%s/\n", ip.c_str());
-        Serial.printf("Snapshot:      http://%s/capture\n", ip.c_str());
-        Serial.printf("Status (JSON): http://%s/status\n", ip.c_str());
-        Serial.printf("MJPEG stream:  http://%s:81/stream\n", ip.c_str());
+        CONSOLE("Wi-Fi connected, signal %d dBm\n", WiFi.RSSI());
+        CONSOLE("Camera page:   http://%s/\n", ip.c_str());
+        CONSOLE("Snapshot:      http://%s/capture\n", ip.c_str());
+        CONSOLE("Status (JSON): http://%s/status\n", ip.c_str());
+        CONSOLE("MJPEG stream:  http://%s:81/stream\n", ip.c_str());
     }
 }
 
@@ -76,13 +77,13 @@ void setup()
 {
     Serial.begin(115200);
     delay(1500);
-    Serial.println("\nNestTrace ESP32-S3 camera starting");
+    CONSOLE("\nNestTrace ESP32-S3 camera starting\n");
 
     // Camera first: the raw-mode frame buffer needs a large block of internal RAM before Wi-Fi takes its share.
     cameraReady = cameraBegin();
     if (!cameraReady)
     {
-        Serial.println("Stopped: camera not usable.");
+        CONSOLE("Stopped: camera not usable.\n");
         return;
     }
     startWifi();
@@ -99,7 +100,7 @@ void loop()
             serversStarted = webServerBegin();
             if (!serversStarted)
             {
-                Serial.println("Web server failed to start; press reset.");
+                CONSOLE("Web server failed to start; press reset.\n");
             }
         }
         if (serversStarted)

@@ -1,6 +1,7 @@
 #include "camera.h"
 
 #include "board_pins.h"
+#include "console.h"
 #include "esp_heap_caps.h"
 #include "img_converters.h"
 
@@ -133,23 +134,23 @@ namespace
             const uint16_t height = resolution[size].height;
             const size_t bytes = static_cast<size_t>(width) * height * 2;
             const size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-            Serial.printf("  raw %ux%u needs %u B, largest internal DMA block %u B ... ", width, height,
+            CONSOLE("  raw %ux%u needs %u B, largest internal DMA block %u B ... ", width, height,
                           static_cast<unsigned>(bytes), static_cast<unsigned>(largest));
             if (largest < bytes + 16 * 1024)
             {
-                Serial.println("skipped");
+                CONSOLE("skipped\n");
                 continue;
             }
 
             camera_config_t config = makeConfig(PIXFORMAT_RGB565, size);
             if (esp_camera_init(&config) != ESP_OK)
             {
-                Serial.println("init failed");
+                CONSOLE("init failed\n");
                 continue;
             }
             if (rawFramesArrive(bytes))
             {
-                Serial.println("ok");
+                CONSOLE("ok\n");
                 applyOrientation();
                 info.mode = CaptureMode::RawRgb565;
                 info.width = width;
@@ -157,7 +158,7 @@ namespace
                 info.frameBufferInPsram = false;
                 return true;
             }
-            Serial.println("no complete frames");
+            CONSOLE("no complete frames\n");
             esp_camera_deinit();
             delay(100);
         }
@@ -169,7 +170,7 @@ bool cameraBegin()
 {
     if (!psramFound())
     {
-        Serial.println("PSRAM not found: set Tools > PSRAM to \"OPI PSRAM\" and upload again.");
+        CONSOLE("PSRAM not found: set Tools > PSRAM to \"OPI PSRAM\" and upload again.\n");
         return false;
     }
 
@@ -179,16 +180,16 @@ bool cameraBegin()
     }
     else
     {
-        Serial.println("Sensor has no hardware JPEG; trying raw RGB565 in internal RAM:");
+        CONSOLE("Sensor has no hardware JPEG; trying raw RGB565 in internal RAM:\n");
         if (!startRawRgb565())
         {
-            Serial.println("No raw size worked. Reseat the camera ribbon and remove anything wired to GPIO 4-18.");
+            CONSOLE("No raw size worked. Reseat the camera ribbon and remove anything wired to GPIO 4-18.\n");
             return false;
         }
         readSensorIdentity();
     }
 
-    Serial.printf("Camera: %s (PID 0x%04x), %s, %ux%u, frame buffer in %s\n", info.sensorName, info.sensorPid,
+    CONSOLE("Camera: %s (PID 0x%04x), %s, %ux%u, frame buffer in %s\n", info.sensorName, info.sensorPid,
                   captureModeName(info.mode), info.width, info.height, info.frameBufferInPsram ? "PSRAM" : "internal RAM");
     return true;
 }
