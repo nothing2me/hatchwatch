@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, LoaderCircle, ShieldCheck, Siren } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { CAMERA_DANGER_LABEL, isCameraDanger } from '@/lib/danger';
 import type { AlertView } from '@/lib/types';
 import { trailColor } from '@/features/map/trails';
 import { type DangerGroup, siteLabel } from './dangerGroups';
@@ -159,6 +160,72 @@ export function DangerGroupCard({ group, sites, canResolve, onSelect, selectedId
     );
 }
 
+// A person seen on a linked live camera while its zone had active unprotected sites. Its own card: there is no
+// nest site and no measured distance, so it is never grouped with site dangers.
+export function CameraDangerCard({ danger, canResolve, onSelect, selected }: { danger: AlertView; canResolve: boolean; onSelect: (alert: AlertView) => void; selected: boolean })
+{
+    const [busy, setBusy] = useState(false);
+    const [done, setDone] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    async function resolve()
+    {
+        setError(null);
+        setBusy(true);
+        const result = await resolveDanger(danger.id);
+        setBusy(false);
+        if (result.ok)
+        {
+            setDone(true);
+        }
+        else
+        {
+            setError(result.error);
+        }
+    }
+
+    return (
+        <li className={cn('relative overflow-hidden rounded-lg bg-alarm/[0.09] ring-1 ring-alarm/45 ring-inset', selected && 'ring-2 ring-alarm/80')}>
+            <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-alarm motion-safe:animate-[alarm-bar_1.6s_ease-in-out_infinite]" />
+            <button
+                type="button"
+                onClick={() => onSelect(danger)}
+                aria-label={`Level 1 danger. Camera alert on camera ${danger.cameraCode}, zone ${danger.zoneCode}, ${clock.format(new Date(danger.createdAt))}`}
+                className="w-full px-3 pt-2 pb-2 text-left transition-colors hover:bg-alarm/[0.06] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-alarm"
+            >
+                <span className="flex items-center gap-2">
+                    <DangerBadge />
+                    <span className="ml-auto font-mono text-[11px] text-[#FFB3BA] tabular-nums">{clock.format(new Date(danger.createdAt))}</span>
+                </span>
+                <span className="mt-1.5 block text-sm leading-snug font-semibold text-white">{CAMERA_DANGER_LABEL}</span>
+                <span className="mt-0.5 block font-mono text-xs text-[#FFB3BA]/80">
+                    Camera {danger.cameraCode} · Zone {danger.zoneCode} · {stamp.format(new Date(danger.createdAt))}
+                </span>
+                <span className="mt-1 block text-[11px] leading-snug text-ink-muted">{danger.message}</span>
+            </button>
+            {(canResolve || done || error) && (
+                <div className="flex items-center gap-2 border-t border-alarm/25 bg-night-950/40 px-3 py-1.5">
+                    {done
+                        ? <span className="inline-flex h-6 items-center gap-1 text-[11px] font-medium text-ok"><ShieldCheck aria-hidden className="h-3.5 w-3.5" />Resolved</span>
+                        : canResolve && (
+                            <button
+                                type="button"
+                                onClick={() => void resolve()}
+                                aria-label={`Resolve camera alert on camera ${danger.cameraCode}`}
+                                disabled={busy}
+                                className="ml-auto inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[11px] font-semibold text-[#FFB3BA] ring-1 ring-alarm/50 transition-colors hover:bg-alarm hover:text-white focus-visible:outline-2 focus-visible:outline-alarm disabled:opacity-50"
+                            >
+                                {busy && <LoaderCircle aria-hidden className="h-3 w-3 animate-spin" />}
+                                Resolve
+                            </button>
+                        )}
+                    {error && <p role="alert" className="flex-1 rounded-md bg-alarm/15 px-2 py-1 text-xs text-[#FFB3BA] ring-1 ring-alarm/30">{error}</p>}
+                </div>
+            )}
+        </li>
+    );
+}
+
 // A danger someone resolved: its own card in Inactive (not the nest-site outcome note).
 export function ResolvedDangerCard({ danger, site, onSelect, selected }: { danger: AlertView; site: AlertView | undefined; onSelect: (alert: AlertView) => void; selected: boolean })
 {
@@ -177,7 +244,7 @@ export function ResolvedDangerCard({ danger, site, onSelect, selected }: { dange
                     Danger resolved by {danger.resolvedBy ?? 'a volunteer'}
                 </span>
                 <span className="mt-0.5 block font-mono text-xs text-ink-muted">
-                    {site ? siteLabel(site) : `Zone ${danger.zoneCode}`} · {stamp.format(new Date(danger.resolvedAt ?? danger.createdAt))}
+                    {isCameraDanger(danger) ? `Camera ${danger.cameraCode} · Zone ${danger.zoneCode}` : site ? siteLabel(site) : `Zone ${danger.zoneCode}`} · {stamp.format(new Date(danger.resolvedAt ?? danger.createdAt))}
                 </span>
             </button>
         </li>

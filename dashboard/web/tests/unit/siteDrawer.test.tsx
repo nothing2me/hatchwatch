@@ -217,3 +217,27 @@ describe('SiteDrawer for a danger alert', () =>
     });
 });
 
+
+describe('SiteDrawer for a camera-level danger', () =>
+{
+    const camera = siteAlert('cd1', { danger: 'active', detectedAt: null }, { kind: 'DANGER', level: 1, siteId: null, videoId: null, simRunId: null, simulated: false, cameraCode: 'A1', zoneCode: 'A', message: 'Danger · person seen on camera A1 near active nest sites — check now', radiusM: 0, startT: 0, endT: 0, score: null });
+    const cameraLog = {
+        site: { id: 'cd1' },
+        summary: { ...openSite, danger: 'active' },
+        events: [{ id: 'e1', type: 'danger', author: 'Camera', note: 'Person on camera A1 (track P1), 1 active unprotected site(s) in zone A', at: '2026-10-09T00:00:00.000Z' }],
+    };
+
+    it('says it is a camera alert, not a measured distance, and keeps the resolve form', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json(cameraLog)));
+        render(<SiteDrawer alert={camera} user={volunteer} onClose={vi.fn()} />);
+        await screen.findByText(/Person on camera A1/);
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.textContent).toContain('Camera alert · person detected (not measured distance)');
+        expect(dialog.textContent).toContain('Camera A1');
+        expect(dialog.textContent).not.toContain('Nest site at risk');
+        expect(dialog.textContent).not.toContain('Person approach');
+        expect(dialog.textContent).not.toContain('Within');
+        expect(within(dialog).getByRole('button', { name: 'Resolve danger' })).toBeTruthy();
+    });
+});

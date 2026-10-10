@@ -6,8 +6,8 @@ const rows: SnapshotRows = {
     zones: [{ id: 'z1', code: 'B', name: 'Holiday', activityLevel: 'HIGH',
         outline: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } }],
     cameras: [
-        { id: 'c1', code: 'B1', zone: { code: 'B' }, lng: 1, lat: 2, headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibration: null, videos: [{ id: 'v9', source: 'SIMULATION', durationS: 61.5, pureMotionPath: 'sim/R/motion-0.mp4', simRunId: 'R' }] },
-        { id: 'c2', code: 'B2', zone: { code: 'B' }, lng: 3, lat: 4, headingDeg: 56, fovDeg: 44, rangeM: 350, status: 'OFFLINE', calibration: { pairs: [] }, videos: [] },
+        { id: 'c1', code: 'B1', zone: { code: 'B' }, lng: 1, lat: 2, headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibration: null, videos: [{ id: 'v9', source: 'SIMULATION', durationS: 61.5, pureMotionPath: 'sim/R/motion-0.mp4', simRunId: 'R' }], liveDevice: null },
+        { id: 'c2', code: 'B2', zone: { code: 'B' }, lng: 3, lat: 4, headingDeg: 56, fovDeg: 44, rangeM: 350, status: 'OFFLINE', calibration: { pairs: [] }, videos: [], liveDevice: null },
     ],
     alerts: [
         { id: 'a1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zone: { code: 'B' }, camera: { code: 'B1' }, lng: 1, lat: 2, radiusM: 0.9, score: 1.6, createdAt: new Date('2026-10-09T18:00:00Z'), videoId: 'v9', video: { simRunId: 'R' }, startT: 12, endT: 30, evidenceTier: 'TWO_CAMERA', simulated: true, events: [{ type: 'detected', at: new Date('2026-10-09T18:00:00Z') }] },
@@ -134,5 +134,19 @@ describe('secured sites', () =>
         expect(toMapSnapshot({ ...rows, alerts: [siteWithDanger] }).alerts[0].site.secured).toBeNull();
         const snapshot = toMapSnapshot({ ...rows, alerts: [siteWithDanger], dangerResolutions: [{ siteId: 'a1', at: new Date('2026-10-09T18:06:00Z'), author: 'Rae' }] });
         expect(snapshot.alerts[0].site.secured).toEqual({ by: 'Rae', at: '2026-10-09T18:06:00.000Z' });
+    });
+});
+
+describe('camera-level danger', () =>
+{
+    it('maps a danger without a clip or site and leaves outcomes alone', () =>
+    {
+        const camera = { ...rows.alerts[0], id: 'cd1', kind: 'DANGER' as const, message: 'Danger · person seen on camera B1 near active nest sites — check now', level: 1, siteId: null, videoId: null, video: null, score: null, radiusM: 0, startT: 0, endT: 0, simulated: false, evidenceTier: null, events: [
+            { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+        ] };
+        const now = new Date('2026-10-09T19:00:00Z');
+        const snapshot = toMapSnapshot({ ...rows, alerts: [...rows.alerts, camera], now });
+        expect(snapshot.alerts[2]).toMatchObject({ id: 'cd1', videoId: null, simRunId: null, siteId: null, level: 1 });
+        expect(snapshot.outcomes).toEqual(toMapSnapshot({ ...rows, now }).outcomes);
     });
 });

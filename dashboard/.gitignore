@@ -8,3 +8,4 @@ web/.env
 web/AGENTS.md
 /media/
 server-data/
+/recordings/

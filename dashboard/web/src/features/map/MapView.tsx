@@ -7,6 +7,7 @@ import { forwardRef, useEffect, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Popup, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import { cn } from '@/lib/cn';
+import { CAMERA_DANGER_LABEL } from '@/lib/danger';
 import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
 import type { FeedVideo, LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
@@ -422,8 +423,8 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                         <button
                             type="button"
                             onClick={event => { event.stopPropagation(); onSelectAlert?.(pin.id); }}
-                            aria-label="Danger: person near a nest site"
-                            title="Danger · person near a nest site"
+                            aria-label={pin.siteId === null ? CAMERA_DANGER_LABEL : 'Danger: person near a nest site'}
+                            title={pin.siteId === null ? CAMERA_DANGER_LABEL : 'Danger · person near a nest site'}
                             className={cn('relative grid h-7 w-7 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white',
                                 pin.id === selectedAlertId && 'ring-2 ring-amber ring-offset-2 ring-offset-transparent')}
                         >

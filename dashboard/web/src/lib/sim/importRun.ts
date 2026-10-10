@@ -134,7 +134,7 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
                 },
             });
             await tx.siteEvent.create({ data: { alertId: created.id, type: 'detected', author: 'Camera', userId: null, at: importedAt } });
-            sites.push({ pinId: simPin.id, alertId: created.id, videoId: created.videoId, cameraId: created.cameraId, position: [lng, lat], startT: simPin.interval[0] });
+            sites.push({ pinId: simPin.id, alertId: created.id, videoId: videos[view].id, cameraId: created.cameraId, position: [lng, lat], startT: simPin.interval[0] });
         }
 
         // A looping demo clip has no wall clock: its dangers are logged at import time, after the detections.

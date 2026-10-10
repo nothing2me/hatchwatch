@@ -427,6 +427,8 @@ export interface CameraRow
     liveSlot: boolean;
     /** Latest simulation clip: the mask editor draws its polygon over this feed. */
     video?: { id: string; maskPolygon: [number, number][] | null } | null;
+    liveDeviceId: string | null;
+    liveDeviceName: string | null;
 }
 
 // Every camera with its footage, alert counts and latest pickup, for Setup → Cameras.
@@ -437,6 +439,7 @@ export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code
         prisma.camera.findMany({
             include: {
                 zone: { select: { code: true } },
+                liveDevice: { select: { id: true, name: true } },
                 _count: { select: { videos: true, alerts: true } },
                 videos: { where: { source: 'SIMULATION' }, orderBy: { createdAt: 'desc' }, take: 1, select: { id: true, maskPolygon: true } },
             },
@@ -451,6 +454,49 @@ export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code
             fovDeg: camera.fovDeg, rangeM: camera.rangeM, status: camera.status, footage: camera._count.videos, alerts: camera._count.alerts,
             liveSlot: isLiveSlot(camera.code, camera.zone.code),
             video: camera.videos[0] ? { id: camera.videos[0].id, maskPolygon: Array.isArray(camera.videos[0].maskPolygon) ? camera.videos[0].maskPolygon as [number, number][] : null } : null,
+            liveDeviceId: camera.liveDevice?.id ?? null, liveDeviceName: camera.liveDevice?.name ?? null,
         })),
     };
+}
+
+// Shows a phone's live picture on a camera (deviceId) or returns it to the simulation loop (null).
+export async function setCameraSource(prisma: PrismaClient, actorId: string, code: string, deviceId: string | null): Promise<{ code: string }>
+{
+    try
+    {
+        await prisma.$transaction(async tx =>
+        {
+            const camera = await tx.camera.findUnique({ where: { code }, include: { liveDevice: { select: { id: true } } } });
+            if (!camera)
+            {
+                throw new CameraEditError(`Camera ${code} no longer exists.`);
+            }
+            let deviceName: string | null = null;
+            if (deviceId)
+            {
+                const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, select: { name: true, disabledAt: true, camera: { select: { code: true } } } });
+                if (!device || device.disabledAt)
+                {
+                    throw new CameraEditError('That phone was removed.');
+                }
+                if (device.camera && device.camera.code !== code)
+                {
+                    throw new CameraEditError(`${device.name} already feeds camera ${device.camera.code}; set ${device.camera.code} back to Simulation loop first.`);
+                }
+                deviceName = device.name;
+            }
+            await tx.camera.update({ where: { id: camera.id }, data: { liveDeviceId: deviceId } });
+            await tx.auditLog.create({ data: { userId: actorId, action: 'camera.source', targetType: 'Camera', targetId: camera.id, details: { code, from: camera.liveDevice?.id ?? null, to: deviceId, deviceName } } });
+        });
+    }
+    catch (error)
+    {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
+        {
+            throw new CameraEditError('That phone was just linked to another camera; try again.');
+        }
+        throw error;
+    }
+    publishChange('cameras');
+    return { code };
 }

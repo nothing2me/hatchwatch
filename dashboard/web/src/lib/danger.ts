@@ -119,3 +119,9 @@ export function limitDangersPerSite(dangers: Danger[], windowS = DANGER_SITE_WIN
 
 /** Danger alerts are events about a nest site, not sites: site counts, analytics and outcomes leave them out. */
 export const isNestSite = (alert: { kind: string }): boolean => alert.kind !== 'DANGER';
+
+export const CAMERA_DANGER_LABEL = 'Camera alert · person detected (not measured distance)';
+
+/** Camera-level danger from live detection: no clip and no nest site. Never a measured distance to a nest. */
+export const isCameraDanger = (alert: { kind: string; siteId: string | null; videoId: string | null }): boolean =>
+    alert.kind === 'DANGER' && alert.siteId === null && alert.videoId === null;

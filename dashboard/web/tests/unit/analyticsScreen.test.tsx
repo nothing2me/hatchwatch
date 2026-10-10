@@ -141,6 +141,15 @@ describe('TopBar', () =>
         expect(screen.getByText('active site')).toBeTruthy();
     });
 
+    it('keeps Live cameras available to viewers alongside Cameras and Analytics', () =>
+    {
+        render(<TopBar user={viewer} current="live" camerasOnline={1} camerasTotal={2} activeSites={0} />);
+        const nav = screen.getByRole('navigation', { name: 'Main' });
+        expect(within(nav).getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
+        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('href')).toBe('/live');
+        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('aria-current')).toBe('page');
+    });
+
     it('keeps Cameras and Settings in the main navigation and Users inside Settings', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);

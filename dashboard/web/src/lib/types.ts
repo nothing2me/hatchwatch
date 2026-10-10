@@ -82,6 +82,7 @@ export interface CameraView
     status: CameraStatus;
     calibrated: boolean;
     video: FeedVideo | null;
+    liveDevice: { id: string; name: string } | null;
 }
 
 export interface AlertView
@@ -96,7 +97,8 @@ export interface AlertView
     radiusM: number;
     score: number | null;
     createdAt: string;       // ISO
-    videoId: string;
+    /** Null for camera-level dangers (no clip). */
+    videoId: string | null;
     simRunId: string | null;
     startT: number;
     endT: number;
@@ -153,4 +155,70 @@ export interface MapSnapshot
     fadeMinutes: number;
     /** ISO time the server built this snapshot; the client re-applies time rules (30-min Not saved) from here. */
     generatedAt?: string;
+}
+
+export type LiveDeviceKind = 'PHONE' | 'BOARD';
+
+// Motion measured on a camera board, as last reported with a frame (schemas/esp32-frame.v1.md).
+export interface BoardMotionView
+{
+    percent: number;
+    active: boolean;
+    box: [number, number, number, number];
+    at: string;
+}
+
+export type DetectionLabel = 'person' | 'possible turtle';
+export type PixelBox = [number, number, number, number];
+
+export interface DetectedObject
+{
+    track: string;            // 'P3' person, 'T1' possible turtle; per device
+    label: DetectionLabel;
+    score?: number;           // people only; a model score, not a probability
+    box: PixelBox;            // x, y, w, h in picture pixels
+}
+
+export interface DetectionTrail
+{
+    track: string;
+    label: DetectionLabel;
+    points: [number, number, number][];   // [epoch ms, x, y] box centres, oldest first, ≤ 60 points / 30 s
+}
+
+// Newest result of the live detection worker for one device (memory only, same lifetime as frames).
+export interface DetectionsView
+{
+    at: number;               // frame time (epoch ms) the result belongs to
+    dark: boolean;
+    width: number;
+    height: number;
+    objects: DetectedObject[];
+    trails: DetectionTrail[];
+}
+
+export interface LiveDeviceView
+{
+    id: string;
+    name: string;
+    kind: LiveDeviceKind;
+    ownerName: string;
+    cameraCode: string | null;
+    online: boolean;
+    recording: boolean;
+    lastSeenAt: string;
+    motion: BoardMotionView | null;
+    detections: DetectionsView | null;
+}
+
+export interface RecordingView
+{
+    path: string;
+    deviceId: string;
+    deviceName: string;
+    cameraCode: string | null;
+    startedAt: string;
+    durationS: number;
+    sizeBytes: number;
+    playable: boolean;
 }

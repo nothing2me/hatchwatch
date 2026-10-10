@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SignJWT } from 'jose';
-import { createSessionToken, readSessionToken, type SessionUser } from '@/lib/auth/session';
+import { createSessionToken, readSessionToken, sessionCookieOptions, type SessionUser } from '@/lib/auth/session';
 
 const secret = 'test-secret-that-is-long-enough-0123456789';
 const user: SessionUser = { id: 'u1', email: 'a@b.c', name: 'A', role: 'ADMIN' };
@@ -62,5 +62,34 @@ describe('session tokens', () =>
     {
         const token = await createSessionToken({ ...user, role: 'ROOT' as never }, secret);
         expect(await readSessionToken(token, secret)).toBeNull();
+    });
+});
+
+describe('sessionCookieOptions', () =>
+{
+    afterEach(() =>
+    {
+        vi.unstubAllEnvs();
+    });
+
+    it('is Secure for HTTPS requests even with INSECURE_COOKIES=1', () =>
+    {
+        vi.stubEnv('NODE_ENV', 'production');
+        vi.stubEnv('INSECURE_COOKIES', '1');
+        expect(sessionCookieOptions({ secure: true }).secure).toBe(true);
+    });
+
+    it('is not Secure over plain HTTP with INSECURE_COOKIES=1', () =>
+    {
+        vi.stubEnv('NODE_ENV', 'production');
+        vi.stubEnv('INSECURE_COOKIES', '1');
+        expect(sessionCookieOptions().secure).toBe(false);
+    });
+
+    it('is Secure over plain HTTP in production without INSECURE_COOKIES', () =>
+    {
+        vi.stubEnv('NODE_ENV', 'production');
+        vi.stubEnv('INSECURE_COOKIES', '');
+        expect(sessionCookieOptions().secure).toBe(true);
     });
 });

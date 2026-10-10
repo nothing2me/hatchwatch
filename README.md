@@ -23,6 +23,8 @@ HatchWatch uses **OpenCV-based computer vision** to analyze beach camera footage
 - **A research simulator and detector** in this directory. A Three.js beach generates two synchronized camera videos; a separate Python/OpenCV process analyzes saved-video differences without access to turtle state or hidden eggs. The simulator makes repeatable tests possible, including missed digs, false alarms, and dark footage.
 - **An operations dashboard** in [`dashboard/`](dashboard/README.md), with a map, camera playback, access roles, and a site log for human follow-up. A continuous **synthetic** feed exercises that workflow through a versioned public-data adapter. The dashboard does not read simulator truth or depend on the local research API; [`agent.md`](agent.md) defines the boundary.
 
+- **Camera firmware** in [`firmware/esp32s3-cam/`](firmware/esp32s3-cam/README.md), with verified HTTPS frame uploads and on-board motion measurements. The dashboard also accepts phone cameras and provides recordings and a separate live detection worker.
+
 ## Current status
 
 > [!IMPORTANT]
@@ -31,6 +33,117 @@ HatchWatch uses **OpenCV-based computer vision** to analyze beach camera footage
 Earlier registered daylight results apply to earlier simulator footage; on the current photoreal scene, a development stress batch missed its digging cases, and the very-dark visible-light detector remains ineffective. The separate [active near-IR night development mode](docs/NEAR_IR.md) models camera-mounted illumination and monochrome capture; it is not a spectral or field validation. Read [the current-scene stress report](docs/STRESS_DEV_RESULTS.md), [night probe](docs/NIGHT_DENOISE.md), and [registered results](SWARM_RESULTS.md) before interpreting a demo pin as evidence of performance.
 
 The beach model is an 84 × 32 m two-layer bed with 134,400 simulated grains. TypeScript/Vite/Three.js render the 1280 × 720 camera views; Python/OpenCV extracts difference signals and runs the blind detector. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times. The sections below explain how to run the prototype and reproduce its experiments.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    subgraph research["Research (repo root)"]
+        sim["Beach simulator<br/>web/ · Three.js"]
+        pipe["Detector<br/>pipeline/ · OpenCV"]
+        post["Blind post-steps<br/>tracks · people"]
+        sim -->|camera videos| pipe --> post
+    end
+
+    pub[("artifacts/public<br/>videos · pins · tracks")]
+    post --> pub
+    pipe --> pub
+
+    subgraph laptop["Dashboard laptop (Docker Compose)"]
+        caddy["Caddy<br/>HTTPS :3443"]
+        web["Next.js web<br/>127.0.0.1:3000"]
+        db[("Postgres<br/>127.0.0.1:5433")]
+        worker["Detection worker<br/>Python · OpenCV · YOLOX-nano"]
+        rec[("recordings/<br/>mp4, 72 h")]
+        caddy --> web
+        web <--> db
+        web --> rec
+        worker <-->|internal network only| web
+    end
+
+    pub -->|sim-import · live watcher<br/>read-only| web
+
+    phone["Phones<br/>/cam page"] -->|JPEG frames| caddy
+    board["ESP32-S3 board<br/>token + motion header"] -->|JPEG frames| caddy
+    people["Volunteers & admins<br/>browser"] -->|login| caddy
+```
+
+### A live frame, from camera to alert
+
+```mermaid
+sequenceDiagram
+    participant B as ESP32 board / phone
+    participant W as Dashboard web
+    participant K as Detection worker
+    participant U as Volunteer's browser
+
+    B->>W: POST frame (HTTPS, token or login)
+    W->>W: keep newest frame in memory, record to mp4
+    K->>W: GET newest frame (internal API, worker token)
+    K->>K: YOLOX-nano people, possible-turtle rule, tracks
+    K->>W: POST detections (boxes, trails)
+    alt person on a linked camera for 2 s and the zone has unprotected nests
+        W->>W: open one camera danger alert (level 1)
+    end
+    U->>W: poll live devices and the map
+    W-->>U: picture, boxes, trails, alerts
+    U->>W: Resolve danger / log patrol action
+```
+
+### Life of a nest site
+
+A digging alert becomes a nest site with an append-only log, and its state is always derived from that log. Only a volunteer moves it past "Unprotected". Analytics counts a site as **Saved** when it hatched after protection was installed, and **Not saved** when it was lost, archived while unprotected, or had a danger event not followed by protection within 30 minutes.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unprotected: detected (digging alert)
+    Unprotected --> Protected: protectionInstalled
+    Unprotected --> NoNest: noNestFound
+    Unprotected --> Archived: not touched for 20 min (live feed only)
+    Protected --> Confirmed: nestConfirmed
+    Unprotected --> Confirmed: nestConfirmed
+    Confirmed --> Hatched: hatched
+    Confirmed --> Lost: lost
+    Protected --> Lost: lost
+    Hatched --> [*]: Saved (if protection was installed)
+    Lost --> [*]: Not saved
+    Archived --> [*]: Not saved (still unprotected)
+    NoNest --> [*]
+
+    state "Danger (person near site)" as Danger
+    Unprotected --> Danger: danger
+    Danger --> Unprotected: dangerResolved
+```
+
+### Who can reach what
+
+```mermaid
+flowchart TB
+    lan["Devices on the Wi-Fi<br/>phones · ESP32 · laptops"]
+    subgraph host["Dashboard laptop"]
+        c["Caddy 0.0.0.0:3443<br/>(only open port)"]
+        w["web 127.0.0.1:3000"]
+        d["db 127.0.0.1:5433"]
+        subgraph internal["internal network (no internet)"]
+            k["detection worker"]
+        end
+    end
+    lan -->|HTTPS + login / device token| c --> w
+    w --> d
+    k -->|worker token| w
+    c -.->|/api/internal/* never proxied| x((blocked))
+```
+
+## Quick start (dashboard)
+
+```sh
+cd dashboard
+cp .env.example .env          # set secrets, LAN_HOST = this laptop's Wi-Fi address, WORKER_TOKEN
+docker compose up -d --build  # web, db, caddy, worker
+```
+
+Open http://localhost:3000 on the laptop, or `https://<LAN_HOST>:3443` from a phone on the same Wi-Fi. Sign in with the seeded admin from `.env`. From **Live cameras**, use **Connect phone** (QR code) or **Add board camera** (ESP32). The full guide is [`dashboard/README.md`](dashboard/README.md).
+
 
 ## Run locally
 

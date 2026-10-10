@@ -94,17 +94,28 @@ export async function setDisabled(prisma: PrismaClient, actorId: string, userId:
     {
         throw new UserError('SELF', 'You cannot disable yourself.');
     }
-    const user = await prisma.$transaction(async tx =>
+    const { user, unlinked } = await prisma.$transaction(async tx =>
     {
         if (!await tx.user.findUnique({ where: { id: userId }, select: { id: true } }))
         {
             throw new UserError('NOT_FOUND', 'That person no longer exists.');
         }
         const updated = await tx.user.update({ where: { id: userId }, data: { disabledAt: disabled ? new Date() : null }, select });
-        await tx.auditLog.create({ data: { userId: actorId, action: disabled ? 'user.disable' : 'user.enable', targetType: 'User', targetId: userId } });
-        return updated;
+        // A disabled person's phones stop feeding the map; their cameras return to the simulation loop.
+        // Boards belong to the deployment, not to the admin who added them, so they stay linked.
+        const cameras = disabled ? await tx.camera.findMany({ where: { liveDevice: { ownerId: userId, kind: 'PHONE' } }, select: { code: true } }) : [];
+        if (cameras.length > 0)
+        {
+            await tx.camera.updateMany({ where: { liveDevice: { ownerId: userId, kind: 'PHONE' } }, data: { liveDeviceId: null } });
+        }
+        await tx.auditLog.create({ data: { userId: actorId, action: disabled ? 'user.disable' : 'user.enable', targetType: 'User', targetId: userId, details: disabled ? { unlinkedCameras: cameras.map(c => c.code) } : undefined } });
+        return { user: updated, unlinked: cameras.length };
     });
     publishChange('users');
+    if (unlinked > 0)
+    {
+        publishChange('cameras');
+    }
     return user;
 }
 
