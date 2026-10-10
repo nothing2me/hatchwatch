@@ -19,7 +19,7 @@ namespace
     constexpr uint32_t BACKOFF_MAX_MS = 30000;
     constexpr uint32_t BUSY_WAIT_MS = 1000;          // after 429
     constexpr size_t MIN_INTERNAL_FREE = 12 * 1024;  // sockets and lwIP still use internal RAM
-    constexpr uint32_t STACK_BYTES = 12 * 1024;      // in PSRAM; this task never touches flash
+    constexpr uint32_t STACK_BYTES = 12 * 1024;      // in PSRAM; this task must not write flash or NVS (its stack is in PSRAM)
 
     SemaphoreHandle_t statusLock = nullptr;
     uplink::Status current;
@@ -59,6 +59,7 @@ namespace
         xSemaphoreTake(statusLock, portMAX_DELAY);
         current.state = "sending";
         current.sent++;
+        current.lastError[0] = '\0';  // the last error is cleared once a frame gets through
         xSemaphoreGive(statusLock);
     }
 
@@ -83,7 +84,12 @@ namespace
         http.setReuse(true);  // one keep-alive TLS connection for every frame
         http.setConnectTimeout(5000);
         http.setTimeout(5000);
-        const String url = String(DASHBOARD_URL) + "/api/live/frame/" + DEVICE_ID;
+        String base(DASHBOARD_URL);
+        while (base.endsWith("/"))
+        {
+            base.remove(base.length() - 1);  // "https://host:3443/" and "https://host:3443" give the same URL
+        }
+        const String url = base + "/api/live/frame/" + DEVICE_ID;
         const String authorization = String("Bearer ") + DEVICE_TOKEN;
 
         uint32_t sequence = 0;
@@ -101,6 +107,7 @@ namespace
             JpegFrame frame(sequence, 1000);  // the next frame newer than the last one sent
             if (!frame.ok())
             {
+                delay(100);  // an encoder failure returns at once; yield so the idle task can feed the watchdog
                 continue;
             }
             sequence = frame.sequence();
@@ -240,7 +247,7 @@ uplink::Status uplink::status()
 
 int uplink::motionHeader(char *out, size_t size, float percent, bool active, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    const float clamped = percent < 0 ? 0 : (percent > 100 ? 100 : percent);
+    const float clamped = percent >= 0 ? (percent <= 100 ? percent : 100) : 0;  // NaN fails both tests and becomes 0
     if (!active)
     {
         x = y = w = h = 0;  // the contract sends 0,0,0,0 when nothing moves

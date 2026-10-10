@@ -47,6 +47,7 @@ Close the IDE's Serial Monitor before uploading from the command line; it holds 
 3. Board, laptop and phones must be on the same 2.4 GHz-capable Wi-Fi, and `DASHBOARD_URL` must use the laptop's address on that network (`LAN_HOST` in `dashboard/.env`).
 4. Upload. The Serial Monitor prints `Dashboard upload: https://... as device ...`. The camera page's **Dashboard** row shows `sending · N frames`, and the board appears under **Live cameras**.
 5. What it sends: the newest JPEG at most 5 times a second, and the header `X-NestTrace-Motion` (`schemas/esp32-frame.v1.md`). On errors it waits 2 s, doubling to 30 s; on HTTP 429 it waits 1 s. If the dashboard refuses the token (401/403), it stops and logs `Dashboard refused the token`. Fix `DEVICE_ID`/`DEVICE_TOKEN` and press reset.
+   Motion runs on raw frames only, so a board with a hardware-JPEG sensor (OV2640, OV3660, OV5640) always shows **Still** on the dashboard.
 6. **If the Dashboard row says `no-memory` or a TLS memory error.** TLS needs about 40 KB. The firmware already moves mbedTLS to PSRAM and keeps the uplink stack there; only about 21 KB of internal RAM is left after the camera and Wi-Fi. If it still fails, choose one:
    - **A.** Remove `FRAMESIZE_QVGA` from `RAW_SIZES` in `camera.cpp`. The raw picture drops to 240×176 and frees about 66 KB of internal RAM.
    - **B.** Leave `DASHBOARD_URL` empty and use a phone as the live camera.
