@@ -100,6 +100,23 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
                     Simulated
                 </span>
             )}
+            {variant === 'raw' && video.maskPolygon && video.maskPolygon.length >= 3 && (
+                <svg viewBox="0 0 1280 720" className="pointer-events-none absolute inset-0 h-full w-full" aria-label="Watch mask">
+                    <polygon
+                        points={video.maskPolygon.map(point => point.join(',')).join(' ')}
+                        fill="rgba(255,181,71,0.05)"
+                        stroke="#FFB547"
+                        strokeWidth={3}
+                        strokeDasharray="10 8"
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </svg>
+            )}
+            {variant === 'raw' && video.maskPolygon && (
+                <span className="absolute top-2 right-2 rounded-md bg-night-950/70 px-1.5 py-0.5 text-[10px] tracking-[0.12em] text-ink-muted uppercase ring-1 ring-amber/30">
+                    Watch mask
+                </span>
+            )}
             {video.hasMotion && (
                 <div role="radiogroup" aria-label="Feed view" className="absolute right-2 bottom-2 flex rounded-md bg-night-950/85 p-0.5 text-[11px] ring-1 ring-white/10">
                     {(['raw', 'motion'] as const).map(option => (

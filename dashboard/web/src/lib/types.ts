@@ -53,6 +53,9 @@ export interface FeedVideo
     hasMotion: boolean;
     simRunId: string | null;
     motionMap?: { url: string; corners: [LngLat, LngLat, LngLat, LngLat]; fitRmseM: number | null };
+    /** Operator-drawn watch polygon in source-frame pixels; motion signals are
+     * computed only inside it at extraction. Never simulator truth. */
+    maskPolygon?: [number, number][];
 }
 
 export interface CameraView

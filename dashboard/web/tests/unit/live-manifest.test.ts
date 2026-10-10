@@ -27,6 +27,15 @@ describe('liveManifestSchema', () =>
         Object.assign(manifest.cameras[0], { motion_map: 'view-1/motion-map.png' });
         expect(liveManifestSchema.safeParse(manifest).success).toBe(false);
     });
+    it('accepts an optional shared per-camera watch mask and rejects a wrong file', () =>
+    {
+        const manifest = validManifest();
+        Object.assign(manifest.cameras[0], { mask: 'mask.json' });
+        Object.assign(manifest.cameras[1], { mask: 'mask.json' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(true);
+        Object.assign(manifest.cameras[0], { mask: 'view-0/mask.json' });
+        expect(liveManifestSchema.safeParse(manifest).success).toBe(false);
+    });
     it('accepts the real runner output', () =>
     {
         const path = join(import.meta.dirname, '../fixtures/live-chunk/live-chunk.json');

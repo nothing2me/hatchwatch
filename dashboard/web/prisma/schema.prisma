@@ -120,6 +120,9 @@ model Video {
   motionFitRmseM Float?
   /// Sanitized public localized-activity candidates (unclassified, never alerts).
   motionCandidates Json?
+  /// Operator-drawn per-camera watch polygon in source-frame pixels; outside it
+  /// the motion-signal grid is excluded at extraction. Public operator config.
+  maskPolygon Json?
   /// Research run id for simulation imports.
   simRunId       String?
   originalName   String

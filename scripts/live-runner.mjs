@@ -14,7 +14,7 @@
 //   node scripts/live-runner.mjs [--scenario swarm-spread] [--model A] [--layout along|seaward] [--humans 0-4] [--keep 40] [--chunks 0]
 
 import {spawn} from 'node:child_process';
-import {mkdir, readFile, readdir, rename, rm, writeFile} from 'node:fs/promises';
+import {mkdir, copyFile, readFile, readdir, rename, rm, writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 
@@ -52,6 +52,11 @@ const chunkPattern = /^live-(\d{6})-([A-Za-z0-9]+)$/;
 const clipSeconds = 40;
 const fps = 8;
 const groundBounds = [-12, 12, -8, 8];
+// Camera masks are operator config, shared with the dashboard through the PUBLIC
+// artifacts dir: the dashboard (admin) edits artifacts/public/camera-masks.json
+// and the runner seeds it from config/ and applies it at extraction.
+const publicMasks = resolve(publicRoot, 'camera-masks.json');
+const masksFallback = resolve('config/camera-masks.json');
 
 let stopping = false;
 const children = new Set();
@@ -187,6 +192,13 @@ async function analyzeAndPublish(chunk)
         }
     }
 
+    const masksFile = existsSync(publicMasks) ? publicMasks : (existsSync(masksFallback) ? masksFallback : null);
+    if (masksFile)
+    {
+        await copyFile(masksFile, resolve(publicRun, 'mask.json'));
+        log(`Included camera mask config ${chunk.chunkId}`);
+    }
+
     const manifest =
     {
         schema: 'nesttrace.live-chunk',
@@ -201,8 +213,8 @@ async function analyzeAndPublish(chunk)
         ground_bounds_m: groundBounds,
         cameras:
         [
-            {index: 0, end: 'x_min', video: 'camera-0.mp4', calibration: 'calibration-0.json', motion_map: 'view-0/motion-map.png', motion_metadata: 'view-0/metadata.json', motion_candidates: 'view-0/detection/predictions.json', pure_motion: 'view-0/pure-motion.mp4'},
-            {index: 1, end: 'x_max', video: 'camera-1.mp4', calibration: 'calibration-1.json', motion_map: 'view-1/motion-map.png', motion_metadata: 'view-1/metadata.json', motion_candidates: 'view-1/detection/predictions.json', pure_motion: 'view-1/pure-motion.mp4'},
+            {index: 0, end: 'x_min', video: 'camera-0.mp4', calibration: 'calibration-0.json', motion_map: 'view-0/motion-map.png', motion_metadata: 'view-0/metadata.json', motion_candidates: 'view-0/detection/predictions.json', pure_motion: 'view-0/pure-motion.mp4', ...(existsSync(masksFile) ? {mask: 'mask.json'} : {})},
+            {index: 1, end: 'x_max', video: 'camera-1.mp4', calibration: 'calibration-1.json', motion_map: 'view-1/motion-map.png', motion_metadata: 'view-1/metadata.json', motion_candidates: 'view-1/detection/predictions.json', pure_motion: 'view-1/pure-motion.mp4', ...(existsSync(masksFile) ? {mask: 'mask.json'} : {})},
         ],
         pins: 'pins/predictions.json',
         note: 'Synthetic simulation output. Pins mark digging activity; nesting unresolved.',
@@ -223,6 +235,13 @@ async function main()
         throw Error(`Python environment not found at ${python}. Follow the README setup first.`);
     }
     await mkdir(publicRoot, {recursive: true});
+
+    // Seed the shared (dashboard-editable) public camera-mask file once.
+    if (existsSync(masksFallback) && !existsSync(publicMasks))
+    {
+        await copyFile(masksFallback, publicMasks);
+        log('Seeded public camera masks at artifacts/public/camera-masks.json');
+    }
 
     // Half-written chunks from an interrupted run have no manifest; clear them before starting.
     const existing = await listLiveChunks();

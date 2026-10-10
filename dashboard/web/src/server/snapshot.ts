@@ -16,7 +16,7 @@ export interface CameraRow
 {
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
-    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; liveChunk?: { groundBounds: unknown } | null }[];
+    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown } | null }[];
 }
 
 export interface AlertRow
@@ -149,6 +149,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
                 hasMotion: camera.videos[0].pureMotionPath !== null,
                 simRunId: camera.videos[0].simRunId,
                 ...(motionMap ? { motionMap } : {}),
+                ...(Array.isArray(camera.videos[0].maskPolygon) ? { maskPolygon: camera.videos[0].maskPolygon } : {}),
             }
             : null,
         };
@@ -258,7 +259,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
                 videos: {
                     // Live media that was pruned is skipped; chunks without a live record are unaffected.
                     where: { AND: [{ OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] }, { OR: [{ liveChunkId: null }, { liveChunk: { mediaPruned: false } }] }] },
-                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true, motionMapPath: true, motionFitRmseM: true, motionCandidates: true, liveChunk: { select: { groundBounds: true } } },
+                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true, motionMapPath: true, motionFitRmseM: true, motionCandidates: true, maskPolygon: true, liveChunk: { select: { groundBounds: true } } },
                     orderBy: { createdAt: 'desc' },
                     take: 1,
                 },

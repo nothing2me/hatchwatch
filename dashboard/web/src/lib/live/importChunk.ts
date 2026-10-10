@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
-import type { PrismaClient } from '@/generated/prisma/client';
+import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
 import { readRunPaths, storeRunPaths, type StoredSite } from '@/lib/sim/paths';
@@ -22,6 +22,11 @@ const candidateSchema = z.object({
     score: z.number().finite(),
 });
 const candidatesFileSchema = z.object({ methods: z.object({ frozen: z.array(candidateSchema).max(25) }) });
+const maskEntrySchema = z.object({
+    camera: z.number().nonnegative(),
+    polygon: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(3),
+});
+const maskFileSchema = z.object({ cameras: z.array(maskEntrySchema).min(1) });
 
 // Imports one live-chunk.v1 folder. Returns null when the chunk is already imported.
 export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoot }: { chunkDir: string; mediaRoot: string }): Promise<{ chunkId: string; zoneCode: string; sites: number; tracks: number; dangers: number } | null>
@@ -41,7 +46,7 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         return null;
     }
 
-    const files = [...manifest.cameras.flatMap(camera => [camera.video, camera.calibration, ...(camera.motion_map ? [camera.motion_map] : []), ...(camera.motion_metadata ? [camera.motion_metadata] : []), ...(camera.motion_candidates ? [camera.motion_candidates] : []), ...(camera.pure_motion ? [camera.pure_motion] : [])]), manifest.pins];
+    const files = [...new Set([...manifest.cameras.flatMap(camera => [camera.video, camera.calibration, ...(camera.motion_map ? [camera.motion_map] : []), ...(camera.motion_metadata ? [camera.motion_metadata] : []), ...(camera.motion_candidates ? [camera.motion_candidates] : []), ...(camera.pure_motion ? [camera.pure_motion] : []), ...(camera.mask ? [camera.mask] : [])]), manifest.pins])];
     const missing = files.filter(file => !existsSync(join(dir, file)));
     if (missing.length)
     {
@@ -52,6 +57,11 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
     {
         throw new Error(`Chunk ${manifest.chunk_id} calibration bounds differ from manifest`);
     }
+    // Optional per-camera operator watch masks (source-frame polygons). Public operator
+    // configuration; the raw feed and pins are still stored unchanged.
+    const masks = manifest.cameras.some(camera => camera.mask)
+        ? { byIndex: new Map(maskFileSchema.parse(readJson(join(dir, 'mask.json'))).cameras.map(entry => [entry.camera, entry.polygon])) }
+        : null;
     const motionMetadata = manifest.cameras.map(camera => camera.motion_metadata ? motionMetadataSchema.parse(readJson(join(dir, camera.motion_metadata))) : null);
     const motionCandidates = manifest.cameras.map(camera => camera.motion_candidates ? candidatesFileSchema.parse(readJson(join(dir, camera.motion_candidates))).methods.frozen.map(candidate => ({ id: candidate.id, point: candidate.point, interval: candidate.interval, radiusM: candidate.radius_m, score: candidate.score })) : []);
     const [xMin, xMax, zMin, zMax] = manifest.ground_bounds_m;
@@ -105,6 +115,10 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
                 mkdirSync(join(staging, `view-${camera.index}`), { recursive: true });
                 copyFileSync(join(dir, camera.pure_motion), join(staging, camera.pure_motion));
             }
+            if (camera.mask)
+            {
+                copyFileSync(join(dir, camera.mask), join(staging, camera.mask));
+            }
         }
         const result = await prisma.$transaction(async tx =>
         {
@@ -118,6 +132,7 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
                     motionMapPath: camera.motion_map ? relative(camera.motion_map) : null,
                     motionFitRmseM: motionMetadata[index]?.calibration_fit_rmse_m ?? null,
                     motionCandidates: motionCandidates[index],
+                    maskPolygon: masks?.byIndex.get(camera.index) ?? Prisma.JsonNull,
                     simRunId: manifest.chunk_id,
                     originalName: `${manifest.chunk_id}/${camera.video}`,
                     durationS: manifest.clip_seconds,

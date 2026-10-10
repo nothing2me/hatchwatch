@@ -10,6 +10,7 @@ const camera = z.object({
     motion_metadata: z.enum(['view-0/metadata.json', 'view-1/metadata.json']).optional(),
     motion_candidates: z.enum(['view-0/detection/predictions.json', 'view-1/detection/predictions.json']).optional(),
     pure_motion: z.enum(['view-0/pure-motion.mp4', 'view-1/pure-motion.mp4']).optional(),
+    mask: z.enum(['mask.json']).optional(),
 }).strict();
 
 export const liveManifestSchema = z.object({
@@ -35,7 +36,7 @@ export const liveManifestSchema = z.object({
     }
     manifest.cameras.forEach((camera, position) =>
     {
-        if (camera.video !== `camera-${camera.index}.mp4` || camera.calibration !== `calibration-${camera.index}.json` || (camera.motion_map && camera.motion_map !== `view-${camera.index}/motion-map.png`) || (camera.motion_metadata && camera.motion_metadata !== `view-${camera.index}/metadata.json`) || (camera.motion_candidates && camera.motion_candidates !== `view-${camera.index}/detection/predictions.json`) || (camera.pure_motion && camera.pure_motion !== `view-${camera.index}/pure-motion.mp4`))
+        if (camera.video !== `camera-${camera.index}.mp4` || camera.calibration !== `calibration-${camera.index}.json` || (camera.motion_map && camera.motion_map !== `view-${camera.index}/motion-map.png`) || (camera.motion_metadata && camera.motion_metadata !== `view-${camera.index}/metadata.json`) || (camera.motion_candidates && camera.motion_candidates !== `view-${camera.index}/detection/predictions.json`) || (camera.pure_motion && camera.pure_motion !== `view-${camera.index}/pure-motion.mp4`) || (camera.mask && camera.mask !== 'mask.json'))
         {
             context.addIssue({ code: 'custom', path: ['cameras', position], message: 'video and calibration names must match the camera index' });
         }

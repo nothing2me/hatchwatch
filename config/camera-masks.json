@@ -1,0 +1,27 @@
+{
+  "schema": "nesttrace.camera_masks",
+  "version": 1,
+  "note": "Operator-drawn per-camera watch areas in source-frame pixel coordinates (1280x720). The runner applies these at extraction: everything outside the polygon is excluded from the motion-signal grid (skies, surf, water, dune edges) while the raw camera feed is unchanged. This is operator configuration, never simulator truth. Changing a mask changes the video-to-signal distribution: registered experiments must be re-validated after any mask change.",
+  "cameras": [
+    {
+      "camera": 0,
+      "label": "Camera 01 (north end, looking SSW)",
+      "polygon": [
+        [70, 320],
+        [1210, 320],
+        [1210, 705],
+        [70, 705]
+      ]
+    },
+    {
+      "camera": 1,
+      "label": "Camera 02 (south end, looking NNE)",
+      "polygon": [
+        [70, 320],
+        [1210, 320],
+        [1210, 705],
+        [70, 705]
+      ]
+    }
+  ]
+}
