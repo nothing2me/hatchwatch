@@ -173,6 +173,18 @@ async function analyzeAndPublish(chunk)
         '--registration', 'config/pin-settings.json',
         '--output', resolve(publicRun, 'pins/predictions.json')]);
 
+    for (const script of ['track_paths.py', 'people_detect.py'])
+    {
+        try
+        {
+            await run(python, [`scripts/${script}`, publicRun]);
+        }
+        catch (error)
+        {
+            log(`${script} failed for ${chunk.chunkId}, publishing without it: ${error.message}`);
+        }
+    }
+
     const manifest =
     {
         schema: 'nesttrace.live-chunk',

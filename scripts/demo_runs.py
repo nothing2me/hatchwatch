@@ -12,10 +12,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 DEMO_RUNS = [
-    ('A-swarm-demo-901', 'swarm', 901),
-    ('A-swarm-demo-907', 'swarm', 907),
-    ('A-swarm-demo-911', 'swarm', 911),
-    ('A-swarm-night-demo-919', 'swarm-night', 919),
+    {'id': 'A-swarm-demo-901', 'scenario': 'swarm', 'seed': 901},
+    {'id': 'A-swarm-demo-907', 'scenario': 'swarm', 'seed': 907},
+    {'id': 'A-swarm-demo-911', 'scenario': 'swarm', 'seed': 911},
+    {'id': 'A-swarm-night-demo-919', 'scenario': 'swarm-night', 'seed': 919},
+    {'id': 'A-seaward-humans-demo-929', 'scenario': 'swarm', 'seed': 929, 'layout': 'seaward', 'humans': 2},
+    {'id': 'A-seaward-humans-demo-937', 'scenario': 'swarm', 'seed': 937, 'layout': 'seaward', 'humans': 2},
+    {'id': 'A-seaward-demo-941', 'scenario': 'swarm', 'seed': 941, 'layout': 'seaward', 'humans': 0},
 ]
 
 
@@ -53,21 +56,37 @@ def registered_seeds(config_dir):
 
 
 def check_seeds(config_dir):
-    clash = sorted({seed for _, _, seed in DEMO_RUNS} & registered_seeds(config_dir))
+    clash = sorted({run['seed'] for run in DEMO_RUNS} & registered_seeds(config_dir))
     if clash:
         raise SystemExit(f'Demo seeds already registered: {clash}')
 
 
-def complete(run_id):
-    public = ROOT / 'artifacts/public' / run_id
-    needed = ['camera-0.mp4', 'camera-1.mp4', 'calibration-0.json', 'calibration-1.json', 'timestamps.json',
+BASE_OUTPUTS = ['camera-0.mp4', 'camera-1.mp4', 'calibration-0.json', 'calibration-1.json', 'timestamps.json',
               'analysis.json', 'view-0/pure-motion.mp4', 'view-1/pure-motion.mp4', 'pins/predictions.json']
-    return all((public / name).is_file() for name in needed)
+EXTRA_OUTPUTS = ['tracks/tracks.json', 'people/people.json']
 
 
-def run_one(run_id, scenario, seed):
+def _has(run_id, names):
     public = ROOT / 'artifacts/public' / run_id
-    subprocess.run(['node', 'scripts/record.mjs', '--seed', str(seed), '--scenario', scenario, '--model', 'A', '--id', run_id], cwd=ROOT, check=True)
+    return all((public / name).is_file() for name in names)
+
+
+def base_complete(run_id):
+    return _has(run_id, BASE_OUTPUTS)
+
+
+def complete(run_id):
+    return _has(run_id, BASE_OUTPUTS + EXTRA_OUTPUTS)
+
+
+def add_trails_and_people(run_id):
+    for script in ('track_paths.py', 'people_detect.py'):
+        subprocess.run([sys.executable, f'scripts/{script}', str(ROOT / 'artifacts/public' / run_id)], cwd=ROOT, check=True)
+
+
+def run_one(run_id, scenario, seed, layout='along', humans=0):
+    public = ROOT / 'artifacts/public' / run_id
+    subprocess.run(['node', 'scripts/record.mjs', '--seed', str(seed), '--scenario', scenario, '--model', 'A', '--layout', layout, '--humans', str(humans), '--id', run_id], cwd=ROOT, check=True)
     subprocess.run([sys.executable, 'scripts/analyze.py', run_id, '--both', '--settings', 'config/settings-swarm.json'], cwd=ROOT, check=True)
     (public / 'pins').mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, 'pipeline/pin_fuse.py',
@@ -75,6 +94,7 @@ def run_one(run_id, scenario, seed):
                     '--camera-1', str(public / 'view-1/detection/predictions.json'),
                     '--registration', 'config/pin-settings.json',
                     '--output', str(public / 'pins/predictions.json')], cwd=ROOT, check=True)
+    add_trails_and_people(run_id)
 
 
 def main():
@@ -83,14 +103,19 @@ def main():
     parser.add_argument('--force', action='store_true', help='Re-record even if complete')
     args = parser.parse_args()
     check_seeds(ROOT / 'config')
-    for run_id, scenario, seed in DEMO_RUNS:
+    for run in DEMO_RUNS:
+        run_id = run['id']
         if args.only and run_id != args.only:
             continue
         if complete(run_id) and not args.force:
             print(f'{run_id}: complete, skipping', flush=True)
             continue
-        print(f'{run_id}: recording {scenario} seed {seed}', flush=True)
-        run_one(run_id, scenario, seed)
+        if base_complete(run_id) and not args.force:
+            print(f'{run_id}: adding trails and people', flush=True)
+            add_trails_and_people(run_id)
+        else:
+            print(f'{run_id}: recording {run["scenario"]} seed {run["seed"]}', flush=True)
+            run_one(run_id, run['scenario'], run['seed'], run.get('layout', 'along'), run.get('humans', 0))
         pins = json.loads((ROOT / 'artifacts/public' / run_id / 'pins/predictions.json').read_text())['methods']['pins']
         print(f'{run_id}: {len(pins)} pins', flush=True)
 
