@@ -16,7 +16,7 @@ const CLOCK_MS = 250;
 const HAVE_METADATA = 1;
 
 // Looping muted feed with an optional Raw/Motion switch. Publishes its clock so the map can gate pins.
-export function CameraVideo({ video, onTime, seekTo = null }: { video: FeedVideo; onTime?: (t: number) => void; seekTo?: SeekRequest | null })
+export function CameraVideo({ video, onTime, seekTo = null, large = false }: { video: FeedVideo; onTime?: (t: number) => void; seekTo?: SeekRequest | null; large?: boolean })
 {
     const ref = useRef<HTMLVideoElement>(null);
     const resumeAt = useRef<number | null>(null);
@@ -85,7 +85,7 @@ export function CameraVideo({ video, onTime, seekTo = null }: { video: FeedVideo
             <video
                 ref={ref}
                 data-testid="camera-video"
-                className="block aspect-video w-full object-cover max-md:aspect-[5/2]"
+                className={cn('block aspect-video w-full', large ? 'object-contain' : 'object-cover max-md:aspect-[5/2]')}
                 src={`/api/media/video/${video.id}?variant=${variant}`}
                 autoPlay
                 muted
