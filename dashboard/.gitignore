@@ -7,3 +7,4 @@ web/tsconfig.tsbuildinfo
 web/.env
 web/AGENTS.md
 /media/
+/recordings/

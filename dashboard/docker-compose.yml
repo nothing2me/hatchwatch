@@ -36,5 +36,18 @@ services:
       db:
         condition: service_healthy
 
+  caddy:
+    image: caddy:2
+    environment:
+      LAN_HOST: ${LAN_HOST:-127.0.0.1}
+    ports:
+      - "0.0.0.0:3443:3443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - web
+
 volumes:
   pgdata:
+  caddy_data:
