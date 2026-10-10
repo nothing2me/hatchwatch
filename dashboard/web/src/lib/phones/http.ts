@@ -121,5 +121,5 @@ export function getFrame(deps: Pick<PhoneDeps, 'user' | 'store' | 'now'>, device
     {
         return new Response(null, { status: 304, headers });
     }
-    return new Response(new Uint8Array(frame.jpeg), { status: 200, headers: { ...headers, 'Content-Type': 'image/jpeg', 'Content-Length': String(frame.jpeg.length) } });
+    return new Response(new Uint8Array(frame.jpeg), { status: 200, headers: { ...headers, 'Content-Type': 'image/jpeg', 'X-Content-Type-Options': 'nosniff', 'Content-Length': String(frame.jpeg.length) } });
 }

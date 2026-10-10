@@ -2,21 +2,25 @@
 
 Standalone camera firmware for field tests. The board serves a camera page, a JPEG snapshot, a status JSON and an MJPEG stream on the local Wi-Fi. It is not connected to the dashboard and never talks to the research pipeline.
 
-| URL | What |
-| --- | --- |
-| `http://<ip>/` | Camera page: live view, snapshot, sensor and stream status |
-| `http://<ip>/capture` | One JPEG (`?download=1` to save it) |
-| `http://<ip>/status` | JSON: sensor, mode, picture size, stream fps, Wi-Fi signal, uptime, free heap |
-| `http://<ip>:81/stream` | MJPEG stream (open it in a browser or VLC) |
+
+| URL                     | What                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `http://<ip>/`          | Camera page: live view, snapshot, sensor and stream status                    |
+| `http://<ip>/capture`   | One JPEG (`?download=1` to save it)                                           |
+| `http://<ip>/status`    | JSON: sensor, mode, picture size, stream fps, Wi-Fi signal, uptime, free heap |
+| `http://<ip>:81/stream` | MJPEG stream (open it in a browser or VLC)                                    |
+
+
+
 
 ## Build and upload
 
 1. Copy `secrets.example.h` to `secrets.h` (git-ignored) and set `WIFI_SSID` and `WIFI_PASSWORD`. The board joins 2.4 GHz networks only.
 2. Arduino IDE, esp32 core 3.x, Tools:
-   - Board: **ESP32S3 Dev Module**
-   - PSRAM: **OPI PSRAM**
-   - Flash Size: **8MB** (N8R8 module; 16MB for N16R8), Partition Scheme: **8M with spiffs**
-   - USB CDC On Boot: **Enabled** if you use the board's native USB port for the Serial Monitor
+  - Board: **ESP32S3 Dev Module**
+  - PSRAM: **OPI PSRAM**
+  - Flash Size: **8MB** (N8R8 module; 16MB for N16R8), Partition Scheme: **8M with spiffs**
+  - USB CDC On Boot: **Enabled** if you use the board's native USB port for the Serial Monitor
 3. Upload, open the Serial Monitor at 115200 and press reset. It prints the sensor, the mode and the URLs.
 
 Command line (same settings):
@@ -32,6 +36,8 @@ Close the IDE's Serial Monitor before uploading from the command line; it holds 
 
 1. **Hardware JPEG** (OV2640, OV3660, OV5640): the sensor compresses each frame, 640×480, double-buffered in PSRAM.
 2. **Raw RGB565 + software JPEG** (sensors without JPEG, such as GC2145): one raw frame at up to 320×240 in **internal RAM**, encoded to JPEG on the ESP32.
+
+
 
 ## Why the old sketch showed a striped, rainbow picture
 
@@ -49,3 +55,4 @@ The fix keeps the raw buffer in internal SRAM, uses one buffer (`CAMERA_GRAB_WHE
 - Unplug the GPIO extension board and test the bare board. The camera uses GPIO 4–18, and anything wired to those rows corrupts the data lines.
 - Reseat the camera ribbon (lift the latch, insert straight and fully, close the latch).
 - Use a short, good USB cable or a powered port. Brown-outs during Wi-Fi transmit also cause tearing.
+

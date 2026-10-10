@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getRecorder, Recorder, recorderSettings, startRecorder, type RecorderOptions, type Sidecar } from '@/lib/phones/recorder';
 import { fakeJpeg, parseAvi } from './aviTestUtils';
 
@@ -79,6 +79,9 @@ describe('Recorder', () =>
         await killed.settled();
         expect(sidecar(join(root, `${base}.json`)).file).toBe('070509.avi.part');
         expect(await killed.list()).toEqual([]);
+        // Left by a process that died long ago, not one still writing.
+        const old = (Date.now() - 5 * 60_000) / 1000;
+        utimesSync(join(root, `${base}.avi.part`), old, old);
 
         const next = make();
         await next.recover();
@@ -153,9 +156,9 @@ describe('Recorder after an interrupted close or past retention', () =>
         try
         {
             const recorder = await startRecorder(options);
-            await recorder.settled();
+            await recorder!.settled();
             await new Promise(resolve => setTimeout(resolve, 50));
-            await recorder.settled();
+            await recorder!.settled();
             for (const extension of ['avi', 'mp4', 'json'])
             {
                 expect(existsSync(join(root, `d1/2026-10-01/010203.${extension}`))).toBe(false);
@@ -190,6 +193,78 @@ describe('Recorder after an interrupted close or past retention', () =>
         expect(existsSync(oldMp4)).toBe(false);
         expect(existsSync(oldAvi)).toBe(false);
         expect(existsSync(freshMp4)).toBe(true);
+    });
+});
+
+describe('Recorder sharing a folder', () =>
+{
+    const reset = () => { delete (globalThis as { __nesttraceRecorder?: Recorder }).__nesttraceRecorder; };
+
+    it('leaves a fresh .avi.part alone but recovers an old one', async () =>
+    {
+        const { root, make } = setup('none');
+        const writer = make();
+        for (let i = 0; i < 3; i++)
+        {
+            writer.addFrame('d1', fakeJpeg(960, 540, i), T0 + i * 200, meta);
+        }
+        await writer.settled();
+        const part = join(root, `${base}.avi.part`);
+
+        const other = make();
+        await other.recover();
+        expect(existsSync(part)).toBe(true);
+        expect(sidecar(join(root, `${base}.json`)).file).toBe('070509.avi.part');
+
+        const old = (Date.now() - 5 * 60_000) / 1000;
+        utimesSync(part, old, old);
+        await other.recover();
+        expect(existsSync(part)).toBe(false);
+        expect(sidecar(join(root, `${base}.json`))).toMatchObject({ file: '070509.avi', frameCount: 3 });
+    });
+
+    it('refuses a second recorder on the same root until the first releases the lock', async () =>
+    {
+        const { root, options } = setup('none');
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        try
+        {
+            const first = await startRecorder(options);
+            expect(first).not.toBeNull();
+            expect(existsSync(join(root, '.recorder.lock'))).toBe(true);
+            reset();
+            expect(await startRecorder(options)).toBeNull();
+            expect(error).toHaveBeenCalledWith(`Recording disabled: another process is recording into ${root}`);
+            await first?.closeAll();
+            expect(existsSync(join(root, '.recorder.lock'))).toBe(false);
+            expect(await startRecorder(options)).not.toBeNull();
+        }
+        finally
+        {
+            reset();
+            vi.restoreAllMocks();
+        }
+    });
+
+    it('takes over a stale lock', async () =>
+    {
+        const { root, options } = setup('none');
+        vi.spyOn(console, 'log').mockImplementation(() => undefined);
+        try
+        {
+            const lock = join(root, '.recorder.lock');
+            writeFileSync(lock, JSON.stringify({ pid: 1, startedAt: 'long ago' }));
+            const old = (Date.now() - 10 * 60_000) / 1000;
+            utimesSync(lock, old, old);
+            expect(await startRecorder(options)).not.toBeNull();
+            expect(readFileSync(lock, 'utf8')).toContain(`"pid":${process.pid}`);
+        }
+        finally
+        {
+            reset();
+            vi.restoreAllMocks();
+        }
     });
 });
 

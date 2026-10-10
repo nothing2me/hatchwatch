@@ -162,6 +162,7 @@ describe('frames', () =>
         expect(ok.headers.get('content-type')).toBe('image/jpeg');
         expect(ok.headers.get('cache-control')).toBe('no-store');
         expect(ok.headers.get('x-frame-at')).toBe(String(T0 + 200));
+        expect(ok.headers.get('x-content-type-options')).toBe('nosniff');
         expect(Buffer.from(await ok.arrayBuffer())).toEqual(jpeg(10));
         expect(get({ 'if-none-match': ok.headers.get('etag')! }).status).toBe(304);
         expect(get({}, T0 + 200 + 10_001).status).toBe(404);

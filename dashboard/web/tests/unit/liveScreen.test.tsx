@@ -68,7 +68,7 @@ describe('LiveScreen', () =>
         expect(within(row).getByText(/last seen/)).toBeTruthy();
         expect(within(row).getByText('Camera B1')).toBeTruthy();
         fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune phone' }));
-        expect(within(row).getByText('Remove Dune phone? Its camera returns to the simulation loop.')).toBeTruthy();
+        expect(within(row).getByText('Remove Dune phone? Its camera returns to the simulation loop. The person can start again with a new phone name; to block a person, disable their account on the Users page.')).toBeTruthy();
         fireEvent.click(within(row).getByRole('button', { name: 'Remove' }));
         expect(await within(row).findByText('That phone was already removed.')).toBeTruthy();
         fireEvent.click(within(row).getByRole('button', { name: 'Remove' }));

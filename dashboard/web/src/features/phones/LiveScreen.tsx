@@ -152,7 +152,7 @@ function PhoneRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: ()
             {confirming
                 ? (
                     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                        <span className="text-xs text-ink">Remove {device.name}? Its camera returns to the simulation loop.</span>
+                        <span className="text-xs text-ink">Remove {device.name}? Its camera returns to the simulation loop. The person can start again with a new phone name; to block a person, disable their account on the Users page.</span>
                         <button type="button" disabled={pending} onClick={remove} className={cn(action, 'border-danger/40 text-[#F2865A] hover:bg-danger/15 disabled:opacity-50')}>Remove</button>
                         <button type="button" disabled={pending} onClick={() => setConfirming(false)} className={action}>Cancel</button>
                     </div>

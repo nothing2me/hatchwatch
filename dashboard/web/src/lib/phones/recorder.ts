@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
 import type { RecordingView } from '@/lib/types';
 import { AVI_HEADER_BYTES, AviWriter, MAX_SEGMENT_BYTES, repairAvi } from './avi';
@@ -36,6 +36,11 @@ export interface Sidecar
 }
 
 const MAX_GAP_MS = 10_000;
+// A live writer flushes every 200 ms, so a part file touched this recently belongs to a running recorder.
+const LIVE_WRITER_MS = 60_000;
+const LOCK_NAME = '.recorder.lock';
+const LOCK_STALE_MS = 120_000;
+const LOCK_REFRESH_MS = 30_000;
 
 export function recorderSettings(env: NodeJS.ProcessEnv = process.env): RecorderOptions | null
 {
@@ -100,6 +105,7 @@ export class Recorder implements FrameRecorder
     private pending = new Set<Promise<void>>();
     private conversions: Promise<void> = Promise.resolve();
     private bases = new Set<string>();
+    releaseLock: (() => Promise<void>) | null = null;
 
     constructor(readonly options: RecorderOptions, readonly hasFfmpeg: boolean)
     {
@@ -125,6 +131,7 @@ export class Recorder implements FrameRecorder
     {
         this.segmenter.closeAll();
         await this.settled();
+        await this.releaseLock?.();
     }
 
     // Resolves when every queued file write, close and conversion has finished.
@@ -163,6 +170,12 @@ export class Recorder implements FrameRecorder
         }
         if (sidecar.file.endsWith('.avi.part'))
         {
+            const part = await stat(`${base}.avi.part`).catch(() => null);
+            if (part && Date.now() - part.mtimeMs < LIVE_WRITER_MS)
+            {
+                // Another process (host dev next to the container) is still writing this segment.
+                return;
+            }
             // A close killed between its rename and the sidecar rewrite leaves only the .avi; finish from that.
             const source = existsSync(`${base}.avi.part`) ? `${base}.avi.part` : `${base}.avi`;
             const repaired = existsSync(source) ? await repairAvi(source, sidecar.fps).catch(() => null) : null;
@@ -350,6 +363,45 @@ export class Recorder implements FrameRecorder
     }
 }
 
+// Exclusive lock in the recordings root so two processes never write the same folder. Returns a release function, or null if held.
+async function takeLock(root: string): Promise<(() => Promise<void>) | null>
+{
+    const path = join(root, LOCK_NAME);
+    const body = JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() });
+    for (let attempt = 0; attempt < 2; attempt++)
+    {
+        try
+        {
+            await writeFile(path, body, { flag: 'wx' });
+            break;
+        }
+        catch (error)
+        {
+            if ((error as NodeJS.ErrnoException).code !== 'EEXIST')
+            {
+                throw error;
+            }
+            const info = await stat(path).catch(() => null);
+            if (info && Date.now() - info.mtimeMs < LOCK_STALE_MS)
+            {
+                return null;
+            }
+            await rm(path, { force: true });
+            if (attempt === 1)
+            {
+                return null;
+            }
+        }
+    }
+    const timer = setInterval(() => { void utimes(path, new Date(), new Date()).catch(() => undefined); }, LOCK_REFRESH_MS);
+    timer.unref();
+    return async () =>
+    {
+        clearInterval(timer);
+        await rm(path, { force: true });
+    };
+}
+
 const globalRecorder = globalThis as unknown as { __nesttraceRecorder?: Recorder };
 
 export function getRecorder(): Recorder | null
@@ -358,14 +410,21 @@ export function getRecorder(): Recorder | null
 }
 
 // Called once from instrumentation.ts in the web process.
-export async function startRecorder(options: RecorderOptions): Promise<Recorder>
+export async function startRecorder(options: RecorderOptions): Promise<Recorder | null>
 {
     if (globalRecorder.__nesttraceRecorder)
     {
         return globalRecorder.__nesttraceRecorder;
     }
     await mkdir(options.root, { recursive: true });
+    const releaseLock = await takeLock(options.root);
+    if (!releaseLock)
+    {
+        console.error(`Recording disabled: another process is recording into ${options.root}`);
+        return null;
+    }
     const recorder = new Recorder(options, await canRun(options.ffmpegPath, ['-version']));
+    recorder.releaseLock = releaseLock;
     const sweep = () => recorder.sweep().catch((error: unknown) => { console.error('Recording retention sweep failed:', (error as Error).message); });
     // Sweep before recovering so an expired leftover is deleted rather than queued for conversion.
     await sweep();
