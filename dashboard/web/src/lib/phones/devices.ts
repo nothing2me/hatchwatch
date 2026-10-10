@@ -14,6 +14,18 @@ export function cleanDeviceName(name: string): string | null
     return clean.length >= 1 && clean.length <= DEVICE_NAME_MAX ? clean : null;
 }
 
+export interface DeviceRef
+{
+    id: string;
+    name: string;
+    cameraCode: string | null;
+}
+
+function deviceRef(row: { id: string; name: string; camera: { code: string } | null }): DeviceRef
+{
+    return { id: row.id, name: row.name, cameraCode: row.camera?.code ?? null };
+}
+
 export interface RegisteredDevice
 {
     id: string;
@@ -25,16 +37,16 @@ export interface RegisteredDevice
 // One phone per owner and name while it is not removed; the phone re-registers on every Start.
 export async function registerDevice(prisma: PrismaClient, ownerId: string, name: string): Promise<RegisteredDevice>
 {
-    const existing = await prisma.liveDevice.findFirst({ where: { ownerId, name, kind: 'PHONE', disabledAt: null }, orderBy: { createdAt: 'asc' }, include: { camera: { select: { code: true } } } });
+    const existing = await prisma.liveDevice.findFirst({ where: { ownerId, name, kind: 'PHONE', disabledAt: null }, orderBy: { createdAt: 'asc' }, select: { id: true, name: true, camera: { select: { code: true } } } });
     if (existing)
     {
-        return { id: existing.id, name: existing.name, cameraCode: existing.camera?.code ?? null, created: false };
+        return { ...deviceRef(existing), created: false };
     }
-    const row = await prisma.liveDevice.create({ data: { ownerId, name, kind: 'PHONE' } });
+    const row = await prisma.liveDevice.create({ data: { ownerId, name, kind: 'PHONE' }, select: { id: true, name: true } });
     return { id: row.id, name: row.name, cameraCode: null, created: true };
 }
 
-export type FrameAccess = { ok: true; device: { id: string; name: string; cameraCode: string | null } } | { ok: false; status: 401 | 403 | 404 };
+export type FrameAccess = { ok: true; device: DeviceRef } | { ok: false; status: 401 | 403 | 404 };
 
 // Session senders: a board needs its token (401); otherwise the owner or an admin, never a viewer, and never a removed phone.
 export async function frameAccess(prisma: PrismaClient, deviceId: string, user: SessionUser): Promise<FrameAccess>
@@ -52,10 +64,10 @@ export async function frameAccess(prisma: PrismaClient, deviceId: string, user: 
     {
         return { ok: false, status: 403 };
     }
-    return { ok: true, device: { id: row.id, name: row.name, cameraCode: row.camera?.code ?? null } };
+    return { ok: true, device: deviceRef(row) };
 }
 
-export type BoardAccess = { ok: true; device: { id: string; name: string; cameraCode: string | null } } | { ok: false };
+export type BoardAccess = { ok: true; device: DeviceRef } | { ok: false };
 
 // A bearer token opens only its own BOARD while that board is not removed. The comparison runs even for unknown ids.
 export async function boardAccess(prisma: PrismaClient, deviceId: string, token: string): Promise<BoardAccess>
@@ -66,7 +78,7 @@ export async function boardAccess(prisma: PrismaClient, deviceId: string, token:
     {
         return { ok: false };
     }
-    return { ok: true, device: { id: row.id, name: row.name, cameraCode: row.camera?.code ?? null } };
+    return { ok: true, device: deviceRef(row) };
 }
 
 export async function touchDevice(prisma: PrismaClient, deviceId: string, at: Date): Promise<void>
@@ -107,7 +119,7 @@ export async function removeDevice(prisma: PrismaClient, actorId: string, device
 {
     const result = await prisma.$transaction(async tx =>
     {
-        const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, include: { camera: { select: { id: true, code: true } } } });
+        const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, select: { name: true, disabledAt: true, camera: { select: { id: true, code: true } } } });
         if (!device || device.disabledAt)
         {
             throw new CameraEditError('That phone was already removed.');
@@ -116,7 +128,7 @@ export async function removeDevice(prisma: PrismaClient, actorId: string, device
         {
             await tx.camera.update({ where: { id: device.camera.id }, data: { liveDeviceId: null } });
         }
-        await tx.liveDevice.update({ where: { id: deviceId }, data: { disabledAt: new Date() } });
+        await tx.liveDevice.update({ where: { id: deviceId }, data: { disabledAt: new Date() }, select: { id: true } });
         await tx.auditLog.create({ data: { userId: actorId, action: 'device.remove', targetType: 'LiveDevice', targetId: deviceId, details: { name: device.name, unlinked: device.camera?.code ?? null } } });
         return { unlinked: device.camera?.code ?? null };
     });

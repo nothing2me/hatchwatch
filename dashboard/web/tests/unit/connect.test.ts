@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectUrl } from '@/lib/phones/connect';
+import { connectUrl, dashboardOrigin } from '@/lib/phones/connect';
 
 describe('connectUrl', () =>
 {
@@ -11,5 +11,14 @@ describe('connectUrl', () =>
         {
             expect(connectUrl(bad)).toBeNull();
         }
+    });
+
+    it('builds the dashboard origin the board uses', () =>
+    {
+        expect(dashboardOrigin('10.47.138.152')).toBe('https://10.47.138.152:3443');
+        expect(dashboardOrigin(' laptop.local ')).toBe('https://laptop.local:3443');
+        expect(dashboardOrigin('')).toBeNull();
+        expect(dashboardOrigin('bad host')).toBeNull();
+        expect(connectUrl('10.47.138.152')).toBe('https://10.47.138.152:3443/cam');
     });
 });

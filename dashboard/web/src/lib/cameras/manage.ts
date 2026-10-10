@@ -464,7 +464,7 @@ export async function setCameraSource(prisma: PrismaClient, actorId: string, cod
             let deviceName: string | null = null;
             if (deviceId)
             {
-                const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, include: { camera: { select: { code: true } } } });
+                const device = await tx.liveDevice.findUnique({ where: { id: deviceId }, select: { name: true, disabledAt: true, camera: { select: { code: true } } } });
                 if (!device || device.disabledAt)
                 {
                     throw new CameraEditError('That phone was removed.');
