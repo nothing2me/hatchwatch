@@ -5,7 +5,7 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'cameras' | 'analytics' | 'live' | 'setup' | 'users';
+export type Page = 'map' | 'cameras' | 'analytics' | 'live' | 'settings' | 'users';
 
 // Counts a server page passes through to the bar.
 export interface TopBarCounts
@@ -37,7 +37,7 @@ const NAV: { page: Page; href: string; label: string; adminOnly?: boolean }[] = 
     { page: 'cameras', href: '/cameras', label: 'Cameras' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
     { page: 'live', href: '/live', label: 'Live cameras' },
-    { page: 'setup', href: '/setup', label: 'Settings', adminOnly: true },
+    { page: 'settings', href: '/settings', label: 'Settings', adminOnly: true },
 ];
 
 // Turtle mark from the favicon, drawn inline so it inherits the ink colour.
@@ -70,7 +70,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
             <nav aria-label="Main" className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-night-950/60 p-0.5 ring-1 ring-white/8 [scrollbar-width:none]">
                 {links.map(item =>
                 {
-                    const here = item.page === current || (item.page === 'setup' && current === 'users');
+                    const here = item.page === current || (item.page === 'settings' && current === 'users');
                     return (
                         <Link
                             key={item.page}

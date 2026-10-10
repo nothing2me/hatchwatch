@@ -136,7 +136,7 @@ describe('TopBar', () =>
     it('shows Settings to admins and uses the singular for one site', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
-        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByText('active site')).toBeTruthy();
     });
@@ -154,7 +154,7 @@ describe('TopBar', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
         expect(screen.getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
-        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
         expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
     });
 });

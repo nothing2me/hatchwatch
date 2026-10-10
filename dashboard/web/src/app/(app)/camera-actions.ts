@@ -45,7 +45,7 @@ async function run<T extends object>(work: (actorId: string) => Promise<T>): Pro
     try
     {
         const result = await work(actor.id);
-        revalidatePath('/setup/cameras');
+        revalidatePath('/settings/cameras');
         return { ok: true, ...result };
     }
     catch (error)

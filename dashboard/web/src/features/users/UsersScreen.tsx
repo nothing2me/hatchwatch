@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Check, Copy, KeyRound, UserPlus } from 'lucide-react';
-import { addUserAction, resetPasswordAction, setDisabledAction, setRoleAction, type UserActionResult } from '@/app/(app)/setup/users/actions';
+import { addUserAction, resetPasswordAction, setDisabledAction, setRoleAction, type UserActionResult } from '@/app/(app)/settings/users/actions';
 import { TopBar } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@/lib/types';

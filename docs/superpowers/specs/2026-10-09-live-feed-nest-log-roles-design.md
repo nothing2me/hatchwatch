@@ -92,7 +92,7 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 - `Role` gains `VOLUNTEER`. Rank: VIEWER < VOLUNTEER < ADMIN.
 - Permissions: VIEWER — view only. VOLUNTEER — view + patrol updates. ADMIN — everything incl. users, cameras, zones.
 - Server enforcement via DB-backed `requireCurrentUser(role)` for every mutation and API route (carry-over from Plan 1 review).
-- **Users page** `/setup/users` (admin): list users; add a user (name, email, role VOLUNTEER/VIEWER/ADMIN, generated temporary password shown once); change role; deactivate (sets `disabledAt`; disabled users cannot log in and their sessions stop working on next request). Every change writes `AuditLog`. An admin cannot demote or disable themselves.
+- **Users page** `/settings/users` (admin): list users; add a user (name, email, role VOLUNTEER/VIEWER/ADMIN, generated temporary password shown once); change role; deactivate (sets `disabledAt`; disabled users cannot log in and their sessions stop working on next request). Every change writes `AuditLog`. An admin cannot demote or disable themselves.
 
 ## 7. Camera editing (admin)
 

@@ -86,7 +86,7 @@ Stack: Tailwind CSS v4, shadcn/ui (Radix primitives), Lucide icons, Motion, TanS
 ### `/alerts`
 Table with filters (status, zone, camera, kind, date). Row opens a drawer: clip starting at `startT`, mini map, score and evidence explanation, status buttons (admins), notes, status history.
 
-### `/setup` (admins)
+### `/settings` (admins)
 - **Zones:** list; draw or edit a polygon on the map; name, code, activity level.
 - **Cameras:** list; place on map; drag heading; FOV; status. **Calibrate:** pick 4 points on the camera's latest `frame0.jpg`, then 4 matching map points. Shows the projected ground outline preview and the RMSE in metres. Saving requires 4 non-collinear pairs.
 - **Upload:** drag-drop a video, choose a camera, submit. Live job progress (stage + bar), error text and **Retry** on failure, link to the result on the map when done.
@@ -95,7 +95,7 @@ Table with filters (status, zone, camera, kind, date). Row opens a drawer: clip 
 Email + password (Auth.js credentials provider, JWT session). Seeded admin from env.
 
 ### Permissions
-- `VIEWER`: read-only on all pages except `/setup` (hidden, and the server returns 403).
+- `VIEWER`: read-only on all pages except `/settings` (hidden, and the server returns 403).
 - `ADMIN`: everything. All mutations go through server-side role checks and write `AuditLog`.
 
 ## 5. API surface (Next.js route handlers / server actions)

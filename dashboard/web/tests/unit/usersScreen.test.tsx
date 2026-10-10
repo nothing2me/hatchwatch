@@ -6,7 +6,7 @@ const setRoleAction = vi.fn();
 const setDisabledAction = vi.fn();
 const resetPasswordAction = vi.fn();
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
-vi.mock('@/app/(app)/setup/users/actions', () => ({ addUserAction, setRoleAction, setDisabledAction, resetPasswordAction }));
+vi.mock('@/app/(app)/settings/users/actions', () => ({ addUserAction, setRoleAction, setDisabledAction, resetPasswordAction }));
 
 const { UsersScreen } = await import('@/features/users/UsersScreen');
 

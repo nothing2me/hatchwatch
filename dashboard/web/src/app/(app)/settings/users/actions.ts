@@ -17,7 +17,7 @@ async function run(work: (actorId: string) => Promise<{ temporaryPassword?: stri
     try
     {
         const result = await work(actor.id);
-        revalidatePath('/setup/users');
+        revalidatePath('/settings/users');
         return { ok: true, temporaryPassword: result?.temporaryPassword };
     }
     catch (error)

@@ -16,19 +16,19 @@ export default async function SetupPage()
     return (
         <main className="min-h-full bg-night-950">
             <div className="sticky top-0 z-20 p-3">
-                <TopBar user={user} current="setup" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} dangerCount={snapshot.dangerCount} firstDangerId={firstDangerId} />
+                <TopBar user={user} current="settings" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} dangerCount={snapshot.dangerCount} firstDangerId={firstDangerId} />
             </div>
             <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-ink">Settings</h1>
                 <p className="mt-1.5 text-sm text-ink-muted">Manage who can sign in and where the cameras stand.</p>
-                <Link href="/setup/users" className="mt-6 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
+                <Link href="/settings/users" className="mt-6 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
                     <Users aria-hidden className="h-5 w-5 text-amber" />
                     <span>
                         <span className="block font-medium text-ink">Users</span>
                         <span className="block text-sm text-ink-muted">Add people, set roles, disable or enable accounts.</span>
                     </span>
                 </Link>
-                <Link href="/setup/cameras" className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
+                <Link href="/settings/cameras" className="mt-3 flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-amber">
                     <Cctv aria-hidden className="h-5 w-5 text-amber" />
                     <span>
                         <span className="block font-medium text-ink">Cameras</span>
