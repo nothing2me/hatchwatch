@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CAMERA_MASK, DEFAULT_MASK, MASK_FRAME, MAX_MASK_POINTS, asCameraMask, cleanCameraMask, clampPolygon, openRing, polygonArea, toNormalized, toPixels, validCameraMask, validMaskPoints } from '@/lib/cameras/masks';
+import { DEFAULT_CAMERA_MASK, DEFAULT_MASK, MASK_FRAME, MAX_MASK_POINTS, asCameraMask, cleanCameraMask, clampPolygon, feetInMask, feetPoint, openRing, pointInMask, polygonArea, toNormalized, toPixels, validCameraMask, validMaskPoints, type MaskPoint } from '@/lib/cameras/masks';
 
 describe('camera mask geometry', () =>
 {
@@ -92,5 +92,53 @@ describe('per-camera masks (normalised 0-1)', () =>
     {
         expect(DEFAULT_CAMERA_MASK).toEqual(toNormalized(DEFAULT_MASK));
         expect(validCameraMask(DEFAULT_CAMERA_MASK)).toBe(true);
+    });
+});
+
+describe('watch-area test', () =>
+{
+    const square: MaskPoint[] = [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]];
+
+    it('tells inside from outside, counting edges and vertices as inside', () =>
+    {
+        expect(pointInMask([0.5, 0.5], square)).toBe(true);
+        expect(pointInMask([0.1, 0.5], square)).toBe(false);
+        expect(pointInMask([0.9, 0.9], square)).toBe(false);
+        expect(pointInMask([0.8, 0.5], square)).toBe(true);
+        expect(pointInMask([0.5, 0.2], square)).toBe(true);
+        expect(pointInMask([0.2, 0.2], square)).toBe(true);
+        expect(pointInMask([0.8, 0.8], square)).toBe(true);
+    });
+
+    it('leaves a concave notch outside', () =>
+    {
+        const ell: MaskPoint[] = [[0, 0], [0.4, 0], [0.4, 0.6], [1, 0.6], [1, 1], [0, 1]];
+        expect(pointInMask([0.2, 0.3], ell)).toBe(true);
+        expect(pointInMask([0.7, 0.8], ell)).toBe(true);
+        expect(pointInMask([0.7, 0.3], ell)).toBe(false);
+    });
+
+    it('uses the even-odd rule on a self-intersecting bow-tie', () =>
+    {
+        const bowTie: MaskPoint[] = [[0, 0], [1, 1], [1, 0], [0, 1]];
+        // The two lobes are the left and right triangles meeting at the centre.
+        expect(pointInMask([0.2, 0.5], bowTie)).toBe(true);
+        expect(pointInMask([0.8, 0.5], bowTie)).toBe(true);
+        expect(pointInMask([0.5, 0.2], bowTie)).toBe(false);
+        expect(pointInMask([0.5, 0.8], bowTie)).toBe(false);
+    });
+
+    it('takes the bottom-centre of a box in picture pixels', () =>
+    {
+        const [x, y] = feetPoint([194, 104, 31, 86], 320, 240);
+        expect(x).toBeCloseTo(0.6547, 4);
+        expect(y).toBeCloseTo(0.7917, 4);
+    });
+
+    it('counts the whole picture when there is no mask', () =>
+    {
+        expect(feetInMask([194, 104, 31, 86], 320, 240, null)).toBe(true);
+        expect(feetInMask([194, 104, 31, 86], 320, 240, square)).toBe(true);
+        expect(feetInMask([10, 10, 20, 20], 320, 240, square)).toBe(false);
     });
 });

@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Prisma } from '@/generated/prisma/client';
 import { createPrismaClient } from '@/lib/db';
 import { CameraDangerThrottle } from '@/lib/detections/cameraDanger';
 import { postInternalDetections } from '@/lib/detections/http';
@@ -205,5 +206,80 @@ describe('camera-level danger', () =>
     it('refuses a video-less alert that is not a camera-level danger (database CHECK)', async () =>
     {
         await expect(prisma.alert.create({ data: { cameraId: cameraA1.id, zoneId: cameraA1.zoneId, kind: 'DIGGING', message: 'x', startT: 0, endT: 0 } })).rejects.toThrow();
+    });
+});
+
+describe('watch mask', () =>
+{
+    // The person box [194, 104, 31, 86] in 320x240 has its feet at (0.65, 0.79).
+    const INSIDE = [[0.5, 0.5], [1, 0.5], [1, 1], [0.5, 1]];
+    const OUTSIDE = [[0, 0], [0.4, 0], [0.4, 0.4], [0, 0.4]];
+    const setMask = (mask: number[][] | null) => prisma.camera.update({ where: { code: 'A1' }, data: { maskPolygon: mask === null ? Prisma.DbNull : mask, maskUpdatedAt: new Date() } });
+
+    it('raises for a person whose feet are inside the mask', async () =>
+    {
+        await setMask(INSIDE);
+        await site();
+        expect(await seen()).toBe('raised');
+    });
+
+    it('never raises for a person outside the mask, however often seen', async () =>
+    {
+        await setMask(OUTSIDE);
+        await site();
+        expect(await seen()).toBe('none');
+        for (let i = 0; i < 3; i++)
+        {
+            clock += 70_000;
+            expect(await seen()).toBe('none');
+        }
+        expect(await cameraDangers()).toEqual([]);
+    });
+
+    it('never appends an outside sighting to an open alert', async () =>
+    {
+        await site();
+        expect(await seen()).toBe('raised');
+        await setMask(OUTSIDE);
+        clock += 70_000;
+        expect(await seen()).toBe('none');
+        clock += 70_000;
+        expect(await seen()).toBe('none');
+        const [alert] = await cameraDangers();
+        expect(alert.events.filter(event => event.type === 'danger')).toHaveLength(1);
+    });
+
+    it('counts the whole picture when there is no mask', async () =>
+    {
+        await site();
+        expect(await seen()).toBe('raised');
+    });
+
+    it('uses no throttle slot for an outside person', async () =>
+    {
+        await setMask(OUTSIDE);
+        await site();
+        expect(await seen()).toBe('none');
+        await setMask(null);
+        clock += 6_000;
+        expect(await seen()).toBe('raised');
+    });
+
+    it('reads an invalid stored mask as no mask and says so once', async () =>
+    {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        try
+        {
+            await setMask([[0, 0], [1, 1]]);
+            await site();
+            expect(await seen()).toBe('raised');
+            clock += 70_000;
+            expect(await seen()).toBe('logged');
+            expect(warn.mock.calls.filter(call => String(call[0]).includes('A1'))).toHaveLength(1);
+        }
+        finally
+        {
+            warn.mockRestore();
+        }
     });
 });

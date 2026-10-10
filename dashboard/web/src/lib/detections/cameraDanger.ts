@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { asCameraMask, feetInMask, type MaskPoint } from '@/lib/cameras/masks';
 import { publishChange } from '@/lib/changes';
 import { summarizeSite } from '@/lib/sites/summary';
 import type { DetectionsView, SiteEventType } from '@/lib/types';
@@ -40,13 +41,18 @@ export const cameraDangerMessage = (code: string) => `Danger · person seen on c
 export const cameraDangerNote = (code: string, track: string, sites: number, zone: string) =>
     `Person on camera ${code} (track ${track}), ${sites} active unprotected site(s) in zone ${zone}`;
 
-// A person in this result, scored at least 0.50, whose track has been seen for at least 2 s; the longest-seen wins.
-export function qualifyingPerson(detections: DetectionsView): { track: string; score: number } | null
+// A person in this result, scored at least 0.50, whose track has been seen for at least 2 s and whose feet are inside
+// the mask (null: the whole picture); the longest-seen wins.
+export function qualifyingPerson(detections: DetectionsView, mask: readonly MaskPoint[] | null = null): { track: string; score: number } | null
 {
     let best: { track: string; score: number; span: number } | null = null;
     for (const object of detections.objects)
     {
         if (object.label !== 'person' || object.score === undefined || object.score < CAMERA_DANGER_MIN_SCORE)
+        {
+            continue;
+        }
+        if (!feetInMask(object.box, detections.width, detections.height, mask))
         {
             continue;
         }
@@ -75,6 +81,20 @@ async function activeUnprotectedSites(tx: Prisma.TransactionClient, zoneId: stri
     }).length;
 }
 
+const warnedInvalidMask = new Set<string>();
+
+// An invalid stored mask counts as no mask (the whole picture), so it can neither block nor widen alerts; said once per camera.
+function storedMask(camera: { id: string; code: string; maskPolygon: unknown }): MaskPoint[] | null
+{
+    const mask = asCameraMask(camera.maskPolygon);
+    if (!mask && camera.maskPolygon !== null && !warnedInvalidMask.has(camera.id))
+    {
+        warnedInvalidMask.add(camera.id);
+        console.warn(`[camera-danger] camera ${camera.code} has an invalid stored mask; using the whole picture`);
+    }
+    return mask;
+}
+
 /**
  * Spec §6: one open camera-level DANGER per camera; repeat sightings append at most one log entry a minute; a new
  * alert only once the previous one was resolved at least 10 minutes ago. The camera row lock serialises results;
@@ -82,17 +102,22 @@ async function activeUnprotectedSites(tx: Prisma.TransactionClient, zoneId: stri
  */
 export async function raiseCameraDanger(prisma: PrismaClient, deviceId: string, detections: DetectionsView, now: Date, throttle: CameraDangerThrottle = sharedThrottle): Promise<CameraDangerResult>
 {
-    const person = qualifyingPerson(detections);
-    if (!person)
+    if (!qualifyingPerson(detections))
     {
-        return 'none';
+        return 'none';                       // nothing anywhere in the picture: no database work
     }
     const device = await prisma.liveDevice.findUnique({
         where: { id: deviceId },
-        select: { disabledAt: true, camera: { select: { id: true, code: true, zoneId: true, lng: true, lat: true, zone: { select: { code: true } } } } },
+        select: { disabledAt: true, camera: { select: { id: true, code: true, zoneId: true, lng: true, lat: true, maskPolygon: true, zone: { select: { code: true } } } } },
     });
     const camera = device && !device.disabledAt ? device.camera : null;
-    if (!camera || !throttle.take(camera.id, now.getTime()))
+    if (!camera)
+    {
+        return 'none';
+    }
+    // Only people whose feet are inside this camera's watch area count; outside ones never raise or append (spec §4).
+    const person = qualifyingPerson(detections, storedMask(camera));
+    if (!person || !throttle.take(camera.id, now.getTime()))
     {
         return 'none';
     }

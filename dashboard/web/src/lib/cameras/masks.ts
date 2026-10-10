@@ -100,3 +100,36 @@ export function asCameraMask(value: unknown): MaskPoint[] | null
 
 /** Starting outline for a new mask: the repository default beach strip, normalised. */
 export const DEFAULT_CAMERA_MASK: MaskPoint[] = toNormalized(DEFAULT_MASK);
+
+/** Even-odd test; a point on an edge counts as inside. */
+export function pointInMask([x, y]: MaskPoint, mask: readonly MaskPoint[]): boolean
+{
+    let inside = false;
+    for (let i = 0, j = mask.length - 1; i < mask.length; j = i++)
+    {
+        const [xi, yi] = mask[i];
+        const [xj, yj] = mask[j];
+        const cross = (xj - xi) * (y - yi) - (yj - yi) * (x - xi);
+        if (Math.abs(cross) < 1e-12 && Math.min(xi, xj) <= x && x <= Math.max(xi, xj) && Math.min(yi, yj) <= y && y <= Math.max(yi, yj))
+        {
+            return true;
+        }
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+        {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+/** Bottom-centre of a box (the person's feet), as 0-1 picture coordinates. */
+export function feetPoint([x, y, w, h]: readonly [number, number, number, number], width: number, height: number): MaskPoint
+{
+    return [(x + w / 2) / width, (y + h) / height];
+}
+
+/** No mask: the whole picture counts. */
+export function feetInMask(box: readonly [number, number, number, number], width: number, height: number, mask: readonly MaskPoint[] | null): boolean
+{
+    return mask === null || pointInMask(feetPoint(box, width, height), mask);
+}

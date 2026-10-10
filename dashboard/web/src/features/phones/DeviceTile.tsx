@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { Activity, LoaderCircle, Maximize2, VideoOff, X } from 'lucide-react';
+import type { MaskPoint } from '@/lib/cameras/masks';
 import type { BoardMotionView, LiveDeviceKind, LiveDeviceView } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import type { LiveFrameState } from './framePoller';
@@ -78,7 +79,7 @@ export function LivePicture({ url, state, name, kind = 'PHONE', className, onNat
     );
 }
 
-function Expanded({ device, url, state, detectionsOn, onClose, returnTo }: { device: LiveDeviceView; url: string | null; state: LiveFrameState | 'idle'; detectionsOn: boolean; onClose: () => void; returnTo: React.RefObject<HTMLButtonElement | null> })
+function Expanded({ device, url, state, detectionsOn, mask, onClose, returnTo }: { device: LiveDeviceView; url: string | null; state: LiveFrameState | 'idle'; detectionsOn: boolean; mask: MaskPoint[] | null; onClose: () => void; returnTo: React.RefObject<HTMLButtonElement | null> })
 {
     const dialogRef = useRef<HTMLDivElement>(null);
     const closeRef = useRef<HTMLButtonElement>(null);
@@ -99,7 +100,7 @@ function Expanded({ device, url, state, detectionsOn, onClose, returnTo }: { dev
                     </button>
                 </div>
                 <LivePicture url={url} state={state} name={device.name} kind={device.kind} className="min-h-0 flex-1 rounded-xl">
-                    {detections && !detections.dark && <DetectionOverlay detections={detections} />}
+                    {detections && !detections.dark && <DetectionOverlay detections={detections} mask={mask} />}
                 </LivePicture>
                 {detectionsOn && device.online && <DetectionNote detections={device.detections} />}
             </div>
@@ -109,7 +110,7 @@ function Expanded({ device, url, state, detectionsOn, onClose, returnTo }: { dev
 
 // One device's picture with its name, REC, the board motion badge and box, Motion view, Expand and the detection lines.
 // `live` adds the LIVE badge when the tile stands in for a map camera. `mask` is the linked camera's watch area (unlinked: null).
-export function DeviceTile({ device, detectionsOn, live = false }: { device: LiveDeviceView; detectionsOn: boolean; mask?: [number, number][] | null; live?: boolean })
+export function DeviceTile({ device, detectionsOn, mask = null, live = false }: { device: LiveDeviceView; detectionsOn: boolean; mask?: MaskPoint[] | null; live?: boolean })
 {
     const { url, state } = useLiveFrame(device.id);
     const [open, setOpen] = useState(false);
@@ -125,7 +126,7 @@ export function DeviceTile({ device, detectionsOn, live = false }: { device: Liv
             <div className="relative">
                 <LivePicture url={url} state={state} name={device.name} kind={device.kind} className="aspect-video" onNaturalSize={(width, height) => setSize(previous => previous?.width === width && previous.height === height ? previous : { width, height })}>
                     {showBox && <MotionBox box={box} width={size.width} height={size.height} />}
-                    {detections && !detections.dark && <DetectionOverlay detections={detections} />}
+                    {detections && !detections.dark && <DetectionOverlay detections={detections} mask={mask} />}
                 </LivePicture>
                 {(live || device.recording) && (
                     <span className="absolute top-2.5 left-2.5 flex gap-1.5">
@@ -155,7 +156,7 @@ export function DeviceTile({ device, detectionsOn, live = false }: { device: Liv
                 </div>
                 {showDetections && <DetectionNote detections={device.detections} className="w-full border-t border-white/8 pt-2.5" />}
             </div>
-            {open && <Expanded device={device} url={url} state={state} detectionsOn={detectionsOn} onClose={() => setOpen(false)} returnTo={expandRef} />}
+            {open && <Expanded device={device} url={url} state={state} detectionsOn={detectionsOn} mask={mask} onClose={() => setOpen(false)} returnTo={expandRef} />}
         </article>
     );
 }

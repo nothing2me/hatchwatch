@@ -36,3 +36,37 @@ describe('camera danger rule', () =>
         expect(throttle.take('c1', T + 10_000)).toBe(true);
     });
 });
+
+describe('camera danger watch area', () =>
+{
+    const INSIDE: [number, number][] = [[0.5, 0.5], [1, 0.5], [1, 1], [0.5, 1]];
+    const OUTSIDE: [number, number][] = [[0, 0], [0.4, 0], [0.4, 0.4], [0, 0.4]];
+    const at = (track: string, box: [number, number, number, number], score = 0.82) => ({ track, label: 'person' as const, score, box });
+    const seen = result([at('P1', [194, 104, 31, 86])], [trail('P1', 2_500)]);
+
+    it('counts a person only when the feet are inside the mask; no mask is the whole picture', () =>
+    {
+        expect(qualifyingPerson(seen, INSIDE)).toEqual({ track: 'P1', score: 0.82 });
+        expect(qualifyingPerson(seen, null)).toEqual({ track: 'P1', score: 0.82 });
+        expect(qualifyingPerson(seen)).toEqual({ track: 'P1', score: 0.82 });
+        expect(qualifyingPerson(seen, OUTSIDE)).toBeNull();
+    });
+
+    it('tests the feet, not the head', () =>
+    {
+        expect(qualifyingPerson(seen, [[0, 0], [1, 0], [1, 0.6], [0, 0.6]])).toBeNull();
+    });
+
+    it('counts feet exactly on the mask edge as inside', () =>
+    {
+        // Feet at (0.5, 0.75): on the left edge of INSIDE.
+        expect(qualifyingPerson(result([at('P1', [150, 100, 20, 80])], [trail('P1', 2_500)]), INSIDE)).toEqual({ track: 'P1', score: 0.82 });
+    });
+
+    it('lets the inside person win when the longer-seen one is outside', () =>
+    {
+        const two = result([at('P1', [10, 10, 20, 40]), at('P2', [194, 104, 31, 86], 0.6)], [trail('P1', 9_000), trail('P2', 2_500)]);
+        expect(qualifyingPerson(two, null)).toEqual({ track: 'P1', score: 0.82 });
+        expect(qualifyingPerson(two, INSIDE)).toEqual({ track: 'P2', score: 0.6 });
+    });
+});

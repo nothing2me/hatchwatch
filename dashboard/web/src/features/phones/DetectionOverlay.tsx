@@ -1,10 +1,14 @@
 'use client';
 
 import type { DetectedObject, DetectionsView } from '@/lib/types';
+import { feetInMask, type MaskPoint } from '@/lib/cameras/masks';
 import { cn } from '@/lib/cn';
 
 export const DETECTION_NOTE = 'Detection is a viewing aid; it can miss people and mistake objects.';
 const RULE_NOTE = 'Possible turtle (rule): a slow, wide moving shape, not a confirmed turtle.';
+
+export const OUTSIDE_LABEL = 'outside watch area';
+export const OUTSIDE_COLOR = '#8A9BA6';
 
 const PALETTE = ['#F5B544', '#5AC8FA', '#FF7AB6', '#7CE38B', '#B69CFF', '#FF9F5A'];
 
@@ -66,7 +70,8 @@ function trailPoints(points: unknown, width: number, height: number): [number, n
 }
 
 // Boxes, labels and fading trails in the picture's own pixels; object-contain letterboxing is matched by xMidYMid meet.
-export function DetectionOverlay({ detections }: { detections: DetectionsView })
+// `mask` is the linked camera's watch area: people whose feet fall outside it are drawn grey, as the alert ignores them.
+export function DetectionOverlay({ detections, mask = null }: { detections: DetectionsView; mask?: readonly MaskPoint[] | null })
 {
     const { width, height } = detections ?? {};
     if (!(typeof width === 'number' && width > 0 && typeof height === 'number' && height > 0))
@@ -76,8 +81,13 @@ export function DetectionOverlay({ detections }: { detections: DetectionsView })
     const objects = Array.isArray(detections.objects) ? detections.objects : [];
     const trails = Array.isArray(detections.trails) ? detections.trails : [];
     const fontSize = Math.max(10, height / 22);
+    // Tested on the box as sent (picture pixels), the same as the server's alert rule.
+    const outside = new Set(objects
+        .filter(object => object?.label === 'person' && clampBox(object.box, width, height) && !feetInMask(object.box, width, height, mask))
+        .map(object => object.track));
     return (
         <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+            {mask && <polygon data-testid="watch-area" points={mask.map(([x, y]) => `${x * width},${y * height}`).join(' ')} fill="none" stroke="#FFB547" strokeOpacity={0.35} strokeDasharray="6 6" vectorEffect="non-scaling-stroke" />}
             {trails.map((trail, t) =>
             {
                 const points = trailPoints(trail?.points, width, height);
@@ -86,7 +96,7 @@ export function DetectionOverlay({ detections }: { detections: DetectionsView })
                 {
                     return null;
                 }
-                const color = trackColor(trail.track);
+                const color = outside.has(trail.track) && trail.label === 'person' ? OUTSIDE_COLOR : trackColor(trail.track);
                 return (
                     <g key={`trail-${trail.track}-${t}`}>
                         {points.slice(1).map((point, i) => (
@@ -103,13 +113,14 @@ export function DetectionOverlay({ detections }: { detections: DetectionsView })
                     return null;
                 }
                 const [x, y, w, h] = box;
-                const color = trackColor(object.track);
                 const turtle = object.label !== 'person';
+                const away = !turtle && outside.has(object.track);
+                const color = away ? OUTSIDE_COLOR : trackColor(object.track);
                 return (
                     <g key={`object-${object.track}-${i}`} data-track={object.track}>
                         {turtle && <title>Possible turtle (rule)</title>}
-                        <rect data-track={object.track} x={x} y={y} width={w} height={h} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-                        <text x={x + 1} y={y < 12 ? y + fontSize : y - 3} fontSize={fontSize} fontFamily="ui-monospace, monospace" fontWeight={600} fill={color} stroke="#070D13" strokeWidth={3} strokeLinejoin="round" paintOrder="stroke">{objectLabel(object)}</text>
+                        <rect data-track={object.track} data-outside={away ? 'true' : undefined} x={x} y={y} width={w} height={h} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                        <text x={x + 1} y={y < 12 ? y + fontSize : y - 3} fontSize={fontSize} fontFamily="ui-monospace, monospace" fontWeight={600} fill={color} stroke="#070D13" strokeWidth={3} strokeLinejoin="round" paintOrder="stroke">{away ? `${objectLabel(object)} · ${OUTSIDE_LABEL}` : objectLabel(object)}</text>
                     </g>
                 );
             })}

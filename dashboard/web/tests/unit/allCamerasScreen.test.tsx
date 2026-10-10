@@ -299,6 +299,23 @@ describe('AllCamerasScreen detections', () =>
         expect((await screen.findByRole('button', { name: 'Detections' })).getAttribute('aria-pressed')).toBe('false');
     });
 
+    it('greys a person outside a linked camera\'s watch area, in the tile and the expanded view, but never on an unlinked tile', async () =>
+    {
+        frame.url = 'blob:1';
+        const outside: [number, number][] = [[0, 0], [0.4, 0], [0.4, 0.4], [0, 0.4]];
+        const detections = { ...seen.detections, objects: [{ ...seen.detections.objects[0], box: [194, 104, 31, 86] as [number, number, number, number] }] };
+        const spare = { ...phone, id: 'cx9', name: 'Spare phone', cameraCode: null, recording: false, detections };
+        stubFetch([{ ...seen, detections }, spare]);
+        render(<AllCamerasScreen user={viewer} initialSnapshot={{ ...snapshot, cameras: [{ ...snapshot.cameras[0], mask: outside }, ...snapshot.cameras.slice(1)] }} connect={null} />);
+        const a1 = await waitFor(() => within(zone('A')).getByRole('article', { name: 'Dune phone' }));
+        expect(await within(a1).findByText('person 0.82 · outside watch area')).toBeTruthy();
+        const unlinked = await within(devicesSection()).findByRole('article', { name: 'Spare phone' });
+        expect(within(unlinked).getByText('person 0.82')).toBeTruthy();
+        expect(within(unlinked).queryByText(/outside watch area/)).toBeNull();
+        fireEvent.click(within(a1).getByRole('button', { name: 'Expand' }));
+        expect(within(screen.getByRole('dialog', { name: 'Dune phone' })).getByText('person 0.82 · outside watch area')).toBeTruthy();
+    });
+
     it('draws the overlay in the expanded view too', async () =>
     {
         frame.url = 'blob:1';

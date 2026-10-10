@@ -111,7 +111,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
                 ? (
                     <div className="relative mt-2 aspect-video max-md:aspect-[5/2] overflow-hidden rounded-lg border border-white/6 bg-black">
                         {live.url && <img src={live.url} alt={`Live picture from ${phone.name}`} className="h-full w-full object-contain" />}
-                        {detectionsOn && detections && !detections.dark && <DetectionOverlay detections={detections} />}
+                        {detectionsOn && detections && !detections.dark && <DetectionOverlay detections={detections} mask={camera.mask ?? null} />}
                         <span className="absolute top-2 left-2 flex max-w-[calc(100%-1rem)] items-center gap-2">
                             <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded bg-alarm px-1.5 text-[10px] font-bold tracking-[0.12em] text-white shadow-[0_0_12px_rgba(255,77,94,0.45)]">
                                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-white motion-safe:animate-pulse" />

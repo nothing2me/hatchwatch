@@ -101,6 +101,16 @@ describe('CameraPanel with a linked phone', () =>
         expect(screen.queryByText('Detection off')).toBeNull();
     });
 
+    it('greys a person outside the linked camera\'s watch area', () =>
+    {
+        live = { url: 'blob:1', state: 'live' };
+        detections.value = { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person', score: 0.82, box: [194, 104, 31, 86] }], trails: [] };
+        const { container } = render(<CameraPanel camera={{ ...camera, mask: [[0, 0], [0.4, 0], [0.4, 0.4], [0, 0.4]] }} onClose={() => undefined} />);
+        expect(screen.getByText('person 0.82 · outside watch area')).toBeTruthy();
+        expect(container.querySelector('rect[data-track="P1"]')!.getAttribute('data-outside')).toBe('true');
+        expect(container.querySelector('[data-testid="watch-area"]')).toBeTruthy();
+    });
+
     it('shows no detection lines while the camera plays the simulation loop', () =>
     {
         live = { url: null, state: 'offline' };

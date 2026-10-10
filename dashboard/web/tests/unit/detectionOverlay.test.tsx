@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { DETECTION_NOTE, DetectionNote, DetectionOverlay, DetectionStatus, detectionCounts, objectLabel, trackColor } from '@/features/phones/DetectionOverlay';
+import { DETECTION_NOTE, DetectionNote, DetectionOverlay, DetectionStatus, OUTSIDE_COLOR, OUTSIDE_LABEL, detectionCounts, objectLabel, trackColor } from '@/features/phones/DetectionOverlay';
 import type { DetectionsView } from '@/lib/types';
 
 afterEach(cleanup);
@@ -94,5 +94,52 @@ describe('detection overlay', () =>
         const { container } = render(<DetectionOverlay detections={detections} />);
         expect(container.querySelector('g[data-track="T1"] title')!.textContent).toBe('Possible turtle (rule)');
         expect(container.querySelector('g[data-track="P1"] title')).toBeNull();
+    });
+});
+
+describe('detection overlay watch area', () =>
+{
+    const INSIDE: [number, number][] = [[0.5, 0.5], [1, 0.5], [1, 1], [0.5, 1]];
+    const OUTSIDE: [number, number][] = [[0, 0], [0.4, 0], [0.4, 0.4], [0, 0.4]];
+
+    it('greys and labels a person whose feet are outside, and draws the mask faintly', () =>
+    {
+        expect(OUTSIDE_LABEL).toBe('outside watch area');
+        expect(OUTSIDE_COLOR).toBe('#8A9BA6');
+        const { container } = render(<DetectionOverlay detections={detections} mask={OUTSIDE} />);
+        const person = container.querySelector('rect[data-track="P1"]')!;
+        expect(person.getAttribute('data-outside')).toBe('true');
+        expect(person.getAttribute('stroke')).toBe('#8A9BA6');
+        const label = screen.getByText('person 0.82 · outside watch area');
+        expect(label.getAttribute('fill')).toBe('#8A9BA6');
+        expect([...container.querySelectorAll('line[data-track="P1"]')].every(line => line.getAttribute('stroke') === '#8A9BA6')).toBe(true);
+        // Possible turtles keep their colours.
+        expect(container.querySelector('rect[data-track="T1"]')!.getAttribute('stroke')).toBe(trackColor('T1'));
+        expect(container.querySelector('rect[data-track="T1"]')!.getAttribute('data-outside')).toBeNull();
+        const area = container.querySelector('[data-testid="watch-area"]')!;
+        expect(area.tagName.toLowerCase()).toBe('polygon');
+        expect(area.getAttribute('points')).toBe('0,0 128,0 128,96 0,96');
+        expect(area.getAttribute('fill')).toBe('none');
+        expect(area.getAttribute('stroke-opacity')).toBe('0.35');
+        // Under the boxes.
+        expect(area.compareDocumentPosition(person) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('keeps a person inside the mask in its own colours', () =>
+    {
+        const { container } = render(<DetectionOverlay detections={detections} mask={INSIDE} />);
+        const person = container.querySelector('rect[data-track="P1"]')!;
+        expect(person.getAttribute('data-outside')).toBeNull();
+        expect(person.getAttribute('stroke')).toBe(trackColor('P1'));
+        expect(screen.getByText('person 0.82')).toBeTruthy();
+        expect(screen.queryByText(/outside watch area/)).toBeNull();
+        expect(container.querySelector('[data-testid="watch-area"]')).toBeTruthy();
+    });
+
+    it('draws no watch area without a mask', () =>
+    {
+        const { container } = render(<DetectionOverlay detections={detections} mask={null} />);
+        expect(container.querySelector('[data-testid="watch-area"]')).toBeNull();
+        expect(screen.queryByText(/outside watch area/)).toBeNull();
     });
 });
