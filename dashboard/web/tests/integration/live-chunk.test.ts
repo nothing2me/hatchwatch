@@ -16,9 +16,9 @@ let settings: LiveSettings;
 
 const START = '2026-10-10T00:00:00.000Z';
 
-function makeChunk(sequence: number, { pins = true, started = START }: { pins?: boolean; started?: string } = {}): string
+function makeChunk(sequence: number, { pins = true, started = START, tag = `abc${sequence}` }: { pins?: boolean; started?: string; tag?: string } = {}): string
 {
-    const id = `live-${String(sequence).padStart(6, '0')}-abc${sequence}`;
+    const id = `live-${String(sequence).padStart(6, '0')}-${tag}`;
     const dir = join(settings.root, id);
     mkdirSync(join(dir, 'pins'), { recursive: true });
     for (const camera of [0, 1])
@@ -241,5 +241,22 @@ describe('pruneMedia', () =>
         expect(existsSync(join(settings.mediaRoot, 'live/live-000002-abc2'))).toBe(true);
         expect((await prisma.liveChunk.findUniqueOrThrow({ where: { id: 'live-000000-abc0' } })).mediaPruned).toBe(true);
         expect(await prisma.video.count()).toBe(6);
+    });
+
+    it('keeps the newest imports when sequences restart after an artifacts reset', async () =>
+    {
+        settings.keep = 2;
+        await importLiveChunk(prisma, { chunkDir: makeChunk(9, { tag: 'old' }), mediaRoot: settings.mediaRoot });
+        await prisma.liveChunk.update({ where: { id: 'live-000009-old' }, data: { importedAt: new Date('2026-10-01T00:00:00Z') } });
+        // The runner restarted: low sequences again, imported later than the high one.
+        await importLiveChunk(prisma, { chunkDir: makeChunk(0, { tag: 'newa' }), mediaRoot: settings.mediaRoot });
+        await prisma.liveChunk.update({ where: { id: 'live-000000-newa' }, data: { importedAt: new Date('2026-10-02T00:00:00Z') } });
+        await importLiveChunk(prisma, { chunkDir: makeChunk(0, { tag: 'newb' }), mediaRoot: settings.mediaRoot });
+        await prisma.liveChunk.update({ where: { id: 'live-000000-newb' }, data: { importedAt: new Date('2026-10-03T00:00:00Z') } });
+        expect(await pruneMedia(prisma, settings)).toBe(1);
+        const pruned = await prisma.liveChunk.findMany({ where: { mediaPruned: true }, select: { id: true } });
+        expect(pruned.map(row => row.id)).toEqual(['live-000009-old']);
+        expect(existsSync(join(settings.mediaRoot, 'live/live-000000-newa'))).toBe(true);
+        expect(existsSync(join(settings.mediaRoot, 'live/live-000000-newb'))).toBe(true);
     });
 });

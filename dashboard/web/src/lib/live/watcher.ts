@@ -119,7 +119,8 @@ export async function pruneMedia(prisma: PrismaClient, settings: LiveSettings): 
 {
     const stale = await prisma.liveChunk.findMany({
         where: { mediaPruned: false },
-        orderBy: { sequence: 'desc' },
+        // Sequences restart when artifacts are reset, so import time decides which chunks are newest.
+        orderBy: [{ importedAt: 'desc' }, { sequence: 'desc' }],
         skip: settings.keep,
         select: { id: true },
     });

@@ -15,14 +15,14 @@ class FakeEventSource
 }
 
 const base: MapSnapshot = {
-    zones: [], cameras: [], alerts: [], camerasOnline: 0, camerasTotal: 0, activeAlertCount: 0, inactiveCount: 0,
+    zones: [], cameras: [], alerts: [], camerasOnline: 0, camerasTotal: 0, inactiveCount: 0,
     outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5,
 };
 
 function Probe({ initial }: { initial: MapSnapshot })
 {
     const snapshot = useLiveSnapshot(initial);
-    return <span data-testid="count">{snapshot.activeAlertCount}</span>;
+    return <span data-testid="count">{snapshot.inactiveCount}</span>;
 }
 
 function deferred<T>()
@@ -32,7 +32,7 @@ function deferred<T>()
     return { promise, resolve };
 }
 
-const reply = (count: number) => ({ ok: true, json: async () => ({ ...base, activeAlertCount: count }) }) as Response;
+const reply = (count: number) => ({ ok: true, json: async () => ({ ...base, inactiveCount: count }) }) as Response;
 
 beforeEach(() =>
 {

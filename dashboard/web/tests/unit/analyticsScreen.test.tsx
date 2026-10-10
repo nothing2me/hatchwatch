@@ -25,7 +25,7 @@ const snapshot: MapSnapshot = {
         siteAlert('a3', { active: false, outcome: 'hatched', nesting: 'confirmed', protection: 'protected', personActed: true, patrolVisited: true }),
         siteAlert('a4', { active: false, archivedAt: '2026-10-09T00:20:00.000Z' }),
     ],
-    camerasOnline: 2, camerasTotal: 4, activeAlertCount: 1, inactiveCount: 2,
+    camerasOnline: 2, camerasTotal: 4, inactiveCount: 2,
     outcomes: { saved: 1, notSaved: 1, pending: 2 }, fadeMinutes: 5,
 };
 
@@ -105,5 +105,12 @@ describe('TopBar', () =>
         expect(screen.getByRole('link', { name: 'Setup' }).getAttribute('href')).toBe('/setup');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByText('active site')).toBeTruthy();
+    });
+
+    it('drops the Users link on phones only (Setup links to it)', () =>
+    {
+        render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
+        expect(screen.getByRole('link', { name: 'Users' }).className).toContain('max-sm:hidden');
+        expect(screen.getByRole('link', { name: 'Setup' }).className).not.toContain('max-sm:hidden');
     });
 });

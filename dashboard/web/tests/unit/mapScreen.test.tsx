@@ -21,6 +21,7 @@ vi.mock('@/features/map/MapView', async () =>
                     <span data-testid="visible-pins">{visible}</span>
                     <span data-testid="editing">{String(Boolean(props.editing))}</span>
                     <button onClick={() => props.onMapClick?.([-97.05, 27.82])}>map click</button>
+                    <button onClick={() => { props.onMapClick?.([-97.05, 27.82]); props.onMapClick?.([-97.05, 27.82]); }}>map double click</button>
                     {props.editing && props.snapshot.zones.filter(zone => zone.custom).map(zone => <button key={zone.id} onClick={() => props.onDeleteZone?.(zone.code)}>remove {zone.code}</button>)}
                 </div>
             );
@@ -57,7 +58,7 @@ const snapshot: MapSnapshot = {
     zones: [{ id: 'z', code: 'B', name: 'Holiday', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]] }],
     cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null }],
     alerts: [],
-    camerasOnline: 1, camerasTotal: 1, activeAlertCount: 0, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5,
+    camerasOnline: 1, camerasTotal: 1, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5,
 };
 const user = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
 
@@ -172,11 +173,38 @@ describe('MapScreen', () =>
         expect(screen.queryByRole('dialog')).toBeNull();
     });
 
+    it('keeps the drawer open when its site drops out of the snapshot', async () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        fireEvent.click(screen.getAllByText('Digging activity detected; nesting unresolved.')[0]);
+        expect(screen.getByRole('dialog', { name: /Site in zone B/ })).toBeTruthy();
+        nextSnapshot = { ...twoRuns, alerts: [twoRuns.alerts[1]] };
+        act(() => FakeEventSource.instances[0].onmessage?.(new MessageEvent('message', { data: '{"type":"snapshot"}' })));
+        await waitFor(() => expect(screen.getByRole('radio', { name: 'Active (1)' })).toBeTruthy(), { timeout: 2000 });
+        expect(screen.getByRole('dialog', { name: /Site in zone B/ })).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Close site' }));
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('hides the legend while a camera panel or a site drawer is open', () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        expect(screen.getByRole('button', { name: /legend/i })).toBeTruthy();
+        fireEvent.click(screen.getByText('cam B1'));
+        expect(screen.queryByRole('button', { name: /legend/i })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Close camera panel' }));
+        expect(screen.getByRole('button', { name: /legend/i })).toBeTruthy();
+        fireEvent.click(screen.getAllByText('Digging activity detected; nesting unresolved.')[0]);
+        fireEvent.click(screen.getByRole('button', { name: 'Close camera panel' }));
+        expect(screen.getByRole('dialog', { name: /Site in zone B/ })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /legend/i })).toBeNull();
+    });
+
     it('re-fetches the snapshot when the stream reports a change', async () =>
     {
         render(<MapScreen snapshot={snapshot} user={user} />);
         expect(screen.getByRole('radio', { name: 'Active (0)' })).toBeTruthy();
-        nextSnapshot = { ...twoRuns, activeAlertCount: 2 };
+        nextSnapshot = twoRuns;
         act(() => FakeEventSource.instances[0].onmessage?.(new MessageEvent('message', { data: '{"type":"snapshot"}' })));
         await waitFor(() => expect(screen.getByRole('radio', { name: 'Active (2)' })).toBeTruthy(), { timeout: 2000 });
         expect(fetchMock).toHaveBeenCalledWith('/api/snapshot', expect.anything());
@@ -225,6 +253,18 @@ describe('MapScreen', () =>
             fireEvent.click(screen.getByText('map click'));
             expect(addCameraPair).toHaveBeenCalledWith([-97.05, 27.82]);
             expect(await screen.findByText('Zone E added')).toBeTruthy();
+        });
+
+        it('places one pair for a double click while the first is still saving', async () =>
+        {
+            addCameraPair.mockResolvedValue({ ok: true, code: 'E' });
+            render(<MapScreen snapshot={snapshot} user={admin} />);
+            fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
+            fireEvent.click(screen.getByText('map double click'));
+            expect(addCameraPair).toHaveBeenCalledTimes(1);
+            expect(await screen.findByText('Zone E added')).toBeTruthy();
+            fireEvent.click(screen.getByText('map click'));
+            expect(addCameraPair).toHaveBeenCalledTimes(2);
         });
 
         it('shows why a placement was refused', async () =>

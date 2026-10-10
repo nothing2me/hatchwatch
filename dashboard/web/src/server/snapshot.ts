@@ -1,7 +1,8 @@
 import 'server-only';
+import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
 import { outcomeCounts } from '@/lib/sites/outcomes';
-import { summarizeSite } from '@/lib/sites/summary';
+import { PERSON_EVENTS, summarizeSite } from '@/lib/sites/summary';
 import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, SiteEventType, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
@@ -34,7 +35,23 @@ export interface SnapshotRows
     cameras: CameraRow[];
     alerts: AlertRow[];
     inactiveCount?: number;
-    outcomeEvents?: { type: string; at: Date; createdAt?: Date }[][];
+    outcomes?: MapSnapshot['outcomes'];
+}
+
+/** Hours a site stays in the snapshot after a person's last entry, however old it is. */
+export const RECENT_ENTRY_HOURS = 6;
+
+// Cached statuses mirror each site's log (statusFor), so totals need no event reads.
+export function outcomesFromStatusCounts(rows: { status: AlertStatus; _count: number }[]): MapSnapshot['outcomes']
+{
+    const counts = { saved: 0, notSaved: 0, pending: 0 };
+    for (const { status, _count: count } of rows)
+    {
+        if (status === 'HATCHED') counts.saved += count;
+        else if (status === 'LOST' || status === 'ARCHIVED') counts.notSaved += count;
+        else if (status !== 'DISMISSED') counts.pending += count;
+    }
+    return counts;
 }
 
 const toEvents = (events: { type: string; at: Date; createdAt?: Date }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date }[];
@@ -100,19 +117,19 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         alerts,
         camerasOnline: cameras.filter(camera => camera.status === 'ONLINE').length,
         camerasTotal: cameras.length,
-        activeAlertCount: alerts.filter(alert => alert.status === 'NEW').length,
         inactiveCount: rows.inactiveCount ?? alerts.filter(alert => ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'].includes(alert.status)).length,
-        outcomes: outcomeCounts((rows.outcomeEvents ?? rows.alerts.map(alert => alert.events)).map(events => summarizeSite(toEvents(events)))),
+        outcomes: rows.outcomes ?? outcomeCounts(alerts.map(alert => alert.site)),
         fadeMinutes: fadeMinutes(),
     };
 }
 
-export async function getMapSnapshot(): Promise<MapSnapshot>
+export async function loadMapSnapshot(client: PrismaClient, now = new Date()): Promise<MapSnapshot>
 {
-    const recent = await prisma.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 100, select: { id: true } });
-    const [zones, cameras, alerts, activeCount, inactiveCount, everyAlert] = await Promise.all([
-        prisma.zone.findMany({ orderBy: { code: 'asc' } }),
-        prisma.camera.findMany({
+    const recent = await client.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 100, select: { id: true } });
+    const since = new Date(now.getTime() - RECENT_ENTRY_HOURS * 3600_000);
+    const [zones, cameras, alerts, inactiveCount, statusCounts] = await Promise.all([
+        client.zone.findMany({ orderBy: { code: 'asc' } }),
+        client.camera.findMany({
             orderBy: { code: 'asc' },
             include: {
                 zone: { select: { code: true } },
@@ -125,18 +142,25 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
                 },
             },
         }),
-        // Every open site plus the newest 100 others, each with its log.
-        prisma.alert.findMany({
-            where: { OR: [{ status: { in: ['NEW', 'REVIEWED', 'FIELD_CONFIRMED'] } }, { id: { in: recent.map(row => row.id) } }] },
+        // Every open site, the newest 100 others, and any site a person logged in the last few hours
+        // (so recording an old site's outcome never drops it from under the open drawer). Each with its log.
+        client.alert.findMany({
+            where: { OR: [
+                { status: { in: ['NEW', 'REVIEWED', 'FIELD_CONFIRMED'] } },
+                { id: { in: recent.map(row => row.id) } },
+                { events: { some: { type: { in: PERSON_EVENTS }, createdAt: { gte: since } } } },
+            ] },
             orderBy: { createdAt: 'desc' },
             include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
         }),
-        prisma.alert.count({ where: { status: 'NEW' } }),
-        prisma.alert.count({ where: { status: { in: ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'] } } }),
-        // Outcome totals read every site's log; acceptable at demo scale.
-        prisma.alert.findMany({ select: { events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } } }),
+        client.alert.count({ where: { status: { in: ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'] } } }),
+        client.alert.groupBy({ by: ['status'], _count: true }),
     ]);
 
-    const snapshot = toMapSnapshot({ zones, cameras, alerts, inactiveCount, outcomeEvents: everyAlert.map(alert => alert.events) });
-    return { ...snapshot, activeAlertCount: activeCount };
+    return toMapSnapshot({ zones, cameras, alerts, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts) });
+}
+
+export function getMapSnapshot(): Promise<MapSnapshot>
+{
+    return loadMapSnapshot(prisma);
 }

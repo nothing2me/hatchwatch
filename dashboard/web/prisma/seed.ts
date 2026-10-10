@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { hash } from '@node-rs/argon2';
 import type { PrismaClient } from '../src/generated/prisma/client';
+import { backfillSiteEvents } from './backfill-site-events';
 import { DEMO_VIEWER, SEED_CAMERAS, SEED_ZONES } from './seed-data';
 
 export interface SeedOptions
@@ -70,6 +71,13 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         {
             console.log(`Seeded viewer ${DEMO_VIEWER.email} with password: ${viewerPassword}`);
         }
+    }
+
+    // Sites from before the site log get their `detected` entry; a no-op once every site has a log.
+    const backfilled = await backfillSiteEvents(prisma);
+    if (backfilled)
+    {
+        console.log(`Backfilled ${backfilled} site log(s)`);
     }
 }
 

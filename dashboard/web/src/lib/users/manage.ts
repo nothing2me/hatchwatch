@@ -111,6 +111,10 @@ export async function setDisabled(prisma: PrismaClient, actorId: string, userId:
 // A fresh temporary password for someone who lost theirs; shown once, like a new account.
 export async function resetPassword(prisma: PrismaClient, actorId: string, userId: string): Promise<{ temporaryPassword: string }>
 {
+    if (userId === actorId)
+    {
+        throw new UserError('SELF', 'You cannot reset your own password here.');
+    }
     const temporaryPassword = randomBytes(9).toString('base64url');
     const passwordHash = await hashPassword(temporaryPassword);
     await prisma.$transaction(async tx =>

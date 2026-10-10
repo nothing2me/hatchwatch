@@ -95,6 +95,7 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 initialViewState={{ bounds: [west, south, east, north], fitBoundsOptions: { padding } }}
                 maxZoom={20}
                 dragRotate
+                doubleClickZoom={!editing}
                 attributionControl={{ compact: true }}
                 interactiveLayerIds={!editing && layers.alerts && onSelectAlert ? ['alert-ring'] : []}
                 cursor={editing ? 'crosshair' : pinHover ? 'pointer' : undefined}

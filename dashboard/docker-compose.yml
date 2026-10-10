@@ -24,7 +24,8 @@ services:
       DATABASE_URL: postgresql://nesttrace:nesttrace@db:5432/nesttrace
       MEDIA_ROOT: /media
       INSECURE_COOKIES: "1"
-      LIVE_FEED: ${LIVE_FEED:-1}
+      # The container is the one live watcher; host dev (`npm run dev`) stays off unless LIVE_FEED=1 there.
+      LIVE_FEED: "1"
       LIVE_ROOT: /sim-public
     ports:
       - "127.0.0.1:3000:3000"

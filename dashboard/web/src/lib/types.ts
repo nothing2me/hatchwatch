@@ -91,7 +91,6 @@ export interface MapSnapshot
     alerts: AlertView[];
     camerasOnline: number;
     camerasTotal: number;
-    activeAlertCount: number; // status NEW
     inactiveCount: number;    // dismissed, hatched, lost or archived
     outcomes: { saved: number; notSaved: number; pending: number };
     fadeMinutes: number;

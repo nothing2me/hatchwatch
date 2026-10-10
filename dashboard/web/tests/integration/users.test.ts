@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPrismaClient } from '@/lib/db';
 import { onChange } from '@/lib/changes';
 import { verifyPassword } from '@/lib/auth/password';
-import { createUser, listUsers, setDisabled, setRole, UserError } from '@/lib/users/manage';
+import { createUser, listUsers, resetPassword, setDisabled, setRole, UserError } from '@/lib/users/manage';
 import { seedDatabase } from '../../prisma/seed';
 
 const prisma = createPrismaClient(process.env.TEST_DATABASE_URL);
@@ -77,5 +77,23 @@ describe('user management', () =>
         expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).disabledAt).toBeNull();
         expect(await prisma.auditLog.count({ where: { action: 'user.enable', targetId: user.id } })).toBe(1);
         await rejects(setDisabled(prisma, adminId, adminId, true), 'SELF');
+    });
+
+    it('resets someone else\'s password, audited without the secret, but never your own', async () =>
+    {
+        const { user, temporaryPassword: first } = await createUser(prisma, adminId, { name: 'V', email: 'v@x.org', role: 'VOLUNTEER' });
+        const { temporaryPassword } = await resetPassword(prisma, adminId, user.id);
+        expect(temporaryPassword).toMatch(/^[A-Za-z0-9_-]{12}$/);
+        const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+        expect(await verifyPassword(row.passwordHash, temporaryPassword)).toBe(true);
+        expect(await verifyPassword(row.passwordHash, first)).toBe(false);
+        const audit = await prisma.auditLog.findMany({ where: { action: 'user.password', targetId: user.id, userId: adminId } });
+        expect(audit).toHaveLength(1);
+        expect(JSON.stringify(audit[0])).not.toContain(temporaryPassword);
+        expect(JSON.stringify(audit[0])).not.toContain(row.passwordHash);
+        await rejects(resetPassword(prisma, adminId, 'nope'), 'NOT_FOUND');
+        const adminHash = (await prisma.user.findUniqueOrThrow({ where: { id: adminId } })).passwordHash;
+        await rejects(resetPassword(prisma, adminId, adminId), 'SELF');
+        expect((await prisma.user.findUniqueOrThrow({ where: { id: adminId } })).passwordHash).toBe(adminHash);
     });
 });

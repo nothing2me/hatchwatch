@@ -55,11 +55,11 @@ The dashboard never talks to the runner. Compose mounts `artifacts/public` read-
 
 Timings (all server side):
 
-- A site not refreshed for 5 minutes fades on the map (`LIVE_FADE_MINUTES`).
-- After 20 minutes it moves to Inactive as archived (`LIVE_ARCHIVE_MINUTES`), unless a person has logged any entry on it, in which case it stays until the person closes it with an outcome.
+- A site fades on the map 5 minutes after detection while nobody has logged an entry on it (`LIVE_FADE_MINUTES`). Any person entry keeps it at full strength.
+- 20 minutes after detection it moves to Inactive as archived (`LIVE_ARCHIVE_MINUTES`), unless a person has logged any entry on it, in which case it stays until the person closes it with an outcome.
 - Media of the newest 40 chunks is kept (`LIVE_KEEP`). Older media is pruned but the database rows stay, and the UI falls back to the status card.
 
-Environment variables: `LIVE_FEED` (`1` starts the watcher; Compose defaults to `1`, set `0` to turn it off; run exactly one watcher), `LIVE_ROOT` (`/sim-public` in Compose, `../../artifacts/public` outside Docker), `LIVE_FADE_MINUTES`, `LIVE_ARCHIVE_MINUTES`, `LIVE_KEEP`.
+Environment variables: `LIVE_FEED` (`1` starts the watcher; Compose always sets `1` for the web container, and a host `npm run dev` leaves it off unless you start it with `LIVE_FEED=1`, after stopping Compose web, because two watchers on one database would race), `LIVE_ROOT` (`/sim-public` in Compose, `../../artifacts/public` outside Docker), `LIVE_FADE_MINUTES`, `LIVE_ARCHIVE_MINUTES`, `LIVE_KEEP`.
 
 ## People and roles
 
@@ -73,7 +73,7 @@ Every request checks the database-backed role, so a role change or a disabled ac
 
 ## Nest lifecycle and statistics
 
-Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site fades with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
+Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site reaches the archive time with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
 
 Active sites are open ones still on the live map. Inactive sites have an outcome (hatched or lost), a no-nest finding, or were archived.
 
@@ -81,12 +81,14 @@ Saved and not saved, shown on Analytics ("Everything logged"):
 
 - Saved: the site was logged as hatched, with or without logged protection.
 - Not saved: logged as lost, or archived while unprotected with no person entry.
-- Pending: everything else still open.
+- Pending: everything else, including sites still open and sites archived after protection was logged.
+
+Pre-log sites (created before the site log existed) get a `detected` entry automatically when the container starts (the seed step runs `backfillSiteEvents`; `npm run db:backfill-site-events` does the same by hand). It is safe to run repeatedly.
 - No-nest sites are excluded from all three.
 
 ## Editing cameras
 
-Admins click the pencil on the map to enter edit mode, then click the dune line to add a camera pair. Esc or Done leaves edit mode. A click creates a zone 120 m along the beach and 60 m seaward with its land edge centred on the click, plus two cameras at the ends of that edge facing the zone centre (fov 60 degrees, range 90 m). Codes continue after the highest existing letter (E, F, ...). Removing a zone, which asks for confirmation, removes its cameras. Volunteers and viewers do not see the edit button.
+Admins click the pencil on the map to enter edit mode, then click the dune line to add a camera pair. Esc or Done leaves edit mode. A click creates a zone 120 m along the beach and 60 m seaward with its land edge centred on the click, plus two cameras at the ends of that edge facing the zone centre (fov 60 degrees, range 90 m). Codes continue after the highest existing letter (E, F, ...). In edit mode a cross on a zone removes it, which asks for confirmation and removes its cameras. Only zones added on the map can be removed, and only while they have no live chunks, footage or alerts; the four original zones never can. Volunteers and viewers do not see the edit button.
 
 Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
 

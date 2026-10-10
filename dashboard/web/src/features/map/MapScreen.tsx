@@ -28,8 +28,15 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
     const mapRef = useRef<MapRef>(null);
     const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
-    // A site that drops out of the snapshot closes its drawer.
-    const selectedAlert = snapshot.alerts.find(alert => alert.id === selectedAlertId) ?? null;
+    // The open drawer keeps the last version of its site it saw, so a site that drops out of the
+    // snapshot (an old site whose outcome was just recorded) does not slam the drawer shut.
+    const liveSelected = snapshot.alerts.find(alert => alert.id === selectedAlertId) ?? null;
+    const [heldAlert, setHeldAlert] = useState<AlertView | null>(null);
+    if (liveSelected && liveSelected !== heldAlert)
+    {
+        setHeldAlert(liveSelected);
+    }
+    const selectedAlert = liveSelected ?? (heldAlert?.id === selectedAlertId ? heldAlert : null);
     const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
     const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true });
@@ -132,13 +139,16 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         }
     }, []);
 
+    // A double click fires two clicks before `busy` re-renders; the ref stops the second placement.
+    const placing = useRef(false);
     const placePair = useCallback((at: LngLat) =>
     {
-        if (!editing || busy || confirmCode)
+        if (!editing || busy || confirmCode || placing.current)
         {
             return;
         }
-        void runEdit(() => addCameraPair(at), code => `Zone ${code} added`);
+        placing.current = true;
+        void runEdit(() => addCameraPair(at), code => `Zone ${code} added`).finally(() => { placing.current = false; });
     }, [editing, busy, confirmCode, runEdit]);
 
     const removeZone = useCallback(() =>
@@ -244,7 +254,8 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                     </div>
                 </div>
 
-                {!selectedAlert && (
+                {/* The legend sits where the camera panel and drawer end; it steps aside for both. */}
+                {!selectedAlert && !selectedCamera && (
                     <div className="pointer-events-auto absolute right-3 bottom-9 max-md:hidden">
                         <Legend fadeMinutes={snapshot.fadeMinutes} />
                     </div>

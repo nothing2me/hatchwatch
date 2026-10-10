@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toMapSnapshot, type SnapshotRows } from '@/server/snapshot';
+import { outcomesFromStatusCounts, toMapSnapshot, type SnapshotRows } from '@/server/snapshot';
 
 const rows: SnapshotRows = {
     zones: [{ id: 'z1', code: 'B', name: 'Holiday', activityLevel: 'HIGH',
@@ -37,11 +37,11 @@ describe('toMapSnapshot', () =>
         expect(snapshot.cameras[1].video).toBeNull();
     });
 
-    it('counts cameras online and NEW alerts', () =>
+    it('counts cameras online and carries no NEW-alert count', () =>
     {
         expect(snapshot.camerasOnline).toBe(1);
         expect(snapshot.camerasTotal).toBe(2);
-        expect(snapshot.activeAlertCount).toBe(1);
+        expect(snapshot).not.toHaveProperty('activeAlertCount');
     });
 
     it('maps alert positions and ISO dates', () =>
@@ -58,5 +58,27 @@ describe('toMapSnapshot', () =>
         expect(snapshot.inactiveCount).toBe(0);
         expect(snapshot.outcomes).toEqual({ saved: 0, notSaved: 0, pending: 2 });
         expect(snapshot.fadeMinutes).toBe(5);
+    });
+});
+
+describe('outcomesFromStatusCounts', () =>
+{
+    it('maps cached statuses to saved, not saved and pending', () =>
+    {
+        expect(outcomesFromStatusCounts([
+            { status: 'HATCHED', _count: 2 },
+            { status: 'LOST', _count: 3 },
+            { status: 'ARCHIVED', _count: 4 },
+            { status: 'DISMISSED', _count: 50 },
+            { status: 'NEW', _count: 5 },
+            { status: 'REVIEWED', _count: 6 },
+            { status: 'FIELD_CONFIRMED', _count: 7 },
+        ])).toEqual({ saved: 2, notSaved: 7, pending: 18 });
+        expect(outcomesFromStatusCounts([])).toEqual({ saved: 0, notSaved: 0, pending: 0 });
+    });
+
+    it('is used when supplied instead of the loaded sites', () =>
+    {
+        expect(toMapSnapshot({ ...rows, outcomes: { saved: 9, notSaved: 8, pending: 7 } }).outcomes).toEqual({ saved: 9, notSaved: 8, pending: 7 });
     });
 });
