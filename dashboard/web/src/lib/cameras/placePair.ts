@@ -17,6 +17,8 @@ const SEAWARD_PROBE_M = 30;
 // Holiday Beach runs about 39° with the Gulf to the south-east.
 const DEFAULT_ALONG = 39;
 const DEFAULT_SEAWARD = 129;
+// Cameras look out to sea, turned this far toward the zone centre (spec §7: seaward ± 20°).
+const TOE_IN_DEG = 20;
 
 // Next single-letter zone code after the highest one in use.
 export function nextZoneCode(codes: string[]): string
@@ -65,8 +67,18 @@ function orientation(click: LngLat, zones: ZoneView[]): { along: number; seaward
     return { along, seaward: closer(right) <= closer(left) ? right : left };
 }
 
+const angleGap = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
+
+// Seaward bearing turned TOE_IN_DEG toward the zone centre, whichever way gets closer to it.
+function seawardToward(position: LngLat, centre: LngLat, seaward: number): number
+{
+    const toCentre = bearingBetween(position, centre);
+    const [plus, minus] = [norm(seaward + TOE_IN_DEG), norm(seaward - TOE_IN_DEG)];
+    return angleGap(plus, toCentre) <= angleGap(minus, toCentre) ? plus : minus;
+}
+
 // A new 120 m × 60 m zone whose land edge is centred on the click, with a camera
-// at each land-edge end looking at the zone's centre (so out to sea).
+// at each land-edge end facing the sea, toed in 20° toward the zone centre.
 export function planCameraPair(click: LngLat, zones: ZoneView[], codes: string[]): PairPlan
 {
     const { along, seaward } = orientation(click, zones);
@@ -82,8 +94,8 @@ export function planCameraPair(click: LngLat, zones: ZoneView[], codes: string[]
         code,
         ring,
         cameras: [
-            { code: `${code}1`, position: landNorth, headingDeg: bearingBetween(landNorth, centre) },
-            { code: `${code}2`, position: landSouth, headingDeg: bearingBetween(landSouth, centre) },
+            { code: `${code}1`, position: landNorth, headingDeg: seawardToward(landNorth, centre, seaward) },
+            { code: `${code}2`, position: landSouth, headingDeg: seawardToward(landSouth, centre, seaward) },
         ],
     };
 }

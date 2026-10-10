@@ -163,8 +163,12 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                     const [[w, s], [e, n]] = boundsOf(zone.ring);
                     const removable = editing && zone.custom && onDeleteZone;
                     // Set beside the centre so digging pins near the middle of a zone are not covered.
+                    // Added zones are small with cameras on their land edge, so their label sits off the sea edge instead.
+                    const [lng, lat] = zone.custom && zone.ring.length >= 4
+                        ? [(zone.ring[2][0] + zone.ring[3][0]) / 2, (zone.ring[2][1] + zone.ring[3][1]) / 2]
+                        : [(w + e) / 2, (s + n) / 2];
                     return (
-                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} anchor="right" offset={[-14, 0]} style={{ pointerEvents: 'none', zIndex: removable ? 3 : undefined }}>
+                        <Marker key={`label-${zone.id}`} longitude={lng} latitude={lat} anchor={zone.custom ? 'left' : 'right'} offset={zone.custom ? [10, 0] : [-14, 0]} style={{ pointerEvents: 'none', zIndex: removable ? 3 : undefined }}>
                             <span className={cn('flex items-center gap-1.5 rounded-md bg-night-950/80 py-0.5 pl-1.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 backdrop-blur-sm', removable ? 'pr-0.5 ring-amber/40' : 'pr-1.5 ring-white/10')}>
                                 <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', levelDot[zone.activityLevel])} />
                                 <span className="max-md:sr-only">ZONE </span>{zone.code}

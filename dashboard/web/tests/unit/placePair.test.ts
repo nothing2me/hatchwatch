@@ -72,23 +72,36 @@ describe('planCameraPair', () =>
         expect(metres(seaNorth, seaMid(zoneD.ring))).toBeLessThan(metres(landNorth, seaMid(zoneD.ring)));
     });
 
-    it('puts cameras at the land-edge ends, both facing the sea', () =>
+    it('puts cameras at the land-edge ends, facing the sea toed in 20° toward the zone', () =>
     {
         const [north, south] = plan.cameras;
         expect(north.position).toEqual(landNorth);
         expect(south.position).toEqual(landSouth);
         const seaward = bearingBetween(landNorth, seaNorth);
-        // Facing the centroid of a 120 x 60 m zone from a land corner sits atan(60/30) ≈ 63.4° off
-        // straight seaward, so the brief's 45° bound cannot hold; check the sea half-plane and the exact angle.
+        expect(angleGap(seaward, 129)).toBeLessThan(15);
+        const centre: LngLat = [(landNorth[0] + landSouth[0] + seaSouth[0] + seaNorth[0]) / 4, (landNorth[1] + landSouth[1] + seaSouth[1] + seaNorth[1]) / 4];
         for (const camera of plan.cameras)
         {
-            expect(angleGap(camera.headingDeg, seaward)).toBeLessThan(90);
-            expect(angleGap(camera.headingDeg, seaward)).toBeCloseTo(63.4, 0);
+            expect(Math.abs(angleGap(camera.headingDeg, seaward) - 20)).toBeLessThan(0.5);
+            // Turned toward the centre: closer to it than straight seaward is.
+            const toCentre = bearingBetween(camera.position, centre);
+            expect(angleGap(camera.headingDeg, toCentre)).toBeLessThan(angleGap(seaward, toCentre));
         }
-        // The pair look inward at each other's half of the zone, not along the beach.
-        expect(angleGap(north.headingDeg, bearingBetween(landNorth, landSouth))).toBeLessThan(90);
-        expect(angleGap(south.headingDeg, bearingBetween(landSouth, landNorth))).toBeLessThan(90);
-        expect(angleGap(seaward, 129)).toBeLessThan(15);
+        // North camera turns toward the south end and vice versa.
+        expect(angleGap(north.headingDeg, bearingBetween(landNorth, landSouth))).toBeLessThan(angleGap(seaward, bearingBetween(landNorth, landSouth)));
+        expect(angleGap(south.headingDeg, bearingBetween(landSouth, landNorth))).toBeLessThan(angleGap(seaward, bearingBetween(landSouth, landNorth)));
+    });
+
+    it('covers the middle of the zone\'s sea edge with each 60° / 90 m cone', () =>
+    {
+        // The centroid itself sits atan(60/30) ≈ 63.4° off seaward from a land corner, so a cone
+        // aimed seaward + 20° (half-width 30°) cannot contain it; the sea-edge midpoint (45° off, 85 m) is inside.
+        const target = seaMid(plan.ring);
+        for (const camera of plan.cameras)
+        {
+            expect(angleGap(bearingBetween(camera.position, target), camera.headingDeg)).toBeLessThan(30);
+            expect(metres(camera.position, target)).toBeLessThan(90);
+        }
     });
 
     it('refuses a click far from every zone', () =>
