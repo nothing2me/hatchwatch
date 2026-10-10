@@ -19,6 +19,7 @@ describe('CamSender', () =>
         render(<CamSender user={{ name: 'Vi', role: 'VIEWER' }} />);
         expect(screen.getByText(MESSAGES.viewer)).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+        expect(screen.getByRole('heading', { name: 'HatchWatch camera' })).toBeTruthy();
     });
 
     it('remembers the phone name and defaults to the rear camera and Standard quality', () =>

@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from nesttrace_worker.detector import ANCHORS, Box, PersonDetector, decode, is_dark, letterbox, to_blob
+from hatchwatch_worker.detector import ANCHORS, Box, PersonDetector, decode, is_dark, letterbox, to_blob
 
 from tests.helpers import FIXTURE_SHA256, FIXTURES, MODEL_SHA256
 

@@ -6,9 +6,9 @@ import cv2
 import numpy as np
 import pytest
 
-from nesttrace_worker.api import DeviceRef, InternalApi
-from nesttrace_worker.config import load_config
-from nesttrace_worker.scheduler import Scheduler
+from hatchwatch_worker.api import DeviceRef, InternalApi
+from hatchwatch_worker.config import load_config
+from hatchwatch_worker.scheduler import Scheduler
 
 TOKEN = 'test-worker-token'
 JPEG = cv2.imencode('.jpg', np.full((240, 320, 3), 128, np.uint8))[1].tobytes()
@@ -200,7 +200,7 @@ def test_a_failing_device_does_not_starve_the_others(web, make_api):
 
 def test_a_refused_token_reaches_the_main_loop_backoff(web, make_api, monkeypatch, caplog):
     import httpx
-    from nesttrace_worker import main
+    from hatchwatch_worker import main
 
     scheduler = Scheduler(make_api('wrong'), lambda: CountingPipeline([]), FakeClock())
     with pytest.raises(httpx.HTTPStatusError):
@@ -218,7 +218,7 @@ def test_a_refused_token_reaches_the_main_loop_backoff(web, make_api, monkeypatc
     monkeypatch.setattr(main, 'load_config', lambda: type('C', (), {'model_path': 'm', 'web_url': web.url, 'token': 'wrong'})())
     monkeypatch.setattr(main, 'PersonDetector', lambda path: None)
     monkeypatch.setattr(main.time, 'sleep', fake_sleep)
-    with caplog.at_level('WARNING', logger='nesttrace_worker'), pytest.raises(Stop):
+    with caplog.at_level('WARNING', logger='hatchwatch_worker'), pytest.raises(Stop):
         main.run()
     assert sleeps == [main.ERROR_BACKOFF_S]
     assert any('401' in r.getMessage() and 'token refused' in r.getMessage() for r in caplog.records)

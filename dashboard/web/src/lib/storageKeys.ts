@@ -7,7 +7,7 @@ export const STORAGE_KEYS = {
 
 export type StorageKeyName = keyof typeof STORAGE_KEYS;
 
-/** Reads a HatchWatch key; the first read moves an old NestTrace value across and removes the old key. Callers keep their try/catch. */
+/** Reads a HatchWatch key; the first read moves an old pre-rename value across and removes the old key. Callers keep their try/catch. */
 export function readStored(storage: Storage, name: StorageKeyName): string | null
 {
     const key = STORAGE_KEYS[name];

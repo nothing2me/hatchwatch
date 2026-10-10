@@ -39,10 +39,10 @@ describe('UsersScreen', () =>
         render(<UsersScreen user={admin} users={users} bar={bar} />);
         expect((screen.getByLabelText('Role', { selector: 'select' }) as HTMLSelectElement).value).toBe('VOLUNTEER');
         fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test Volunteer' } });
-        fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'Volunteer@Nesttrace.Local' } });
+        fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'Volunteer@Hatchwatch.Local' } });
         fireEvent.click(screen.getAllByRole('button', { name: 'Add person' })[0]);
         await waitFor(() => expect(screen.getByTestId('temp-password').textContent).toBe('abcDEF123_-x'));
-        expect(addUserAction).toHaveBeenCalledWith({ name: 'Test Volunteer', email: 'Volunteer@Nesttrace.Local', role: 'VOLUNTEER' });
+        expect(addUserAction).toHaveBeenCalledWith({ name: 'Test Volunteer', email: 'Volunteer@Hatchwatch.Local', role: 'VOLUNTEER' });
         expect(screen.getByText('Shown once — share it privately.')).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Copy' })).toBeTruthy();
     });

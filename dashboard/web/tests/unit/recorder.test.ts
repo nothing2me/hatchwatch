@@ -137,7 +137,7 @@ describe('Recorder', () =>
         {
             mkdirSync(join(root, 'd1/2026-10-01'), { recursive: true });
             writeFileSync(join(root, `d1/2026-10-01/${name}.mp4`), 'x');
-            writeFileSync(join(root, `d1/2026-10-01/${name}.json`), JSON.stringify({ schema: 'nesttrace.recording', version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(endedAt - 600_000).toISOString(), endedAt: new Date(endedAt).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: `${name}.mp4` }));
+            writeFileSync(join(root, `d1/2026-10-01/${name}.json`), JSON.stringify({ schema: 'hatchwatch.recording', version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(endedAt - 600_000).toISOString(), endedAt: new Date(endedAt).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: `${name}.mp4` }));
         };
         write('old', T0 - 73 * 3_600_000);
         write('new', T0 - 71 * 3_600_000);
@@ -178,7 +178,7 @@ describe('Recorder after an interrupted close or past retention', () =>
         const ended = Date.now() - 73 * 3_600_000;
         mkdirSync(join(root, 'd1/2026-10-01'), { recursive: true });
         writeFileSync(join(root, 'd1/2026-10-01/010203.avi'), 'avi');
-        writeFileSync(join(root, 'd1/2026-10-01/010203.json'), JSON.stringify({ schema: 'nesttrace.recording', version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(ended - 600_000).toISOString(), endedAt: new Date(ended).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: '010203.avi' }));
+        writeFileSync(join(root, 'd1/2026-10-01/010203.json'), JSON.stringify({ schema: 'hatchwatch.recording', version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(ended - 600_000).toISOString(), endedAt: new Date(ended).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: '010203.avi' }));
         const before = { term: process.listeners('SIGTERM'), int: process.listeners('SIGINT') };
         try
         {
@@ -193,7 +193,7 @@ describe('Recorder after an interrupted close or past retention', () =>
         }
         finally
         {
-            delete (globalThis as { __nesttraceRecorder?: Recorder }).__nesttraceRecorder;
+            delete (globalThis as { __hatchwatchRecorder?: Recorder }).__hatchwatchRecorder;
             process.listeners('SIGTERM').filter(listener => !before.term.includes(listener)).forEach(listener => process.off('SIGTERM', listener));
             process.listeners('SIGINT').filter(listener => !before.int.includes(listener)).forEach(listener => process.off('SIGINT', listener));
         }
@@ -225,7 +225,7 @@ describe('Recorder after an interrupted close or past retention', () =>
 
 describe('Recorder sharing a folder', () =>
 {
-    const reset = () => { delete (globalThis as { __nesttraceRecorder?: Recorder }).__nesttraceRecorder; };
+    const reset = () => { delete (globalThis as { __hatchwatchRecorder?: Recorder }).__hatchwatchRecorder; };
 
     it('leaves a fresh .avi.part alone but recovers an old one', async () =>
     {

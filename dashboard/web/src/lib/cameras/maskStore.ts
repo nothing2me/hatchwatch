@@ -59,7 +59,7 @@ function parseByCode(data: { by_code?: unknown }): Record<string, CodeMaskEntry>
     }));
 }
 
-// The schema id is not checked: hatchwatch.camera_masks, nesttrace.camera_masks (config/camera-masks.json) and none all read.
+// The schema id is not checked: hatchwatch.camera_masks, the legacy id in config/camera-masks.json and none all read.
 function parseMasksFile(path: string): Omit<MasksFile, 'source'>
 {
     const data = JSON.parse(readFileSync(path, 'utf8')) as { cameras?: unknown; by_code?: unknown };

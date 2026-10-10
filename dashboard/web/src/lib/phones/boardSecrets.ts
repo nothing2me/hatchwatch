@@ -3,7 +3,7 @@
 export function boardSecretsBlock({ dashboardUrl, deviceId, token }: { dashboardUrl: string | null; deviceId: string; token: string }): string
 {
     return [
-        '// NestTrace dashboard upload. Replace the DASHBOARD_URL, DEVICE_ID and DEVICE_TOKEN lines in firmware/esp32s3-cam/secrets.h.',
+        '// HatchWatch dashboard upload. Replace the DASHBOARD_URL, DEVICE_ID and DEVICE_TOKEN lines in firmware/esp32s3-cam/secrets.h.',
         ...(dashboardUrl ? [] : ['// Set LAN_HOST in dashboard/.env, then put https://<LAN_HOST>:3443 here.']),
         `#define DASHBOARD_URL "${dashboardUrl ?? ''}"`,
         `#define DEVICE_ID "${deviceId}"`,

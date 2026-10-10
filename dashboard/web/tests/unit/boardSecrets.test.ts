@@ -14,6 +14,7 @@ describe('boardSecretsBlock', () =>
         // secrets.h (from secrets.example.h) already defines DASHBOARD_CA; a second one would not compile.
         expect(block).not.toContain('static const char DASHBOARD_CA');
         expect(block.match(/^#define /gm)).toHaveLength(3);
+        expect(block).toContain('// HatchWatch dashboard upload.');
     });
 
     it('leaves the address empty with a note when LAN_HOST is not set', () =>

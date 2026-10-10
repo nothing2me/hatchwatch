@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 
-const globalBus = globalThis as unknown as { __nesttraceChanges?: EventEmitter };
-const bus = globalBus.__nesttraceChanges ??= (() =>
+const globalBus = globalThis as unknown as { __hatchwatchChanges?: EventEmitter };
+const bus = globalBus.__hatchwatchChanges ??= (() =>
 {
     const emitter = new EventEmitter();
     emitter.setMaxListeners(100);

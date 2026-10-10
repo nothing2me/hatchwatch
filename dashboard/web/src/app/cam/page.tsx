@@ -3,7 +3,7 @@ import { currentUserOrNull } from '@/lib/auth/guard';
 import { CamSender } from '@/features/phones/CamSender';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'NestTrace camera' };
+export const metadata = { title: 'HatchWatch camera' };
 
 export default async function CamPage()
 {

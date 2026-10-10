@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import httpx
 
 TIMEOUT_S = 3.0
-log = logging.getLogger('nesttrace_worker')
+log = logging.getLogger('hatchwatch_worker')
 
 
 @dataclass(frozen=True)

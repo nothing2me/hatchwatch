@@ -8,7 +8,7 @@ import numpy as np
 
 from .api import InternalApi
 
-log = logging.getLogger('nesttrace_worker')
+log = logging.getLogger('hatchwatch_worker')
 
 LOOP_MS = 500
 MIN_FRAME_GAP_MS = 500    # at most 2 frames/s per device

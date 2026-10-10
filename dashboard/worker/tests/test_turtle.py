@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from nesttrace_worker.detector import Box
-from nesttrace_worker.device import DevicePipeline
+from hatchwatch_worker.detector import Box
+from hatchwatch_worker.device import DevicePipeline
 
 W, H = 320, 240
 STEP_MS = 500  # the worker's 2 frames/s
@@ -74,8 +74,8 @@ def test_dark_frames_detect_nothing():
     assert payload == {'at': 1_000, 'dark': True, 'width': W, 'height': H, 'objects': [], 'trails': []}
 
 
-from nesttrace_worker.tracker import Track
-from nesttrace_worker.turtle import blob_shape_ok, is_possible_turtle
+from hatchwatch_worker.tracker import Track
+from hatchwatch_worker.turtle import blob_shape_ok, is_possible_turtle
 
 PIC_W, PIC_H = 320, 240
 

@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import cv2
 
-from nesttrace_worker.detector import PersonDetector
-from nesttrace_worker.device import DevicePipeline
+from hatchwatch_worker.detector import PersonDetector
+from hatchwatch_worker.device import DevicePipeline
 from tests.helpers import FIXTURES
 
 
@@ -19,7 +19,7 @@ def test_person_keeps_one_track_and_a_trail(model_path):
 
 
 def test_objects_and_trails_are_capped_at_50_highest_score_first():
-    from nesttrace_worker.detector import Box
+    from hatchwatch_worker.detector import Box
 
     boxes = [Box(10 + (i % 10) * 30, 10 + (i // 10) * 30, 20, 20, 0.5 + i / 1000) for i in range(70)]
     pipeline = DevicePipeline(lambda bgr: boxes)
@@ -31,7 +31,7 @@ def test_objects_and_trails_are_capped_at_50_highest_score_first():
 
 
 def test_a_picture_size_change_rebuilds_the_pipeline_so_no_old_pixels_remain():
-    from nesttrace_worker.detector import Box
+    from hatchwatch_worker.detector import Box
 
     pipeline = DevicePipeline(lambda bgr: [Box(100, 100, 40, 40, 0.9)])
     big = np.full((400, 400, 3), 128, dtype=np.uint8)
@@ -44,7 +44,7 @@ def test_a_picture_size_change_rebuilds_the_pipeline_so_no_old_pixels_remain():
 
 
 def test_track_numbers_wrap_back_to_one_after_999999():
-    from nesttrace_worker.detector import Box
+    from hatchwatch_worker.detector import Box
 
     pipeline = DevicePipeline(lambda bgr: [Box(10, 10, 40, 40, 0.9)])
     pipeline.person_count = 999_999

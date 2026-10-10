@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import pytest
 
-from nesttrace_worker.tracker import END_AFTER_MS, TRAIL_POINTS, Tracker, hungarian, iou
+from hatchwatch_worker.tracker import END_AFTER_MS, TRAIL_POINTS, Tracker, hungarian, iou
 
 
 def brute_force(cost: np.ndarray) -> float:

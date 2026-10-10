@@ -37,16 +37,16 @@ describe('user management', () =>
     {
         const reasons: string[] = [];
         const off = onChange(reason => reasons.push(reason));
-        const { user, temporaryPassword } = await createUser(prisma, adminId, { name: ' Test Volunteer ', email: ' Volunteer@NestTrace.Local ', role: 'VOLUNTEER' });
+        const { user, temporaryPassword } = await createUser(prisma, adminId, { name: ' Test Volunteer ', email: ' Volunteer@HatchWatch.Local ', role: 'VOLUNTEER' });
         off();
         expect(temporaryPassword).toMatch(/^[A-Za-z0-9_-]{12}$/);
-        expect(user).toMatchObject({ name: 'Test Volunteer', email: 'volunteer@nesttrace.local', role: 'VOLUNTEER', disabledAt: null });
+        expect(user).toMatchObject({ name: 'Test Volunteer', email: 'volunteer@hatchwatch.local', role: 'VOLUNTEER', disabledAt: null });
         expect(user).not.toHaveProperty('passwordHash');
-        const row = await prisma.user.findUniqueOrThrow({ where: { email: 'volunteer@nesttrace.local' } });
+        const row = await prisma.user.findUniqueOrThrow({ where: { email: 'volunteer@hatchwatch.local' } });
         expect(await verifyPassword(row.passwordHash, temporaryPassword)).toBe(true);
         expect(await prisma.auditLog.count({ where: { action: 'user.create', targetId: row.id, userId: adminId } })).toBe(1);
         expect(reasons).toContain('users');
-        expect((await listUsers(prisma)).map(u => u.email)).toContain('volunteer@nesttrace.local');
+        expect((await listUsers(prisma)).map(u => u.email)).toContain('volunteer@hatchwatch.local');
     });
 
     it('rejects a duplicate email in any case and a blank name or bad email', async () =>

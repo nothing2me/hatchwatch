@@ -19,7 +19,7 @@ def test_dockerfile_pins_the_model_release_and_hash():
 def test_worker_never_reaches_into_the_research_app():
     # agent.md: the worker is dashboard code. No simulator, research pipeline, research API, seeds or private paths.
     imports = re.compile(r'^\s*(from|import)\s+(pipeline|web|scripts|config)\b', re.MULTILINE)
-    for path in (WORKER / 'nesttrace_worker').glob('*.py'):
+    for path in (WORKER / 'hatchwatch_worker').glob('*.py'):
         text = path.read_text()
         assert not imports.search(text), path.name
         for word in ('artifacts/', 'private/', 'server.mjs', ':5174', 'truth.json'):

@@ -120,5 +120,5 @@ export class FrameStore
     }
 }
 
-const globalStore = globalThis as unknown as { __nesttraceFrames?: FrameStore };
-export const frameStore = globalStore.__nesttraceFrames ??= new FrameStore();
+const globalStore = globalThis as unknown as { __hatchwatchFrames?: FrameStore };
+export const frameStore = globalStore.__hatchwatchFrames ??= new FrameStore();

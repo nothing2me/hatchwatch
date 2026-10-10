@@ -11,7 +11,7 @@ from .scheduler import LOOP_MS, Scheduler
 
 ERROR_BACKOFF_S = 2.0
 
-log = logging.getLogger('nesttrace_worker')
+log = logging.getLogger('hatchwatch_worker')
 
 
 def run() -> None:

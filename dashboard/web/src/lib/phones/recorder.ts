@@ -406,19 +406,19 @@ async function takeLock(root: string): Promise<(() => Promise<void>) | null>
     };
 }
 
-const globalRecorder = globalThis as unknown as { __nesttraceRecorder?: Recorder };
+const globalRecorder = globalThis as unknown as { __hatchwatchRecorder?: Recorder };
 
 export function getRecorder(): Recorder | null
 {
-    return globalRecorder.__nesttraceRecorder ?? null;
+    return globalRecorder.__hatchwatchRecorder ?? null;
 }
 
 // Called once from instrumentation.ts in the web process.
 export async function startRecorder(options: RecorderOptions): Promise<Recorder | null>
 {
-    if (globalRecorder.__nesttraceRecorder)
+    if (globalRecorder.__hatchwatchRecorder)
     {
-        return globalRecorder.__nesttraceRecorder;
+        return globalRecorder.__hatchwatchRecorder;
     }
     await mkdir(options.root, { recursive: true });
     const releaseLock = await takeLock(options.root);
@@ -434,7 +434,7 @@ export async function startRecorder(options: RecorderOptions): Promise<Recorder 
     await sweep();
     await recorder.recover();
     // Registered only once start-up succeeded, so a failed start leaves recording off rather than half on.
-    globalRecorder.__nesttraceRecorder = recorder;
+    globalRecorder.__hatchwatchRecorder = recorder;
     setInterval(() => recorder.closeIdle(), 5_000).unref();
     setInterval(() => { void sweep(); }, 3_600_000).unref();
     // Best effort: finish open files on stop (5 s cap). Anything cut off is repaired by recover() next start.

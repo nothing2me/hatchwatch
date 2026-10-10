@@ -12,4 +12,4 @@ RUN mkdir -p /app/models \
 COPY . .
 RUN useradd --system --no-create-home worker
 USER worker
-CMD ["python", "-m", "nesttrace_worker.main"]
+CMD ["python", "-m", "hatchwatch_worker.main"]

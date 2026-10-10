@@ -254,8 +254,8 @@ export function CamSender({ user }: { user: { name: string; role: Role } })
             <div className="relative mx-auto flex w-full max-w-md flex-col gap-4">
                 <header className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="text-xs font-semibold tracking-[0.2em] text-ink-muted">NESTTRACE</p>
-                        <h1 className="mt-1 text-xl font-semibold">NestTrace camera</h1>
+                        <p className="text-xs font-semibold tracking-[0.2em] text-ink-muted">HATCHWATCH</p>
+                        <h1 className="mt-1 text-xl font-semibold">HatchWatch camera</h1>
                         <p className="mt-0.5 truncate text-sm text-ink-muted">Signed in as {user.name}</p>
                     </div>
                     <span className={cn('mt-1 inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs',

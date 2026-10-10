@@ -153,13 +153,13 @@ export async function retireMissingMedia(prisma: PrismaClient, settings: LiveSet
     return missing.length;
 }
 
-const globalWatcher = globalThis as unknown as { __nesttraceLiveWatcher?: () => void };
+const globalWatcher = globalThis as unknown as { __hatchwatchLiveWatcher?: () => void };
 
 export function startLiveWatcher(prisma: PrismaClient, settings: LiveSettings): () => void
 {
-    if (globalWatcher.__nesttraceLiveWatcher)
+    if (globalWatcher.__hatchwatchLiveWatcher)
     {
-        return globalWatcher.__nesttraceLiveWatcher;
+        return globalWatcher.__hatchwatchLiveWatcher;
     }
     let running = false;
     const tick = async () =>
@@ -190,9 +190,9 @@ export function startLiveWatcher(prisma: PrismaClient, settings: LiveSettings): 
     const stop = () =>
     {
         clearInterval(timer);
-        globalWatcher.__nesttraceLiveWatcher = undefined;
+        globalWatcher.__hatchwatchLiveWatcher = undefined;
     };
-    globalWatcher.__nesttraceLiveWatcher = stop;
+    globalWatcher.__hatchwatchLiveWatcher = stop;
     console.log(`[live] watching ${settings.root}`);
     return stop;
 }
