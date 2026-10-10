@@ -1,9 +1,9 @@
 import type { AlertKind, AlertStatus, Secured, SiteEventType, SiteSummary } from '@/lib/types';
 
-export const PERSON_EVENTS: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost', 'note', 'dangerResolved'];
-const ON_SITE: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost'];
+export const PERSON_EVENTS: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'nestDamaged', 'protectionInstalled', 'hatched', 'lost', 'note', 'dangerResolved'];
+const ON_SITE: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'nestDamaged', 'protectionInstalled', 'hatched', 'lost'];
 /** Person entries that answer an active danger on a nest site. */
-export const RESOLVES_DANGER: SiteEventType[] = ['dangerResolved', 'protectionInstalled', 'patrolVisit', 'note'];
+export const RESOLVES_DANGER: SiteEventType[] = ['dangerResolved', 'protectionInstalled', 'patrolVisit', 'nestDamaged', 'note'];
 /** Entry types a person may add to a DANGER alert itself. */
 export const DANGER_ALERT_EVENTS: SiteEventType[] = ['dangerResolved'];
 /** Minutes after the first danger within which protection must be logged, or the site counts as Not saved. */
@@ -43,7 +43,7 @@ export function summarizeSite(events: Ev[], kind?: AlertKind): SiteSummary
 {
     // Ties on `at` fall back to creation order, then to input order (Array.sort is stable).
     const ordered = [...events].sort(byTime);
-    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null };
+    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, damaged: false, danger: 'none', dangerDeadline: null, secured: null };
     let archivedWithoutFollowUp = false;
     let firstDanger: number | null = null;
     let protectedAt: number | null = null;
@@ -75,6 +75,8 @@ export function summarizeSite(events: Ev[], kind?: AlertKind): SiteSummary
             case 'archived': summary.archivedAt = iso; archivedWithoutFollowUp = true; break;
             case 'nestConfirmed': summary.nesting = 'confirmed'; if (summary.protection === 'notNeeded') summary.protection = 'unprotected'; break;
             case 'noNestFound': summary.nesting = 'noNest'; summary.protection = 'notNeeded'; break;
+            // A damaged nest is still a nest: it stays active so the patrol can protect what's left or log it lost.
+            case 'nestDamaged': summary.damaged = true; summary.nesting = 'confirmed'; if (summary.protection === 'notNeeded') summary.protection = 'unprotected'; break;
             case 'protectionInstalled': summary.protection = 'protected'; protectedAt ??= time(event.at).getTime(); break;
             case 'hatched': summary.outcome = 'hatched'; break;
             case 'lost': summary.outcome = 'lost'; break;

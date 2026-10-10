@@ -14,7 +14,7 @@ export const ALERT_MESSAGES = {
 
 export type AlertKind = keyof typeof ALERT_MESSAGES;
 export type AlertStatus = 'NEW' | 'REVIEWED' | 'DISMISSED' | 'FIELD_CONFIRMED' | 'HATCHED' | 'LOST' | 'ARCHIVED';
-export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'protectionInstalled' | 'hatched' | 'lost' | 'note' | 'danger' | 'dangerResolved';
+export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'nestDamaged' | 'protectionInstalled' | 'hatched' | 'lost' | 'note' | 'danger' | 'dangerResolved';
 export type Protection = 'unprotected' | 'protected' | 'notNeeded';
 export type Nesting = 'unresolved' | 'confirmed' | 'noNest';
 export type Outcome = 'open' | 'hatched' | 'lost';
@@ -30,6 +30,8 @@ export interface SiteSummary
     patrolVisited: boolean;
     detectedAt: string | null;
     archivedAt: string | null;
+    /** A patrol found the nest damaged (trampled, driven over, dug up, washed out). Sticky once logged; the site stays active. */
+    damaged: boolean;
     /** Person-near-site state from the log: a `danger` entry makes it active until someone resolves or acts on the site. */
     danger: DangerState;
     /** ISO time the site counts as Not saved unless protection is logged first (first danger + 30 min); null = no deadline. */

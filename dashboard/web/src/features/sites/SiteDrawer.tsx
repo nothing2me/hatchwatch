@@ -7,7 +7,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 import { PERSON_EVENTS } from '@/lib/sites/summary';
 import type { AlertView, SiteEventType, SiteSummary } from '@/lib/types';
-import { PatrolledMark, StatusPill } from '@/features/alerts/AlertsFeed';
+import { DamagedMark, PatrolledMark, StatusPill } from '@/features/alerts/AlertsFeed';
 import { CLOSED_SITE_NOTE, DangerBadge, siteClosed } from '@/features/alerts/DangerCards';
 import { siteLabel } from '@/features/alerts/dangerGroups';
 import { trailColor } from '@/features/map/trails';
@@ -220,7 +220,7 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                             ? <StatusPill tone={{ label: 'Open · act now', color: ALARM }} />
                             : <span className="inline-flex items-center gap-1 text-xs text-ok"><ShieldCheck aria-hidden className="h-3.5 w-3.5" />Resolved{alert.resolvedBy ? ` by ${alert.resolvedBy}` : ''}</span>
                         : site.active
-                        ? (<><StatusPill tone={PROTECTION[site.protection]} />{site.patrolVisited && <PatrolledMark />}<span className="text-[11px] text-ink-muted">{NESTING[site.nesting]}</span></>)
+                        ? (<><StatusPill tone={PROTECTION[site.protection]} />{site.patrolVisited && <PatrolledMark />}{site.damaged && <DamagedMark />}<span className="text-[11px] text-ink-muted">{NESTING[site.nesting]}</span></>)
                         : (<><StatusPill tone={inactiveState(site)} /><span className="text-[11px] text-ink-muted">{PROTECTION[site.protection].label}</span></>)}
                     {!isDanger && faded && site.active && <span className="text-[11px] text-ink-muted/80">· untouched {fadeMinutes}+ min</span>}
                 </div>

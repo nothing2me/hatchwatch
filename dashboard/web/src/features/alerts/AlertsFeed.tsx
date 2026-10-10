@@ -48,6 +48,16 @@ export function PatrolledMark()
     );
 }
 
+// A patrol found the nest damaged; shown beside the protection pill until the site closes.
+export function DamagedMark()
+{
+    return (
+        <span className="inline-flex h-[18px] items-center rounded-full bg-[#E2581F]/15 px-1.5 text-[10px] font-semibold tracking-[0.04em] text-[#F4A27F] ring-1 ring-[#E2581F]/40 ring-inset">
+            Damaged
+        </span>
+    );
+}
+
 const outcomeNote = { saved: 'Saved', notSaved: 'Not saved', pending: '', none: '' } as const;
 
 // `inactiveCount` is the server's whole-log count; the snapshot lists only the newest inactive sites.
@@ -199,7 +209,7 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                                 </span>
                                 <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                                     {live
-                                        ? (<><StatusPill tone={PROTECTION[alert.site.protection]} />{alert.site.patrolVisited && <PatrolledMark />}<span className="text-[11px] text-ink-muted">{NESTING[alert.site.nesting]}</span></>)
+                                        ? (<><StatusPill tone={PROTECTION[alert.site.protection]} />{alert.site.patrolVisited && <PatrolledMark />}{alert.site.damaged && <DamagedMark />}<span className="text-[11px] text-ink-muted">{NESTING[alert.site.nesting]}</span></>)
                                         : (<><StatusPill tone={inactiveState(alert.site)} />{note && <span className="text-[11px] text-ink-muted">{note}</span>}</>)}
                                 </span>
                                 {alert.evidenceTier && (
