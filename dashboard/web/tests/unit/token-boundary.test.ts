@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const root = join(import.meta.dirname, '..', '..');
 const ALLOWED = ['src/lib/phones/deviceToken.ts', 'src/lib/phones/devices.ts', 'src/lib/phones/boards.ts'];
-const NO_LOGS = [...ALLOWED, 'src/app/(app)/live/actions.ts', 'src/lib/phones/boardSecrets.ts', 'src/features/phones/BoardToken.tsx'];
+// Every file that holds a token, its hash or the raw bearer header. Task 3 adds src/features/phones/BoardToken.tsx when it exists.
+const NO_LOGS = [...ALLOWED, 'src/app/(app)/live/actions.ts', 'src/lib/phones/boardSecrets.ts', 'src/lib/phones/http.ts', 'src/app/api/live/frame/[deviceId]/route.ts'];
 
 function files(dir: string): string[]
 {
@@ -26,8 +27,9 @@ describe('device token boundary', () =>
 
     it('never logs from code that holds a token or its hash', () =>
     {
-        for (const path of NO_LOGS.map(file => join(root, file)).filter(existsSync))
+        for (const path of NO_LOGS.map(file => join(root, file)))
         {
+            expect(existsSync(path), path).toBe(true);
             expect(readFileSync(path, 'utf8'), path).not.toMatch(/console\.|logger\./);
         }
     });

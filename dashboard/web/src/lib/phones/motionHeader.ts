@@ -2,8 +2,8 @@ import type { BoardMotion } from './frameStore';
 
 export const MOTION_HEADER = 'x-nesttrace-motion';
 const MAX_LENGTH = 160;
-// schemas/esp32-frame.v1.md: fixed order, one decimal, no spaces.
-const V1 = /^v1;percent=(100\.0|\d{1,2}\.\d);active=([01]);box=(\d{1,5}),(\d{1,5}),(\d{1,5}),(\d{1,5})$/;
+// schemas/esp32-frame.v1.md: fixed order, one decimal, no spaces, no leading zeros.
+const V1 = /^v1;percent=(100\.0|[1-9]?\d\.\d);active=([01]);box=(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4})$/;
 
 // The board's motion reading, or null when absent, malformed or another version (the frame is still accepted).
 export function parseMotionHeader(value: string | null): BoardMotion | null
