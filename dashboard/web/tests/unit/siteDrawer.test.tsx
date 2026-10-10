@@ -184,4 +184,23 @@ describe('SiteDrawer for a danger alert', () =>
         // The site's own form never offers "Danger resolved": that belongs to the danger alert.
         expect(screen.queryByRole('option', { name: 'Danger resolved' })).toBeNull();
     });
+
+    it('says who secured an active site and when', async () =>
+    {
+        const secured = { by: 'Vera Volunteer', at: '2026-10-09T00:30:00.000Z' };
+        vi.stubGlobal('fetch', vi.fn(async () => json(log({ protection: 'protected', secured }))));
+        render(<SiteDrawer alert={siteAlert('a1', { protection: 'protected', secured })} user={viewer} onClose={vi.fn()} />);
+        await screen.findByText('Patrol visited');
+        const line = screen.getByTestId('site-secured');
+        expect(line.textContent).toBe('Secured by Vera Volunteer · Oct 8, 7:30 PM');
+    });
+
+    it('shows no secured line for an unsecured site', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json(log())));
+        render(<SiteDrawer alert={siteAlert('a1')} user={viewer} onClose={vi.fn()} />);
+        await screen.findByText('Patrol visited');
+        expect(screen.queryByTestId('site-secured')).toBeNull();
+    });
 });
+

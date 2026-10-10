@@ -12,7 +12,7 @@ import type { LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
 import type { Playback } from './playback';
-import { dangerPins, pinFeatures } from './pins';
+import { dangerPins, pinFeatures, SECURED_GREEN, securedAreaFeatures, securedLabels } from './pins';
 import { trailFeatures } from './trails';
 import type { LayerKey } from './MapControls';
 
@@ -60,6 +60,8 @@ const haloRadius = ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 15, 20, 22] 
 const trailWidth = ['interpolate', ['linear'], ['zoom'], 14, 1.5, 18, 2.75, 20, 4] as unknown as number;
 const casingWidth = ['interpolate', ['linear'], ['zoom'], 14, 3, 18, 5, 20, 7] as unknown as number;
 const ALARM = '#FF4D5E';
+// "Secured" labels appear once a 3 m circle is big enough on screen to carry one.
+const SECURED_LABEL_ZOOM = 18.5;
 
 export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera }, ref)
 {
@@ -96,6 +98,9 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
     const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
     const alertsGeoJson = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(pinKey) }), [pinKey]);
     const dangers = dangerPins(snapshot.alerts);
+    const securedKey = JSON.stringify(securedAreaFeatures(snapshot.alerts));
+    const securedAreas = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(securedKey) }), [securedKey]);
+    const [securedLabelsOn, setSecuredLabelsOn] = useState(false);
 
     // Trails change only when the clock passes a recorded point; key on what is drawn, not on every tick.
     const trailKey = JSON.stringify(trailFeatures(snapshot.tracks ?? [], snapshot.alerts, playback));
@@ -121,6 +126,7 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 attributionControl={{ compact: true }}
                 interactiveLayerIds={!editing && layers.alerts && onSelectAlert ? ['alert-ring'] : []}
                 cursor={editing ? 'crosshair' : pinHover ? 'pointer' : undefined}
+                onZoom={event => setSecuredLabelsOn(event.viewState.zoom >= SECURED_LABEL_ZOOM)}
                 onMouseEnter={() => setPinHover(true)}
                 onMouseLeave={() => setPinHover(false)}
                 onClick={event =>
@@ -170,6 +176,11 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                     <Layer id="zone-fill" type="fill" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'fill-color': levelColor, 'fill-opacity': 0.22 }} />
                     <Layer id="zone-line" type="line" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'line-color': levelColor, 'line-width': 2 }} />
                 </Source>
+                {/* Secured areas: above zone fills, below trails, pins and danger rings. Shown with the sites layer. */}
+                <Source id="secured" type="geojson" data={securedAreas}>
+                    <Layer id="secured-fill" type="fill" layout={{ visibility: layers.alerts ? 'visible' : 'none' }} paint={{ 'fill-color': SECURED_GREEN, 'fill-opacity': 0.18 }} />
+                    <Layer id="secured-line" type="line" layout={{ visibility: layers.alerts ? 'visible' : 'none' }} paint={{ 'line-color': SECURED_GREEN, 'line-width': 1.5, 'line-opacity': 0.9 }} />
+                </Source>
                 {/* Trails sit under the pins; hidden by layout so toggling keeps them below. */}
                 <Source id="trails" type="geojson" data={trailLines}>
                     <Layer id="trail-casing" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round', visibility: trailVisibility }} paint={{ 'line-color': '#04080C', 'line-width': casingWidth, 'line-opacity': ['*', 0.55, ['get', 'opacity']] as unknown as number }} />
@@ -206,6 +217,13 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         </Marker>
                     );
                 })}
+
+                {layers.alerts && securedLabelsOn && securedLabels(securedAreas.features as ReturnType<typeof securedAreaFeatures>).map(label => (
+                    // Under the circle's south edge, so it never covers the pin.
+                    <Marker key={`secured-${label.id}`} longitude={label.position[0]} latitude={label.position[1]} anchor="top" offset={[0, 3]} style={{ pointerEvents: 'none' }}>
+                        <span className="rounded-full bg-night-950/80 px-1.5 py-px font-mono text-[9px] font-semibold tracking-[0.16em] text-[#6EE7B7] uppercase ring-1 ring-[#34D399]/45 backdrop-blur-sm">Secured</span>
+                    </Marker>
+                ))}
 
                 {layers.cameras && snapshot.cameras.map(camera =>
                 {

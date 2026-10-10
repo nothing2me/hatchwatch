@@ -127,7 +127,7 @@ describe('MapScreen', () =>
         id, kind: 'DIGGING', message: `Digging activity detected; nesting unresolved.`, status: 'NEW', zoneCode: 'B', cameraCode,
         position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `video-${runId}`,
         simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: null,
-        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null },
+        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null },
     });
     const twoRuns: MapSnapshot = {
         ...snapshot,
@@ -304,7 +304,7 @@ describe('MapScreen', () =>
     describe('trails and dangers', () =>
     {
         const site = { id: 's1', kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1', position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: 'v', simRunId: 'R', startT: 8, endT: 20, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: 0,
-            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null } } as AlertView;
+            site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'active', dangerDeadline: null, secured: null } } as AlertView;
         const danger = { ...site, id: 'd1', kind: 'DANGER', message: 'Danger · person near an active nest site — immediate action', level: 1, siteId: 's1', colorIndex: null, startT: 14, endT: 15 } as AlertView;
         const withDanger: MapSnapshot = { ...snapshot, alerts: [site, danger], dangerCount: 1, dangerTotal: 1 };
 

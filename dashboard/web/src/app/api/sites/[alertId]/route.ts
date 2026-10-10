@@ -1,6 +1,7 @@
 import { currentUserOrNull } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
-import { summarizeSite } from '@/lib/sites/summary';
+import { securedOf, summarizeSite } from '@/lib/sites/summary';
+import { loadDangerResolutions } from '@/server/snapshot';
 import type { SiteEventType } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,14 @@ export async function GET(_request: Request, context: { params: Promise<{ alertI
     {
         return Response.json({ error: 'Site not found' }, { status: 404 });
     }
-    const summary = summarizeSite(alert.events.map(event => ({ type: event.type as SiteEventType, at: event.at, createdAt: event.createdAt })), alert.kind);
+    const events = alert.events.map(event => ({ type: event.type as SiteEventType, at: event.at, createdAt: event.createdAt, author: event.author }));
+    const summary = summarizeSite(events, alert.kind);
+    if (alert.kind !== 'DANGER')
+    {
+        // A resolution logged on one of the site's danger alerts also secures it.
+        const resolutions = await loadDangerResolutions(prisma, [alert.id]);
+        summary.secured = securedOf([...events, ...resolutions.map(row => ({ ...row, type: 'dangerResolved' as const }))]);
+    }
     return Response.json({
         site: {
             id: alert.id,

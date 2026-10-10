@@ -91,3 +91,30 @@ describe('danger fields', () =>
         expect(snapshot.generatedAt).toBe('2026-10-09T19:00:00.000Z');
     });
 });
+
+describe('secured sites', () =>
+{
+    const siteWithDanger = { ...rows.alerts[0], events: [
+        { type: 'detected', at: new Date('2026-10-09T18:00:00Z'), author: 'Camera' },
+        { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+        { type: 'patrolVisit', at: new Date('2026-10-09T18:04:00Z'), author: 'Pat' },
+    ] };
+
+    it('counts a resolution logged on the site\'s danger alert', () =>
+    {
+        const danger = { ...rows.alerts[0], id: 'd1', kind: 'DANGER' as const, status: 'REVIEWED' as const, level: 1, siteId: 'a1', events: [
+            { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+            { type: 'dangerResolved', at: new Date('2026-10-09T18:04:00Z'), author: 'Pat' },
+        ] };
+        const snapshot = toMapSnapshot({ ...rows, alerts: [siteWithDanger, danger] });
+        expect(snapshot.alerts[0].site.secured).toEqual({ by: 'Pat', at: '2026-10-09T18:04:00.000Z' });
+        expect(snapshot.alerts[1].site.secured).toBeNull();
+    });
+
+    it('uses the separately loaded danger resolutions when given', () =>
+    {
+        expect(toMapSnapshot({ ...rows, alerts: [siteWithDanger] }).alerts[0].site.secured).toBeNull();
+        const snapshot = toMapSnapshot({ ...rows, alerts: [siteWithDanger], dangerResolutions: [{ siteId: 'a1', at: new Date('2026-10-09T18:06:00Z'), author: 'Rae' }] });
+        expect(snapshot.alerts[0].site.secured).toEqual({ by: 'Rae', at: '2026-10-09T18:06:00.000Z' });
+    });
+});

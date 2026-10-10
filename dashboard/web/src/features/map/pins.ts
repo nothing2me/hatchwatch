@@ -1,4 +1,5 @@
-import type { Feature, Point } from 'geojson';
+import type { Feature, Point, Polygon } from 'geojson';
+import { circleRing, distanceBetween } from '@/lib/geo';
 import { isNestSite } from '@/lib/danger';
 import type { AlertView, LngLat } from '@/lib/types';
 import { PROTECTION } from '@/features/sites/labels';
@@ -57,4 +58,41 @@ export function dangerPins(alerts: AlertView[]): DangerPin[]
 {
     return alerts.filter(alert => isOpenDanger(alert) && alert.position !== null)
         .map(alert => ({ id: alert.id, siteId: alert.siteId, position: alert.position! }));
+}
+
+/** Real radius of the secured-area circle around a protected nest site. */
+export const SECURED_RADIUS_M = 3;
+/** Fill and outline colour of a secured area. */
+export const SECURED_GREEN = '#34D399';
+
+export interface SecuredAreaProperties { id: string; by: string; at: string }
+
+// Active nest sites someone secured (protection set up or its danger resolved): a 3 m circle on the ground.
+export function securedAreaFeatures(alerts: AlertView[]): Feature<Polygon, SecuredAreaProperties>[]
+{
+    return alerts.filter(alert => isNestSite(alert) && alert.site.active && alert.site.secured && alert.position !== null).map(alert => ({
+        type: 'Feature',
+        properties: { id: alert.id, by: alert.site.secured!.by, at: alert.site.secured!.at },
+        geometry: { type: 'Polygon', coordinates: [circleRing(alert.position!, SECURED_RADIUS_M)] },
+    }));
+}
+
+// "Secured" tags under the circles. Sites a few metres apart would stack their tags, so a circle that overlaps one
+// already tagged goes without (its green circle still shows).
+export function securedLabels(areas: Feature<Polygon, SecuredAreaProperties>[]): { id: string; position: LngLat }[]
+{
+    const labelled: LngLat[] = [];
+    const labels: { id: string; position: LngLat }[] = [];
+    for (const area of areas)
+    {
+        const ring = area.geometry.coordinates[0] as LngLat[];
+        const centre: LngLat = [ring.reduce((sum, point) => sum + point[0], 0) / ring.length, ring.reduce((sum, point) => sum + point[1], 0) / ring.length];
+        if (labelled.some(other => distanceBetween(other, centre) < 2 * SECURED_RADIUS_M + 1))
+        {
+            continue;
+        }
+        labelled.push(centre);
+        labels.push({ id: area.properties.id, position: ring.reduce((low, point) => (point[1] < low[1] ? point : low), ring[0]) });
+    }
+    return labels;
 }

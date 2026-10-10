@@ -35,6 +35,7 @@ interface SiteLog
 
 const ALARM = '#FF4D5E';
 const absolute = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' });
+const securedTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const tierText = { TWO_CAMERA: 'Both cameras', SINGLE_CAMERA: 'One camera' } as const;
 const FOCUSABLE = 'button:not([disabled]), select:not([disabled]), textarea:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -197,6 +198,12 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                         : (<><StatusPill tone={inactiveState(site)} /><span className="text-[11px] text-ink-muted">{PROTECTION[site.protection].label}</span></>)}
                     {!isDanger && faded && site.active && <span className="text-[11px] text-ink-muted/80">· untouched {fadeMinutes}+ min</span>}
                 </div>
+                {!isDanger && site.active && site.secured && (
+                    <p data-testid="site-secured" className="mt-2 flex items-center gap-1.5 text-xs text-[#6EE7B7]">
+                        <span aria-hidden className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-[#34D399]/15 ring-1 ring-[#34D399]/60"><ShieldCheck className="h-2.5 w-2.5" /></span>
+                        <span>Secured by <span className="font-medium text-ink">{site.secured.by}</span><span className="text-ink-muted"> · </span><time dateTime={site.secured.at} className="font-mono text-[11px] text-ink-muted">{securedTime.format(new Date(site.secured.at))}</time></span>
+                    </p>
+                )}
             </header>
 
             <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">

@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { PROTECTION } from '@/features/sites/labels';
+import { SECURED_GREEN } from './pins';
 import { TRAIL_PALETTE } from './trails';
 import { useStoredBoolean } from './useStoredBoolean';
 
@@ -75,6 +76,15 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                             </p>
                         </div>
                     </div>
+                    <p className="flex items-center gap-2">
+                        <span className={symbol}>
+                            <svg aria-hidden viewBox="0 0 20 16" className="h-4 w-5">
+                                <circle cx="10" cy="8" r="7" fill={`${SECURED_GREEN}33`} stroke={SECURED_GREEN} strokeWidth="1" />
+                                <circle cx="10" cy="8" r="2.4" fill="#4ADE80" fillOpacity="0.3" stroke="#4ADE80" strokeWidth="1.25" />
+                            </svg>
+                        </span>
+                        Secured area (3 m)
+                    </p>
                     <p className="flex items-center gap-2">
                         <span className={symbol}>
                             <svg aria-hidden viewBox="0 0 20 16" className="h-4 w-5">

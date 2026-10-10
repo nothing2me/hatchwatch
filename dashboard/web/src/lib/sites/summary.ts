@@ -1,4 +1,4 @@
-import type { AlertKind, AlertStatus, SiteEventType, SiteSummary } from '@/lib/types';
+import type { AlertKind, AlertStatus, Secured, SiteEventType, SiteSummary } from '@/lib/types';
 
 export const PERSON_EVENTS: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost', 'note', 'dangerResolved'];
 const ON_SITE: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost'];
@@ -9,17 +9,41 @@ export const DANGER_ALERT_EVENTS: SiteEventType[] = ['dangerResolved'];
 /** Minutes after the first danger within which protection must be logged, or the site counts as Not saved. */
 export const DANGER_PROTECT_MINUTES = 30;
 
-type Ev = { type: SiteEventType; at: Date | string; createdAt?: Date | string };
+type Ev = { type: SiteEventType; at: Date | string; createdAt?: Date | string; author?: string };
 const time = (at: Date | string) => (at instanceof Date ? at : new Date(at));
+/** Entries that secure a nest site: protection set up, or a danger resolved (on the site or any of its danger alerts). */
+export const SECURES_SITE: SiteEventType[] = ['protectionInstalled', 'dangerResolved'];
+
+const byTime = (a: Ev, b: Ev) => time(a.at).getTime() - time(b.at).getTime()
+    || (a.createdAt && b.createdAt ? time(a.createdAt).getTime() - time(b.createdAt).getTime() : 0);
+
+// Who secured a site and when: the first securing entry after its latest danger (or, with no danger, the first
+// protection). A newer danger un-secures the site until it is resolved or protected again. Pass the site's own log,
+// plus the `dangerResolved` entries of its danger alerts.
+export function securedOf(events: Ev[]): Secured | null
+{
+    let secured: Secured | null = null;
+    for (const event of [...events].sort(byTime))
+    {
+        if (event.type === 'danger')
+        {
+            secured = null;
+        }
+        else if (SECURES_SITE.includes(event.type))
+        {
+            secured ??= { by: event.author || 'A volunteer', at: time(event.at).toISOString() };
+        }
+    }
+    return secured;
+}
 
 // Reads a site's log oldest-first; later entries win so a patrol can correct an earlier finding.
 // A DANGER alert's own log (`kind: 'DANGER'`) is active until its danger is resolved and never carries a deadline.
 export function summarizeSite(events: Ev[], kind?: AlertKind): SiteSummary
 {
     // Ties on `at` fall back to creation order, then to input order (Array.sort is stable).
-    const ordered = [...events].sort((a, b) => time(a.at).getTime() - time(b.at).getTime()
-        || (a.createdAt && b.createdAt ? time(a.createdAt).getTime() - time(b.createdAt).getTime() : 0));
-    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null };
+    const ordered = [...events].sort(byTime);
+    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null, secured: null };
     let archivedWithoutFollowUp = false;
     let firstDanger: number | null = null;
     let protectedAt: number | null = null;
@@ -64,6 +88,7 @@ export function summarizeSite(events: Ev[], kind?: AlertKind): SiteSummary
         return summary;
     }
     summary.active = summary.outcome === 'open' && summary.nesting !== 'noNest' && !archivedWithoutFollowUp;
+    summary.secured = securedOf(ordered);
     // Not-saved rule: protection must be logged by the first danger + 30 min (protection logged earlier also counts).
     if (firstDanger !== null)
     {

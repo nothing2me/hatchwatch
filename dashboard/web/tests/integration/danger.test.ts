@@ -274,6 +274,23 @@ describe('snapshot', () =>
         expect(snapshot.alerts.find(alert => alert.id === danger.id)?.site.active).toBe(false);
     });
 
+    it('marks a site secured once its danger is resolved, and not while a newer danger is open', async () =>
+    {
+        await importRun(makeRun('A-seaward-humans-demo-1', [walk('person-1', 0)]));
+        const site = await siteOf(0);
+        const securedOfSite = async () => (await loadMapSnapshot(prisma)).alerts.find(alert => alert.id === site.id)?.site.secured;
+        expect(await securedOfSite()).toBeNull();
+        // A patrol answers the danger on the site log; the danger alert's resolution secures the site.
+        await addSiteEvent(prisma, { alertId: site.id, type: 'patrolVisit', ...volunteer });
+        const secured = await securedOfSite();
+        expect(secured).toMatchObject({ by: 'Vera' });
+        // A newer danger un-secures the site until protection (or a resolution) follows it.
+        await addSiteEvent(prisma, { alertId: site.id, type: 'danger', author: 'Camera', userId: null, system: true, at: new Date(Date.parse(secured!.at) + 60_000) });
+        expect(await securedOfSite()).toBeNull();
+        await addSiteEvent(prisma, { alertId: site.id, type: 'protectionInstalled', ...volunteer, at: new Date(Date.parse(secured!.at) + 120_000) });
+        expect(await securedOfSite()).toMatchObject({ by: 'Vera', at: new Date(Date.parse(secured!.at) + 120_000).toISOString() });
+    });
+
     it('counts a site not saved when 30 min pass after a danger without protection (cached-status path)', async () =>
     {
         await importRun(makeRun('A-seaward-humans-demo-1', [walk('person-1', 0)]));

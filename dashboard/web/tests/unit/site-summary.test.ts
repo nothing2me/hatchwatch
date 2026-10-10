@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statusFor, summarizeSite } from '@/lib/sites/summary';
+import { securedOf, statusFor, summarizeSite } from '@/lib/sites/summary';
 
 const e = (type: string, minute: number) => ({ type: type as never, at: new Date(Date.UTC(2026, 9, 9, 20, minute)) });
 
@@ -103,5 +103,44 @@ describe('danger lifecycle', () =>
         expect(summarizeSite([e('detected', 0), e('protectionInstalled', 1), e('danger', 5)]).dangerDeadline).toBeNull();
         expect(summarizeSite([e('detected', 0), e('danger', 1), e('protectionInstalled', 32)]).dangerDeadline).toBe('2026-10-09T20:31:00.000Z');
         expect(summarizeSite([e('detected', 0)]).dangerDeadline).toBeNull();
+    });
+});
+
+describe('secured', () =>
+{
+    const by = (type: string, minute: number, author: string) => ({ ...e(type, minute), author });
+    const at = (minute: number) => new Date(Date.UTC(2026, 9, 9, 20, minute)).toISOString();
+
+    it('is null until protection is set up, then names who and when (the first protection)', () =>
+    {
+        expect(summarizeSite([e('detected', 0), by('patrolVisit', 2, 'Ada')]).secured).toBeNull();
+        expect(summarizeSite([e('detected', 0), by('protectionInstalled', 4, 'Ada'), by('protectionInstalled', 9, 'Bo')]).secured).toEqual({ by: 'Ada', at: at(4) });
+    });
+
+    it('counts a resolved danger as securing the site', () =>
+    {
+        expect(summarizeSite([e('detected', 0), e('danger', 1), by('dangerResolved', 6, 'Cy')]).secured).toEqual({ by: 'Cy', at: at(6) });
+        // A patrol answers the danger but does not secure the site by itself.
+        expect(summarizeSite([e('detected', 0), e('danger', 1), by('patrolVisit', 6, 'Cy')]).secured).toBeNull();
+    });
+
+    it('a newer danger un-secures the site until it is resolved or protected again', () =>
+    {
+        const base = [e('detected', 0), by('protectionInstalled', 2, 'Ada'), e('danger', 10)];
+        expect(summarizeSite(base).secured).toBeNull();
+        expect(summarizeSite([...base, by('dangerResolved', 14, 'Bo')]).secured).toEqual({ by: 'Bo', at: at(14) });
+        expect(summarizeSite([...base, by('protectionInstalled', 15, 'Cy'), by('dangerResolved', 16, 'Bo')]).secured).toEqual({ by: 'Cy', at: at(15) });
+    });
+
+    it('takes the danger alerts\' resolutions into account through securedOf', () =>
+    {
+        const site = [e('detected', 0), e('danger', 1), by('patrolVisit', 3, 'Ada')];
+        expect(securedOf([...site, by('dangerResolved', 3, 'Ada')])).toEqual({ by: 'Ada', at: at(3) });
+        expect(securedOf([...site, by('dangerResolved', 0, 'Ada')])).toBeNull();
+    });
+
+    it('is never set on a DANGER alert', () =>
+    {
+        expect(summarizeSite([e('danger', 0), by('dangerResolved', 4, 'Ada')], 'DANGER').secured).toBeNull();
     });
 });
