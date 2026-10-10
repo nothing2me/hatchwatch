@@ -2,11 +2,12 @@
 
 import { Fragment, useState, useTransition } from 'react';
 import { Check, Compass, Merge, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { addCameraPairToZone, deleteCamera, faceOcean, mergeZoneInto, updateCamera } from '@/app/(app)/camera-actions';
+import { addCameraPairNewZone, addCameraPairToZone, deleteCamera, faceOcean, mergeZoneInto, updateCamera } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CameraRow } from '@/lib/cameras/manage';
 import { CAMERA_CODE, CAMERA_LIMITS, rangeError } from '@/lib/cameras/limits';
+import { nextZoneCode } from '@/lib/cameras/placePair';
 import { compassPoint } from '@/lib/geo';
 import type { CameraStatus, LngLat } from '@/lib/types';
 import { cn } from '@/lib/cn';
@@ -98,6 +99,7 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
     const [showErrors, setShowErrors] = useState(false);
     const [confirmMerge, setConfirmMerge] = useState<string | null>(null);
     const firstZone = zones[0];
+    const [pairMode, setPairMode] = useState<'join' | 'new'>('join');
     const [pairZone, setPairZone] = useState(firstZone?.code ?? '');
     const [pairLat, setPairLat] = useState(firstZone?.suggested ? fixed(firstZone.suggested[1], 6) : '');
     const [pairLng, setPairLng] = useState(firstZone?.suggested ? fixed(firstZone.suggested[0], 6) : '');
@@ -191,6 +193,16 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
         }
     }
 
+    let nextZone: string | null = null;
+    try
+    {
+        nextZone = nextZoneCode(zones.map(zone => zone.code));
+    }
+    catch
+    {
+        // Zone Z exists; the server explains when the pair is added.
+    }
+
     const pairErrors = [rangeError('lat', pairLat.trim() === '' ? NaN : Number(pairLat)), rangeError('lng', pairLng.trim() === '' ? NaN : Number(pairLng))].filter(Boolean) as string[];
 
     function addPair(event: React.FormEvent)
@@ -201,7 +213,9 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
             setNotice({ kind: 'error', text: pairErrors.join(' ') });
             return;
         }
-        run(() => addCameraPairToZone(pairZone, Number(pairLng), Number(pairLat)), ({ codes, zoneCode }: { codes: [string, string]; zoneCode: string }) => `${codes.join(' · ')} added to Zone ${zoneCode}, facing the sea`);
+        const done = ({ codes, zoneCode, newZone }: { codes: [string, string]; zoneCode: string; newZone: boolean }) =>
+            (newZone ? `New Zone ${zoneCode} · ${codes.join(' · ')} facing the sea` : `${codes.join(' · ')} added to Zone ${zoneCode}, facing the sea`);
+        run(() => (pairMode === 'new' ? addCameraPairNewZone(Number(pairLng), Number(pairLat)) : addCameraPairToZone(pairZone, Number(pairLng), Number(pairLat))), done);
     }
 
     const errors = draft && showErrors ? draftErrors(draft) : {};
@@ -213,25 +227,54 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
             </div>
             <div className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
                 <h1 className="text-3xl font-semibold tracking-tight text-ink">Cameras</h1>
-                <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">New pairs join an existing zone and face the sea, each turned 20° toward the other. Edit any camera&apos;s position, heading, view or status here, or drag it on the map in edit mode.</p>
+                <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">New pairs join a zone, or start a new zone on open beach, and face the sea, each turned 20° toward the other. Edit any camera&apos;s position, heading, view or status here, or drag it on the map in edit mode.</p>
 
                 <section aria-labelledby="pair-heading" className="mt-6 rounded-xl border border-white/8 bg-white/[0.03] p-4">
                     <h2 id="pair-heading" className="flex items-center gap-2 text-sm font-semibold text-ink"><Plus aria-hidden className="h-4 w-4 text-amber" />Add camera pair</h2>
-                    <form onSubmit={addPair} className="mt-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
-                        <label className="text-xs text-ink-muted">Zone
-                            <select className={cn(field, 'mt-1 font-sans')} value={pairZone} onChange={e => choosePairZone(e.target.value)}>
-                                {zones.map(zone => <option key={zone.code} value={zone.code}>Zone {zone.code}</option>)}
-                            </select>
-                        </label>
-                        <label className="text-xs text-ink-muted">Centre latitude
-                            <input className={cn(field, 'mt-1')} inputMode="decimal" value={pairLat} onChange={e => setPairLat(e.target.value)} aria-invalid={rangeError('lat', Number(pairLat)) !== null || undefined} />
-                        </label>
-                        <label className="text-xs text-ink-muted">Centre longitude
-                            <input className={cn(field, 'mt-1')} inputMode="decimal" value={pairLng} onChange={e => setPairLng(e.target.value)} aria-invalid={rangeError('lng', Number(pairLng)) !== null || undefined} />
-                        </label>
-                        <button type="submit" disabled={pending || zones.length === 0} className={cn(button, 'h-9 bg-amber/90 px-3 text-sm font-medium text-night-950 hover:bg-amber')}>Add pair</button>
+                    <form onSubmit={addPair} className="mt-3 space-y-3">
+                        <fieldset className="flex flex-wrap items-center gap-3">
+                            <legend className="sr-only">Where the pair goes</legend>
+                            <div className="inline-flex rounded-lg border border-white/12 bg-night-950/70 p-0.5">
+                                {([['join', 'Add to zone'], ['new', 'New zone at this location']] as const).map(([mode, label]) => (
+                                    <label key={mode} className={cn('relative cursor-pointer rounded-md px-3 py-1.5 text-xs transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-amber',
+                                        pairMode === mode ? 'bg-amber/15 font-medium text-amber ring-1 ring-amber/40' : 'text-ink-muted hover:text-ink')}>
+                                        <input type="radio" name="pair-mode" value={mode} checked={pairMode === mode} onChange={() => setPairMode(mode)} className="sr-only" />
+                                        {label}
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                        <div className="grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] sm:items-end">
+                            {pairMode === 'join'
+                                ? (
+                                    <label className="text-xs text-ink-muted">Zone
+                                        <select className={cn(field, 'mt-1 font-sans')} value={pairZone} onChange={e => choosePairZone(e.target.value)}>
+                                            {zones.map(zone => <option key={zone.code} value={zone.code}>Zone {zone.code}</option>)}
+                                        </select>
+                                    </label>
+                                )
+                                : (
+                                    <p className="text-xs text-ink-muted">Zone
+                                        <span className="mt-1 flex h-9 items-center justify-between gap-2 rounded-lg border border-dashed border-amber/35 px-2 text-[13px] text-amber">
+                                            <span data-testid="next-zone">{nextZone ? `Zone ${nextZone}` : 'None left'}</span>
+                                            <span className="font-mono text-[10px] tracking-[0.12em] text-amber/70 uppercase">new</span>
+                                        </span>
+                                    </p>
+                                )}
+                            <label className="text-xs text-ink-muted">Centre latitude
+                                <input className={cn(field, 'mt-1')} inputMode="decimal" value={pairLat} onChange={e => setPairLat(e.target.value)} aria-invalid={rangeError('lat', Number(pairLat)) !== null || undefined} />
+                            </label>
+                            <label className="text-xs text-ink-muted">Centre longitude
+                                <input className={cn(field, 'mt-1')} inputMode="decimal" value={pairLng} onChange={e => setPairLng(e.target.value)} aria-invalid={rangeError('lng', Number(pairLng)) !== null || undefined} />
+                            </label>
+                            <button type="submit" disabled={pending || (pairMode === 'join' && zones.length === 0)} className={cn(button, 'h-9 bg-amber/90 px-3 text-sm font-medium text-night-950 hover:bg-amber')}>Add pair</button>
+                        </div>
                     </form>
-                    <p className="mt-2 text-xs text-ink-muted">The two cameras stand 40 m apart along the shore, centred on this point. Prefilled with the middle of the zone&apos;s dune edge.</p>
+                    <p className="mt-2 text-xs text-ink-muted">
+                        {pairMode === 'join'
+                            ? 'The two cameras stand 40 m apart along the shore, centred on this point. Prefilled with the middle of the zone\u2019s dune edge.'
+                            : 'A 120 m × 60 m zone with its dune edge centred on this point, lined up with the nearest zone; its two cameras stand on that edge 40 m apart. Refused if it would overlap a zone.'}
+                    </p>
                 </section>
 
                 {/* Pinned to the bottom of the screen so the result shows next to whichever row was changed. */}

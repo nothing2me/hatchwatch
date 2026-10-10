@@ -16,7 +16,7 @@ interface EditCamerasBannerProps
 export function EditCamerasBanner({ busy, notice, onDone }: EditCamerasBannerProps)
 {
     return (
-        <div className="pointer-events-none absolute top-[72px] left-1/2 z-20 flex w-[min(40rem,calc(100%-1.5rem))] -translate-x-1/2 max-md:left-3 max-md:w-[calc(100%-4.5rem)] max-md:translate-x-0 flex-col items-center gap-2">
+        <div className="pointer-events-none absolute top-[72px] left-1/2 z-20 flex w-[min(50rem,calc(100%-1.5rem))] -translate-x-1/2 max-md:left-3 max-md:w-[calc(100%-4.5rem)] max-md:translate-x-0 flex-col items-center gap-2">
             <div className="pointer-events-auto flex w-full items-center gap-3 overflow-hidden rounded-xl border border-amber/35 bg-[rgba(8,14,20,0.9)] py-2 pr-2 pl-3 shadow-2xl shadow-black/50 backdrop-blur-md">
                 <span className="flex shrink-0 items-center gap-2 font-mono text-[10px] font-semibold tracking-[0.18em] text-amber uppercase">
                     <span aria-hidden className="relative flex h-2 w-2">
@@ -26,7 +26,7 @@ export function EditCamerasBanner({ busy, notice, onDone }: EditCamerasBannerPro
                     Edit cameras
                 </span>
                 <span aria-hidden className="h-4 w-px shrink-0 bg-white/12" />
-                <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink">Click near a zone to add a camera pair facing the sea · drag a camera to move it · Esc to finish</p>
+                <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink">Click a zone to add a pair · open beach starts a new zone · drag cameras or new zones</p>
                 <button
                     type="button"
                     onClick={onDone}

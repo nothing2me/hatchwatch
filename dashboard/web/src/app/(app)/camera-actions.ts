@@ -5,9 +5,12 @@ import { z } from 'zod';
 import { requireCurrentUser } from '@/lib/auth/guard';
 import {
     addCameraPair as addPair,
+    addCameraPairNewZone as addPairNewZone,
     addCameraPairToZone as addPairToZone,
     CameraEditError,
     deleteCamera as removeCamera,
+    deleteZone as removeZone,
+    moveZone as shiftZone,
     faceOcean as turnToSea,
     mergeZoneInto as mergeZone,
     updateCamera as saveCamera,
@@ -15,7 +18,8 @@ import {
 import { prisma } from '@/lib/db';
 import type { LngLat } from '@/lib/types';
 
-export type PairActionResult = { ok: true; codes: [string, string]; zoneCode: string } | { ok: false; error: string };
+export type PairActionResult = { ok: true; codes: [string, string]; zoneCode: string; newZone: boolean } | { ok: false; error: string };
+export type ZoneActionResult = { ok: true; code: string } | { ok: false; error: string };
 export type CameraActionResult = { ok: true; code: string } | { ok: false; error: string };
 export type FaceOceanResult = { ok: true; codes: string[] } | { ok: false; error: string };
 export type MergeActionResult = { ok: true; targetCode: string; moved: { from: string; to: string }[] } | { ok: false; error: string };
@@ -78,6 +82,39 @@ export async function addCameraPairToZone(zoneCode: string, lng: number, lat: nu
         return { ok: false, error: 'Enter a longitude between -180 and 180 and a latitude between -90 and 90.' };
     }
     return run(actorId => addPairToZone(prisma, actorId, zone.data, at.data));
+}
+
+export async function addCameraPairNewZone(lng: number, lat: number): Promise<PairActionResult>
+{
+    await requireCurrentUser('ADMIN');
+    const at = clickSchema.safeParse([lng, lat]);
+    if (!at.success)
+    {
+        return { ok: false, error: 'Enter a longitude between -180 and 180 and a latitude between -90 and 90.' };
+    }
+    return run(actorId => addPairNewZone(prisma, actorId, at.data));
+}
+
+export async function moveZone(code: string, from: LngLat, to: LngLat): Promise<ZoneActionResult>
+{
+    await requireCurrentUser('ADMIN');
+    const parsed = z.object({ code: zoneCodeSchema, from: clickSchema, to: clickSchema }).safeParse({ code, from, to });
+    if (!parsed.success)
+    {
+        return { ok: false, error: 'That move could not be read.' };
+    }
+    return run(actorId => shiftZone(prisma, actorId, parsed.data.code, parsed.data.from, parsed.data.to));
+}
+
+export async function deleteZone(code: string): Promise<ZoneActionResult>
+{
+    await requireCurrentUser('ADMIN');
+    const parsed = zoneCodeSchema.safeParse(code);
+    if (!parsed.success)
+    {
+        return { ok: false, error: 'That zone no longer exists.' };
+    }
+    return run(actorId => removeZone(prisma, actorId, parsed.data));
 }
 
 export async function updateCamera(code: string, patch: { code?: string; lng?: number; lat?: number; headingDeg?: number; fovDeg?: number; rangeM?: number; status?: 'ONLINE' | 'OFFLINE' }): Promise<CameraActionResult>

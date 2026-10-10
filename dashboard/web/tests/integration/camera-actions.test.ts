@@ -3,7 +3,7 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { createPrismaClient } from '@/lib/db';
 import { onChange } from '@/lib/changes';
 import { bearingBetween, destinationPoint } from '@/lib/geo';
-import { addCameraPair, addCameraPairToZone, CameraEditError, deleteCamera, faceOcean, listCameras, mergeZoneInto, updateCamera } from '@/lib/cameras/manage';
+import { addCameraPair, addCameraPairNewZone, addCameraPairToZone, CameraEditError, deleteCamera, deleteZone, faceOcean, listCameras, mergeZoneInto, moveZone, updateCamera } from '@/lib/cameras/manage';
 import { zoneOrientation } from '@/lib/cameras/placePair';
 import type { LngLat } from '@/lib/types';
 import { seedDatabase } from '../../prisma/seed';
@@ -15,6 +15,10 @@ let adminId: string;
 const dRing = SEED_ZONES[3].outline.coordinates[0] as LngLat[];
 const dAlong = bearingBetween(dRing[1], dRing[0]);
 const northOfD: LngLat = destinationPoint(dRing[0], dAlong, 150);
+// Within the 150 m join distance of D's outline.
+const nearD: LngLat = destinationPoint(dRing[0], dAlong, 100);
+// Open beach about 1 km north of D: no zone within 150 m.
+const kmNorthOfD: LngLat = destinationPoint(dRing[0], dAlong, 1000);
 const angleGap = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 
 beforeAll(async () =>
@@ -69,12 +73,12 @@ async function makeZoneE()
 
 describe('adding a camera pair', () =>
 {
-    it('adds D3 and D4 to the nearest zone, facing the sea, without creating a zone', async () =>
+    it('adds D3 and D4 to a zone within 150 m, facing the sea, without creating a zone', async () =>
     {
         const { reasons, off } = changes();
-        const result = await addCameraPair(prisma, adminId, northOfD);
+        const result = await addCameraPair(prisma, adminId, nearD);
         off();
-        expect(result).toEqual({ codes: ['D3', 'D4'], zoneCode: 'D' });
+        expect(result).toEqual({ codes: ['D3', 'D4'], zoneCode: 'D', newZone: false });
         expect(await prisma.zone.count()).toBe(4);
         const zoneD = await prisma.zone.findUniqueOrThrow({ where: { code: 'D' } });
         const added = await prisma.camera.findMany({ where: { code: { in: ['D3', 'D4'] } }, orderBy: { code: 'asc' } });
@@ -89,21 +93,137 @@ describe('adding a camera pair', () =>
         }
         expect(await prisma.auditLog.count({ where: { action: 'camera.pair.add', targetId: zoneD.id, userId: adminId } })).toBe(1);
         expect(reasons).toContain('cameras');
-        expect((await addCameraPair(prisma, adminId, northOfD)).codes).toEqual(['D5', 'D6']);
+        expect((await addCameraPair(prisma, adminId, nearD)).codes).toEqual(['D5', 'D6']);
     });
 
-    it('refuses a click far from the beach without writing anything', async () =>
+    it('joins a zone when the click is inside it', async () =>
     {
-        await rejects(addCameraPair(prisma, adminId, destinationPoint(northOfD, 300, 5000)), 'Click closer to the beach');
-        expect(await prisma.camera.count()).toBe(8);
+        const insideB: LngLat = [(SEED_ZONES[1].outline.coordinates[0][0][0] + SEED_ZONES[1].outline.coordinates[0][2][0]) / 2, (SEED_ZONES[1].outline.coordinates[0][0][1] + SEED_ZONES[1].outline.coordinates[0][2][1]) / 2];
+        expect(await addCameraPair(prisma, adminId, insideB)).toEqual({ codes: ['B3', 'B4'], zoneCode: 'B', newZone: false });
+        expect(await prisma.zone.count()).toBe(4);
     });
 
     it('adds a pair to a chosen zone, or refuses an unknown zone or a far point', async () =>
     {
-        expect(await addCameraPairToZone(prisma, adminId, 'B', northOfD)).toEqual({ codes: ['B3', 'B4'], zoneCode: 'B' });
+        expect(await addCameraPairToZone(prisma, adminId, 'B', northOfD)).toEqual({ codes: ['B3', 'B4'], zoneCode: 'B', newZone: false });
         await rejects(addCameraPairToZone(prisma, adminId, 'Q', northOfD), 'That zone no longer exists.');
         await rejects(addCameraPairToZone(prisma, adminId, 'B', destinationPoint(northOfD, 300, 5000)), /more than 2 km from Zone B/);
         expect(await prisma.camera.count()).toBe(10);
+    });
+});
+
+const ringOf = (zone: { outline: unknown }) => (zone.outline as { coordinates: LngLat[][] }).coordinates[0];
+
+describe('new zones from a click', () =>
+{
+    it('creates Zone E on open beach with E1 and E2 on its land edge facing the sea, audited', async () =>
+    {
+        const { reasons, off } = changes();
+        const result = await addCameraPair(prisma, adminId, kmNorthOfD);
+        off();
+        expect(result).toEqual({ codes: ['E1', 'E2'], zoneCode: 'E', newZone: true });
+        const zone = await prisma.zone.findUniqueOrThrow({ where: { code: 'E' } });
+        expect(zone).toMatchObject({ name: 'Zone E', activityLevel: 'LOW', createdById: adminId });
+        const ring = ringOf(zone);
+        expect(ring).toHaveLength(5);
+        expect(ring[4]).toEqual(ring[0]);
+        const { seaward } = zoneOrientation({ id: 'd', code: 'D', name: '', activityLevel: 'LOW', ring: dRing });
+        const cameras = await prisma.camera.findMany({ where: { zoneId: zone.id }, orderBy: { code: 'asc' } });
+        expect(cameras.map(camera => [camera.code, camera.fovDeg, camera.rangeM, camera.status])).toEqual([['E1', 60, 90, 'ONLINE'], ['E2', 60, 90, 'ONLINE']]);
+        for (const camera of cameras)
+        {
+            expect(angleGap(camera.headingDeg, seaward)).toBeCloseTo(20, 1);
+        }
+        const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'zone.create' } });
+        expect(audit).toMatchObject({ userId: adminId, targetType: 'Zone', targetId: zone.id, details: { zone: 'E', click: kmNorthOfD } });
+        expect(reasons).toContain('cameras');
+        // The next open-beach click makes F; a click beside E joins it.
+        expect((await addCameraPair(prisma, adminId, destinationPoint(dRing[0], dAlong, 2000))).zoneCode).toBe('F');
+        expect(await addCameraPair(prisma, adminId, destinationPoint(kmNorthOfD, dAlong, 90))).toEqual({ codes: ['E3', 'E4'], zoneCode: 'E', newZone: false });
+    });
+
+    it('has no distance limit for a new zone', async () =>
+    {
+        expect((await addCameraPair(prisma, adminId, destinationPoint(northOfD, 300, 5000))).zoneCode).toBe('E');
+    });
+
+    it('refuses a new zone that would overlap an existing one, writing nothing', async () =>
+    {
+        await rejects(addCameraPairNewZone(prisma, adminId, destinationPoint(dRing[0], dAlong, 40)), 'Too close to Zone D — click inside it to join, or further away for a new zone');
+        expect(await prisma.zone.count()).toBe(4);
+        expect(await prisma.camera.count()).toBe(8);
+        expect(await addCameraPairNewZone(prisma, adminId, kmNorthOfD)).toEqual({ codes: ['E1', 'E2'], zoneCode: 'E', newZone: true });
+    });
+
+    it('refuses a new zone once Zone Z exists', async () =>
+    {
+        const far = destinationPoint(northOfD, 300, 30000);
+        await prisma.zone.create({ data: { code: 'Z', name: 'Zone Z', activityLevel: 'LOW', createdById: adminId, outline: { type: 'Polygon', coordinates: [[far, destinationPoint(far, 219, 50), destinationPoint(far, 129, 50), far]] } } });
+        await rejects(addCameraPair(prisma, adminId, kmNorthOfD), /Zone Z already exists/);
+        expect(await prisma.zone.count()).toBe(5);
+    });
+});
+
+describe('moveZone', () =>
+{
+    it('moves a map-made zone and its cameras together, in one audited write', async () =>
+    {
+        await addCameraPair(prisma, adminId, kmNorthOfD);
+        const before = await prisma.zone.findUniqueOrThrow({ where: { code: 'E' }, include: { cameras: { orderBy: { code: 'asc' } } } });
+        const from = ringOf(before)[0];
+        const to: LngLat = [from[0] + 0.0004, from[1] + 0.0002];
+        const { reasons, off } = changes();
+        expect(await moveZone(prisma, adminId, 'E', from, to)).toEqual({ code: 'E' });
+        off();
+        const after = await prisma.zone.findUniqueOrThrow({ where: { code: 'E' }, include: { cameras: { orderBy: { code: 'asc' } } } });
+        ringOf(after).forEach((point, i) =>
+        {
+            expect(point[0]).toBeCloseTo(ringOf(before)[i][0] + 0.0004, 9);
+            expect(point[1]).toBeCloseTo(ringOf(before)[i][1] + 0.0002, 9);
+        });
+        after.cameras.forEach((camera, i) =>
+        {
+            expect(camera.lng).toBeCloseTo(before.cameras[i].lng + 0.0004, 9);
+            expect(camera.lat).toBeCloseTo(before.cameras[i].lat + 0.0002, 9);
+            expect(camera.headingDeg).toBe(before.cameras[i].headingDeg);
+        });
+        expect(await prisma.auditLog.count({ where: { action: 'zone.move', targetId: after.id, userId: adminId } })).toBe(1);
+        expect(reasons).toContain('cameras');
+    });
+
+    it('refuses to move a seeded zone, or onto another zone', async () =>
+    {
+        await rejects(moveZone(prisma, adminId, 'B', dRing[0], kmNorthOfD), 'Zone B is a built-in zone; only zones added on the map can be moved.');
+        await addCameraPair(prisma, adminId, kmNorthOfD);
+        const zone = await prisma.zone.findUniqueOrThrow({ where: { code: 'E' } });
+        await rejects(moveZone(prisma, adminId, 'E', ringOf(zone)[0], dRing[0]), /Too close to Zone D/);
+        expect(ringOf(await prisma.zone.findUniqueOrThrow({ where: { code: 'E' } }))).toEqual(ringOf(zone));
+        await rejects(moveZone(prisma, adminId, 'Q', dRing[0], kmNorthOfD), 'That zone no longer exists.');
+        expect(await prisma.auditLog.count({ where: { action: 'zone.move' } })).toBe(0);
+    });
+});
+
+describe('deleteZone', () =>
+{
+    it('deletes an unused map-made zone with its cameras, audited', async () =>
+    {
+        await addCameraPair(prisma, adminId, kmNorthOfD);
+        const { reasons, off } = changes();
+        expect(await deleteZone(prisma, adminId, 'E')).toEqual({ code: 'E' });
+        off();
+        expect(await prisma.zone.findUnique({ where: { code: 'E' } })).toBeNull();
+        expect(await prisma.camera.count({ where: { code: { in: ['E1', 'E2'] } } })).toBe(0);
+        expect(await prisma.auditLog.findFirstOrThrow({ where: { action: 'zone.delete' } })).toMatchObject({ userId: adminId, details: { zone: 'E', cameras: ['E1', 'E2'] } });
+        expect(reasons).toContain('cameras');
+    });
+
+    it('refuses a zone with footage, alerts or live chunks, and seeded zones', async () =>
+    {
+        await makeZoneE();
+        await rejects(deleteZone(prisma, adminId, 'E'), 'Zone E has footage, alerts or live chunks; merge it into a neighbour instead.');
+        await rejects(deleteZone(prisma, adminId, 'D'), 'Zone D is a built-in zone; only zones added on the map can be deleted.');
+        expect(await prisma.zone.count()).toBe(5);
+        expect(await prisma.auditLog.count({ where: { action: 'zone.delete' } })).toBe(0);
     });
 });
 

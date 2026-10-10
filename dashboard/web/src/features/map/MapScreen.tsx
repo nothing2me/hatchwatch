@@ -5,7 +5,7 @@ import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
 import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
 import { isNestSite } from '@/lib/danger';
-import { addCameraPair, updateCamera } from '@/app/(app)/camera-actions';
+import { addCameraPair, deleteZone, moveZone, updateCamera } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
 import { CameraPanel } from '@/features/cameras/CameraPanel';
@@ -72,7 +72,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
     }, [selectedCameraId, snapshot.cameras]);
 
-    // Admin camera editing: a map click adds a seaward pair to the nearest zone; dragging a camera moves it.
+    // Admin camera editing: a click joins a zone within 150 m or makes a new zone there; cameras and map-made zones drag.
     const isAdmin = user.role === 'ADMIN';
     const [editing, setEditing] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -141,7 +141,8 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
             return;
         }
         placing.current = true;
-        void runEdit(() => addCameraPair(at), ({ codes, zoneCode }: { codes: [string, string]; zoneCode: string }) => `${codes.join(' · ')} added to Zone ${zoneCode}`).finally(() => { placing.current = false; });
+        void runEdit(() => addCameraPair(at), ({ codes, zoneCode, newZone }: { codes: [string, string]; zoneCode: string; newZone: boolean }) =>
+            (newZone ? `New Zone ${zoneCode} · ${codes.join(' · ')} facing the sea` : `${codes.join(' · ')} added to Zone ${zoneCode}`)).finally(() => { placing.current = false; });
     }, [editing, busy, runEdit]);
 
     // Resolves false when the move was refused, so the map puts the marker back.
@@ -152,6 +153,25 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
             return false;
         }
         return runEdit(() => updateCamera(code, { lng: to[0], lat: to[1] }), ({ code: moved }: { code: string }) => `${moved} moved`);
+    }, [editing, runEdit]);
+
+    // Map-made zones: a dropped zone label moves the outline with its cameras; × removes an unused zone.
+    const shiftZone = useCallback(async (code: string, from: LngLat, to: LngLat): Promise<boolean> =>
+    {
+        if (!editing)
+        {
+            return false;
+        }
+        return runEdit(() => moveZone(code, from, to), ({ code: moved }: { code: string }) => `Zone ${moved} moved with its cameras`);
+    }, [editing, runEdit]);
+
+    const removeZone = useCallback(async (code: string): Promise<boolean> =>
+    {
+        if (!editing)
+        {
+            return false;
+        }
+        return runEdit(() => deleteZone(code), ({ code: removed }: { code: string }) => `Zone ${removed} and its cameras removed`);
     }, [editing, runEdit]);
 
     const fitBeach = useCallback(() =>
@@ -225,7 +245,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
             <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById}
-                editing={editing} onMapClick={placePair} onMoveCamera={moveCamera} />
+                editing={editing} onMapClick={placePair} onMoveCamera={moveCamera} onMoveZone={shiftZone} onDeleteZone={removeZone} />
 
             {editing && (
                 <EditCamerasBanner busy={busy} notice={notice} onDone={finishEditing} />

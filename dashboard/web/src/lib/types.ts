@@ -51,6 +51,8 @@ export interface ZoneView
     name: string;
     activityLevel: ActivityLevel;
     ring: LngLat[];          // closed ring, first point repeated last
+    /** Added on the map by an admin (can be moved and deleted there); seeded zones are not. */
+    editable?: boolean;
 }
 
 export interface FeedVideo
