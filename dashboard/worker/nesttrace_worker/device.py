@@ -8,6 +8,7 @@ MAX_OBJECTS = 50
 MAX_TRAILS = 50
 PERSON = 'person'
 POSSIBLE_TURTLE = 'possible turtle'
+MAX_TRACK_NUMBER = 999_999  # the web schema allows 6 digits (P999999)
 
 
 class DevicePipeline:
@@ -15,25 +16,32 @@ class DevicePipeline:
 
     def __init__(self, detect_people):
         self.detect_people = detect_people  # callable(bgr) -> list[Box]
+        self.size: tuple[int, int] | None = None
+        self._reset_models()
+        self.person_count = 0
+        self.turtle_count = 0
+
+    def _reset_models(self) -> None:
         self.blobs = MovingBlobs()
         self.people = Tracker(PERSON)
         self.candidates = Tracker('blob')
         self.rule_since: dict[int, int] = {}
-        self.person_count = 0
-        self.turtle_count = 0
 
     def _name_person(self, track: Track) -> None:
         if track.name is None:
-            self.person_count += 1
+            self.person_count = self.person_count % MAX_TRACK_NUMBER + 1
             track.name = f'P{self.person_count}'
 
     def _name_turtle(self, track: Track) -> None:
         if track.name is None:
-            self.turtle_count += 1
+            self.turtle_count = self.turtle_count % MAX_TRACK_NUMBER + 1
             track.name = f'T{self.turtle_count}'
 
     def process(self, bgr: np.ndarray, at_ms: int) -> dict:
         height, width = bgr.shape[:2]
+        if self.size is not None and self.size != (width, height):
+            self._reset_models()  # old trail points would be in old-size pixels, which web rejects
+        self.size = (width, height)
         objects = []
         dark = is_dark(bgr)
         if not dark:

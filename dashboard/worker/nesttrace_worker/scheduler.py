@@ -4,7 +4,6 @@ from collections.abc import Callable
 from typing import Protocol
 
 import cv2
-import httpx
 import numpy as np
 
 from .api import InternalApi
@@ -34,11 +33,7 @@ class Scheduler:
 
     def tick(self) -> list[str]:
         started = self.clock()
-        try:
-            devices = self.api.devices()
-        except (httpx.HTTPError, KeyError, ValueError) as error:
-            log.warning('device list failed: %s', type(error).__name__)  # class only: never the token or URL
-            return []
+        devices = self.api.devices()  # a refused token or unreachable web service propagates: main names it once and backs off
         online = {d.id for d in devices}
         for gone in [key for key in self.pipelines if key not in online]:
             self.pipelines.pop(gone)

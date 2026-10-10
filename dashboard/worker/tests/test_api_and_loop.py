@@ -198,9 +198,31 @@ def test_a_failing_device_does_not_starve_the_others(web, make_api):
     assert len(web.posted['b']) == 2 and 'a' not in web.posted
 
 
-def test_a_failing_device_list_skips_the_pass(web, make_api):
+def test_a_refused_token_reaches_the_main_loop_backoff(web, make_api, monkeypatch, caplog):
+    import httpx
+    from nesttrace_worker import main
+
     scheduler = Scheduler(make_api('wrong'), lambda: CountingPipeline([]), FakeClock())
-    assert scheduler.tick() == []
+    with pytest.raises(httpx.HTTPStatusError):
+        scheduler.tick()
+
+    class Stop(Exception):
+        pass
+
+    sleeps = []
+
+    def fake_sleep(seconds):
+        sleeps.append(seconds)
+        raise Stop
+
+    monkeypatch.setattr(main, 'load_config', lambda: type('C', (), {'model_path': 'm', 'web_url': web.url, 'token': 'wrong'})())
+    monkeypatch.setattr(main, 'PersonDetector', lambda path: None)
+    monkeypatch.setattr(main.time, 'sleep', fake_sleep)
+    with caplog.at_level('WARNING', logger='nesttrace_worker'), pytest.raises(Stop):
+        main.run()
+    assert sleeps == [main.ERROR_BACKOFF_S]
+    assert any('401' in r.getMessage() and 'token refused' in r.getMessage() for r in caplog.records)
+    assert not any('wrong' in r.getMessage() for r in caplog.records)
 
 
 def test_the_pipeline_is_built_once_per_device(web, make_api):
