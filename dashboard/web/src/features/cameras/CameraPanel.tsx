@@ -183,8 +183,8 @@ export function CameraPanel({ camera, feed, isAdmin = false, devices = [], onClo
                         </span>
                     </div>
                 )}
-            {shown.kind === 'sim' && shown.deviceOffline && (
-                <p className="mt-2 text-xs text-ink-muted">{shown.deviceOffline} offline · showing simulation</p>
+            {shown.kind !== 'live' && shown.deviceOffline && (
+                <p className="mt-2 text-xs text-ink-muted">{shown.deviceOffline} offline{shown.kind === 'sim' ? ' · showing simulation' : ''}</p>
             )}
 
             <dl className="mt-3 grid grid-cols-3 gap-x-2 gap-y-2.5 text-xs">

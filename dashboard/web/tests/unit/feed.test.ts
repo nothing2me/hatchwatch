@@ -35,5 +35,6 @@ describe('feedFor', () =>
     it('a live device works on a camera with no footage yet', () =>
     {
         expect(feedFor(camera({ video: null }), { B1: { deviceId: 'd1', name: 'P', online: true } })).toMatchObject({ kind: 'live' });
+        expect(feedFor(camera({ video: null }), { B1: { deviceId: 'd1', name: 'P', online: false } })).toEqual({ kind: 'none', reason: 'no-footage', deviceOffline: 'P' });
     });
 });

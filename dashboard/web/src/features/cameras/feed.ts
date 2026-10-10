@@ -5,7 +5,7 @@ import type { LiveStatus } from '@/features/live/useLiveStatus';
 export type Feed =
     | { kind: 'live'; deviceId: string; deviceName: string }
     | { kind: 'sim'; video: FeedVideo; deviceOffline: string | null }   // deviceOffline: the assigned device's name while it is offline
-    | { kind: 'none'; reason: 'offline' | 'no-footage' };
+    | { kind: 'none'; reason: 'offline' | 'no-footage'; deviceOffline?: string };
 
 export function feedFor(camera: CameraView, live: LiveStatus): Feed
 {
@@ -22,7 +22,7 @@ export function feedFor(camera: CameraView, live: LiveStatus): Feed
     {
         return { kind: 'sim', video: camera.video, deviceOffline: device ? device.name : null };
     }
-    return { kind: 'none', reason: 'no-footage' };
+    return { kind: 'none', reason: 'no-footage', ...(device ? { deviceOffline: device.name } : {}) };
 }
 
 export function feedKey(feed: Feed): string

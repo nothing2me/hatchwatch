@@ -40,7 +40,7 @@ function CameraCard({ camera, feed }: { camera: CameraView; feed: Feed })
                 : feed.kind === 'sim'
                 ? <CameraVideo key={feed.video.id} video={feed.video} />
                 : <div className="mt-2 grid aspect-video place-content-center gap-2 rounded-lg bg-night-950 text-center text-sm text-ink-muted"><VideoOff aria-hidden className="mx-auto h-6 w-6" />{camera.status === 'ONLINE' ? 'No footage yet' : 'Camera offline'}</div>}
-            {feed.kind === 'sim' && feed.deviceOffline && <p className="mt-2 px-1 text-xs text-ink-muted">{feed.deviceOffline} offline · showing simulation</p>}
+            {feed.kind !== 'live' && feed.deviceOffline && <p className="mt-2 px-1 text-xs text-ink-muted">{feed.deviceOffline} offline{feed.kind === 'sim' ? ' · showing simulation' : ''}</p>}
         </GlassPanel>
     );
 }

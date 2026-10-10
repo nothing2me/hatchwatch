@@ -46,6 +46,13 @@ describe('CameraPanel feeds', () =>
         expect(screen.getByTestId('camera-video')).toBeTruthy();
         expect(screen.getByText('Pixel offline · showing simulation')).toBeTruthy();
     });
+
+    it('names the offline device on a camera without footage', () =>
+    {
+        render(panel({ camera: { ...camera, video: null }, feed: { kind: 'none', reason: 'no-footage', deviceOffline: 'Pixel' } }));
+        expect(screen.getByText('No footage yet')).toBeTruthy();
+        expect(screen.getByText('Pixel offline')).toBeTruthy();
+    });
 });
 
 describe('CameraPanel source picker', () =>
