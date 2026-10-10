@@ -88,7 +88,7 @@ export class Simulation{
  }
  hasDig(){return !['travel','rest'].includes(this.config.scenario)}
  pauseEnd(actor:TurtleActor){return this.config.scenario==='travel'?actor.digStart:actor.coverEnd}
- position(actor:TurtleActor,t:number){const shore=-BEACH_WIDTH/2+.2,a=smooth((t-actor.startAt)/(actor.digStart-actor.startAt));let x=actor.startX+(actor.target.x-actor.startX)*a,z=shore+(actor.target.y-shore)*a;if(t>this.pauseEnd(actor)){const b=smooth((t-this.pauseEnd(actor))/8);x=actor.target.x+(actor.startX+1-actor.target.x)*b;z=actor.target.y+(-BEACH_WIDTH/2-.5-actor.target.y)*b}return {x,z}}
+ position(actor:TurtleActor,t:number){const shore=-BEACH_WIDTH/2+.2,a=smooth((t-actor.startAt)/(actor.digStart-actor.startAt));let x=actor.startX+(actor.target.x-actor.startX)*a,z=shore+(actor.target.y-shore)*a;if(t>this.pauseEnd(actor)){const b=smooth((t-this.pauseEnd(actor))/8);x=actor.target.x+(actor.startX+1-actor.target.x)*b;z=actor.target.y+(-BEACH_WIDTH/2-6-actor.target.y)*b}return {x,z}}
  forcing(t:number):SandForcing[]{return this.actors.map(actor=>{const {x,z}=this.position(actor,t);let mode:SandForcing['mode']='none';if(t>=actor.startAt&&t<this.pauseEnd(actor)+8){if(this.hasDig()&&t>=actor.digStart&&t<actor.digEnd)mode='dig';else if(this.hasDig()&&t>=actor.digEnd&&t<actor.coverEnd)mode='cover';else if((t<actor.digStart||t>this.pauseEnd(actor))&&this.config.scenario!=='unrelated')mode='travel'}return {x,z,heading:t>this.pauseEnd(actor)?Math.PI:Math.atan2(actor.target.x-actor.startX,actor.target.y+BEACH_WIDTH/2-.2),mode,model:this.config.model,strength:actor.strength*(this.config.scenario==='weak'?.15:1),time:t-actor.startAt}})}
  render(t:number,view:number,capture=true){
  this.sand.advance(t,tt=>this.forcing(tt));const forces=this.forcing(t);
@@ -100,6 +100,11 @@ export class Simulation{
  for(let j=0;j<this.actors.length;j++){const actor=this.actors[j],f=forces[j];actor.group.visible=this.config.scenario!=='unrelated'&&t>=actor.startAt&&t<this.pauseEnd(actor)+8;
  const crawling=f.mode==='travel',cycle=(t-actor.startAt)*7.4;
  actor.group.position.set(f.x,surface(f.z)-.04+(crawling?0.024*Math.sin(cycle*2):0),f.z);
+  // After digging the turtle returns to the sea. Past the shoreline it sinks
+  // smoothly below the waterline so it is fully submerged before it despawns.
+  const returnProgress=(t-this.pauseEnd(actor))/8,waterEdge=-BEACH_WIDTH/2-.3;
+  const sink=returnProgress>0&&f.z<=waterEdge?smooth((waterEdge-f.z)/5)*.85:0;
+  actor.group.position.y-=sink;
  actor.group.rotation.set(crawling?0.024*Math.sin(cycle):0,f.heading+(crawling?0.055*Math.sin(cycle):0),crawling?0.04*Math.sin(cycle):0);
  actor.flippers.forEach(flipper=>{const side=Math.sign(flipper.position.x),front=flipper.position.z>0,stroke=Math.sin(cycle+(side>0?Math.PI:0));flipper.rotation.y=side*(front?.4:.24)+stroke*(f.mode!=='none'?(front?.8:.35):0);flipper.rotation.x=front?Math.max(0,-stroke)*.45:Math.max(0,stroke)*.2;flipper.position.y=.1+(f.mode!=='none'?Math.max(0,-stroke)*(front?.09:.035):0)});this.animateModel(actor,t,f.mode);}
  if(view===3){const first=this.actors[0],f=forces[0];this.detailCamera.position.set(f.x+2.8,1.55,f.z-3.25);this.detailCamera.lookAt(f.x,0.6,f.z+0.15)}
