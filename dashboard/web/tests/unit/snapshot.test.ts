@@ -20,7 +20,13 @@ describe('toMapSnapshot', () =>
 
     it('maps zones to rings', () =>
     {
-        expect(snapshot.zones[0]).toMatchObject({ code: 'B', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]] });
+        expect(snapshot.zones[0]).toMatchObject({ code: 'B', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]], custom: false });
+    });
+
+    it('flags zones an admin added on the map', () =>
+    {
+        const added = toMapSnapshot({ ...rows, zones: [{ ...rows.zones[0], code: 'E', createdById: 'u1' }] });
+        expect(added.zones[0]).toMatchObject({ code: 'E', custom: true });
     });
 
     it('maps cameras with calibration flag and latest video', () =>

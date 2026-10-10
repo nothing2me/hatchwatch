@@ -8,6 +8,7 @@ export interface ZoneRow
 {
     id: string; code: string; name: string; activityLevel: ActivityLevel;
     outline: unknown;
+    createdById?: string | null;
 }
 
 export interface CameraRow
@@ -94,7 +95,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
     }));
 
     return {
-        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline) })),
+        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline), custom: (zone.createdById ?? null) !== null })),
         cameras,
         alerts,
         camerasOnline: cameras.filter(camera => camera.status === 'ONLINE').length,

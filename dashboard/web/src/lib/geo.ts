@@ -54,3 +54,12 @@ export function bearingBetween([lng1, lat1]: LngLat, [lng2, lat2]: LngLat): numb
     const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
+
+// Great-circle (haversine) distance in metres.
+export function distanceBetween([lng1, lat1]: LngLat, [lng2, lat2]: LngLat): number
+{
+    const φ1 = toRad(lat1);
+    const φ2 = toRad(lat2);
+    const a = Math.sin(toRad(lat2 - lat1) / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(toRad(lng2 - lng1) / 2) ** 2;
+    return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)));
+}

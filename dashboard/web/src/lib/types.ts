@@ -37,6 +37,7 @@ export interface ZoneView
     name: string;
     activityLevel: ActivityLevel;
     ring: LngLat[];          // closed ring, first point repeated last
+    custom?: boolean;        // added on the map by an admin (removable while it has no footage)
 }
 
 export interface FeedVideo

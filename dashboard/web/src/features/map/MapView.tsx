@@ -2,13 +2,13 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as maplibre from 'maplibre-gl';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, X } from 'lucide-react';
 import { forwardRef, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import { cn } from '@/lib/cn';
 import { boundsOf, viewCone } from '@/lib/geo';
-import type { MapSnapshot } from '@/lib/types';
+import type { LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
 import type { Playback } from './playback';
@@ -32,6 +32,10 @@ interface MapViewProps
     now?: number;
     selectedAlertId?: string | null;
     onSelectAlert?: (alertId: string) => void;
+    // Admin edit mode: map clicks place a camera pair; added zones show a remove control.
+    editing?: boolean;
+    onMapClick?: (at: LngLat) => void;
+    onDeleteZone?: (code: string) => void;
 }
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
@@ -50,7 +54,7 @@ const pinPaint = {
 const alertRadius = ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10, 20, 16] as unknown as number;
 const selectedRadius = ['interpolate', ['linear'], ['zoom'], 14, 9, 18, 16, 20, 23] as unknown as number;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert }, ref)
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onDeleteZone }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
     const [pinHover, setPinHover] = useState(false);
@@ -92,12 +96,22 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 maxZoom={20}
                 dragRotate
                 attributionControl={{ compact: true }}
-                interactiveLayerIds={layers.alerts && onSelectAlert ? ['alert-ring'] : []}
-                cursor={pinHover ? 'pointer' : undefined}
+                interactiveLayerIds={!editing && layers.alerts && onSelectAlert ? ['alert-ring'] : []}
+                cursor={editing ? 'crosshair' : pinHover ? 'pointer' : undefined}
                 onMouseEnter={() => setPinHover(true)}
                 onMouseLeave={() => setPinHover(false)}
                 onClick={event =>
                 {
+                    if (editing)
+                    {
+                        // Clicks on markers (cameras, zone labels) bubble to the map; they are not placements.
+                        const target = event.originalEvent?.target;
+                        if (!(target instanceof Element && target.closest('.maplibregl-marker')))
+                        {
+                            onMapClick?.([event.lngLat.lng, event.lngLat.lat]);
+                        }
+                        return;
+                    }
                     const id = event.features?.[0]?.properties?.id;
                     if (typeof id === 'string')
                     {
@@ -147,12 +161,24 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 {layers.zones && snapshot.zones.filter(zone => zone.ring.length > 0).map(zone =>
                 {
                     const [[w, s], [e, n]] = boundsOf(zone.ring);
+                    const removable = editing && zone.custom && onDeleteZone;
                     // Set beside the centre so digging pins near the middle of a zone are not covered.
                     return (
-                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} anchor="right" offset={[-14, 0]} style={{ pointerEvents: 'none' }}>
-                            <span className="flex items-center gap-1.5 rounded-md bg-night-950/80 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 ring-white/10 backdrop-blur-sm">
+                        <Marker key={`label-${zone.id}`} longitude={(w + e) / 2} latitude={(s + n) / 2} anchor="right" offset={[-14, 0]} style={{ pointerEvents: 'none', zIndex: removable ? 3 : undefined }}>
+                            <span className={cn('flex items-center gap-1.5 rounded-md bg-night-950/80 py-0.5 pl-1.5 text-[10px] font-semibold tracking-[0.14em] text-ink ring-1 backdrop-blur-sm', removable ? 'pr-0.5 ring-amber/40' : 'pr-1.5 ring-white/10')}>
                                 <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', levelDot[zone.activityLevel])} />
                                 <span className="max-md:sr-only">ZONE </span>{zone.code}
+                                {removable && (
+                                    <button
+                                        type="button"
+                                        onClick={event => { event.stopPropagation(); onDeleteZone(zone.code); }}
+                                        aria-label={`Remove zone ${zone.code}`}
+                                        title={`Remove zone ${zone.code}`}
+                                        className="pointer-events-auto grid h-4 w-4 cursor-pointer place-items-center rounded text-ink-muted transition-colors hover:bg-[#E2581F] hover:text-white focus-visible:outline-2 focus-visible:outline-amber"
+                                    >
+                                        <X aria-hidden className="h-3 w-3" />
+                                    </button>
+                                )}
                             </span>
                         </Marker>
                     );

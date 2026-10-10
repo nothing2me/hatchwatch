@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
-import type { AlertView, MapSnapshot } from '@/lib/types';
+import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
+import { addCameraPair, deleteZone } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
 import { CameraPanel } from '@/features/cameras/CameraPanel';
@@ -11,6 +12,7 @@ import type { SeekRequest } from '@/features/cameras/CameraVideo';
 import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
 import { useNow } from '@/features/live/useNow';
 import { SiteDrawer } from '@/features/sites/SiteDrawer';
+import { EditCamerasBanner, type EditNotice } from './EditCamerasBanner';
 import { Legend } from './Legend';
 import { MapControls, type LayerKey } from './MapControls';
 import { fitPadding } from './bounds';
@@ -60,6 +62,95 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         setSeek(null);
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
     }, [selectedCameraId, snapshot.cameras]);
+
+    // Admin camera editing: one map click adds a zone with a camera pair; added zones can be removed.
+    const isAdmin = user.role === 'ADMIN';
+    const [editing, setEditing] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [notice, setNotice] = useState<EditNotice>(null);
+    const [confirmCode, setConfirmCode] = useState<string | null>(null);
+    const confirmZone = confirmCode ? snapshot.zones.find(zone => zone.code === confirmCode && zone.custom) ?? null : null;
+
+    const finishEditing = useCallback(() =>
+    {
+        setEditing(false);
+        setConfirmCode(null);
+        setNotice(null);
+    }, []);
+
+    useEffect(() =>
+    {
+        if (!editing)
+        {
+            return;
+        }
+        const onKey = (event: KeyboardEvent) =>
+        {
+            if (event.key === 'Escape')
+            {
+                // Esc first dismisses the removal question, then leaves edit mode.
+                if (confirmCode)
+                {
+                    setConfirmCode(null);
+                }
+                else
+                {
+                    finishEditing();
+                }
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [editing, confirmCode, finishEditing]);
+
+    useEffect(() =>
+    {
+        if (!notice)
+        {
+            return;
+        }
+        const timer = setTimeout(() => setNotice(null), 5000);
+        return () => clearTimeout(timer);
+    }, [notice]);
+
+    const runEdit = useCallback(async (work: () => Promise<{ ok: true; code: string } | { ok: false; error: string }>, done: (code: string) => string) =>
+    {
+        setBusy(true);
+        setNotice(null);
+        try
+        {
+            const result = await work();
+            setNotice(result.ok ? { kind: 'ok', text: done(result.code) } : { kind: 'error', text: result.error });
+        }
+        catch
+        {
+            setNotice({ kind: 'error', text: 'That did not save. Check your connection and try again.' });
+        }
+        finally
+        {
+            setBusy(false);
+        }
+    }, []);
+
+    const placePair = useCallback((at: LngLat) =>
+    {
+        if (!editing || busy || confirmCode)
+        {
+            return;
+        }
+        void runEdit(() => addCameraPair(at), code => `Zone ${code} added`);
+    }, [editing, busy, confirmCode, runEdit]);
+
+    const removeZone = useCallback(() =>
+    {
+        const code = confirmCode;
+        if (!code)
+        {
+            return;
+        }
+        setConfirmCode(null);
+        void runEdit(() => deleteZone(code), removed => `Zone ${removed} removed`);
+    }, [confirmCode, runEdit]);
 
     const fitBeach = useCallback(() =>
     {
@@ -111,7 +202,19 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
-            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById} />
+            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById}
+                editing={editing} onMapClick={placePair} onDeleteZone={code => { setNotice(null); setConfirmCode(code); }} />
+
+            {editing && (
+                <EditCamerasBanner
+                    busy={busy}
+                    notice={notice}
+                    confirm={confirmZone ? { code: confirmZone.code, cameraCodes: snapshot.cameras.filter(camera => camera.zoneCode === confirmZone.code).map(camera => camera.code) } : null}
+                    onConfirm={removeZone}
+                    onCancel={() => setConfirmCode(null)}
+                    onDone={finishEditing}
+                />
+            )}
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
@@ -134,6 +237,8 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                             onFit={fitBeach}
                             layers={layers}
                             onToggleLayer={key => setLayers(current => ({ ...current, [key]: !current[key] }))}
+                            editing={editing}
+                            onToggleEdit={isAdmin ? () => (editing ? finishEditing() : setEditing(true)) : undefined}
                         />
                         {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} />}
                     </div>
