@@ -42,21 +42,11 @@ describe('Legend', () =>
         }
     });
 
-    it('explains trail colours and danger pins', () =>
+    it('keeps only the essential map symbols and actions', () =>
     {
         render(<Legend />);
-        expect(screen.getByText('Turtle trail — colour matches its site')).toBeTruthy();
-        expect(screen.getByText('Danger — person near a site')).toBeTruthy();
-    });
-});
-
-describe('Legend secured area', () =>
-{
-    it('explains the green secured circle', () =>
-    {
-        render(<Legend />);
-        expect(screen.getByText('Secured area (20 m)')).toBeTruthy();
-        cleanup();
-        localStorage.clear();
+        expect(screen.getByText('Person near a site')).toBeTruthy();
+        expect(screen.getByText('Click a pin for details. Right-click a zone for playback.')).toBeTruthy();
+        expect(screen.queryByText(/24 × 16/)).toBeNull();
     });
 });

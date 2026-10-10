@@ -60,7 +60,7 @@ export const SEED_ZONES: SeedZone[] = [
 // Pairs face each other along the shoreline: *1 at the north end facing SSW, *2 at the south end facing NE.
 export const SEED_CAMERAS: SeedCamera[] = [
     { code: 'A1', zoneCode: 'A', lng: -97.066985, lat: 27.813574, headingDeg: screenHeadingToBearing(113), fovDeg: 44, rangeM: 370, status: 'ONLINE' },
-    { code: 'A2', zoneCode: 'A', lng: -97.069884, lat: 27.810403, headingDeg: screenHeadingToBearing(-34), fovDeg: 44, rangeM: 370, status: 'OFFLINE' },
+    { code: 'A2', zoneCode: 'A', lng: -97.069884, lat: 27.810403, headingDeg: screenHeadingToBearing(-34), fovDeg: 44, rangeM: 370, status: 'ONLINE' },
     { code: 'B1', zoneCode: 'B', lng: -97.062796, lat: 27.81816, headingDeg: screenHeadingToBearing(113), fovDeg: 44, rangeM: 350, status: 'ONLINE' },
     { code: 'B2', zoneCode: 'B', lng: -97.065525, lat: 27.815179, headingDeg: screenHeadingToBearing(-34), fovDeg: 44, rangeM: 350, status: 'ONLINE' },
     { code: 'C1', zoneCode: 'C', lng: -97.060172, lat: 27.821026, headingDeg: screenHeadingToBearing(113), fovDeg: 44, rangeM: 245, status: 'ONLINE' },

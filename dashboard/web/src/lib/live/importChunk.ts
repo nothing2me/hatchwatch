@@ -4,7 +4,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
-import { recordingOffsetM, shiftedZoneFrame, simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import { recordingOffsetM, shiftedZoneFrame, simPointToLngLat, stationOffsetM, zoneFrame } from '@/lib/sim/frame';
 import { readRunPaths, storeRunPaths, type StoredSite } from '@/lib/sim/paths';
 import { calibrationSchema, pinsFileSchema, type SimPin } from '@/lib/sim/schema';
 import { ALERT_MESSAGES, type LngLat } from '@/lib/types';
@@ -21,7 +21,7 @@ const candidateSchema = z.object({
     radius_m: z.number().positive().max(20),
     score: z.number().finite(),
 });
-const candidatesFileSchema = z.object({ methods: z.object({ frozen: z.array(candidateSchema).max(25) }) });
+const candidatesFileSchema = z.object({ methods: z.object({ frozen: z.array(candidateSchema).max(64) }) });
 const maskEntrySchema = z.object({
     camera: z.number().nonnegative(),
     polygon: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(3),
@@ -79,11 +79,18 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         throw new Error('No zones to place the live chunk on');
     }
     const zone = zones[manifest.sequence % zones.length];
-    const dashboardCameras = await prisma.camera.findMany({ where: { code: { in: [`${zone.code}1`, `${zone.code}2`] } } });
+    const zoneCameras = await prisma.camera.findMany({ where: { zoneId: zone.id } });
+    // Seeded demo zones have three fixed, short-baseline rigs. Other/admin zones
+    // retain their original pair and placement behavior.
+    const fixedStations = [3, 5, 7].filter(first => zoneCameras.some(camera => camera.code === `${zone.code}${first}`)
+        && zoneCameras.some(camera => camera.code === `${zone.code}${first + 1}`));
+    const visit = Math.floor(manifest.sequence / zones.length);
+    const firstCode = fixedStations.length ? fixedStations[visit % fixedStations.length] : 1;
+    const dashboardCameras = zoneCameras.filter(camera => camera.code === `${zone.code}${firstCode}` || camera.code === `${zone.code}${firstCode + 1}`);
     // The manifest camera at x_min sits at the <zone>1 end, x_max at <zone>2.
     const cameraFor = (end: 'x_min' | 'x_max') =>
     {
-        const found = dashboardCameras.find(camera => camera.code === `${zone.code}${end === 'x_min' ? 1 : 2}`);
+        const found = dashboardCameras.find(camera => camera.code === `${zone.code}${firstCode + (end === 'x_min' ? 0 : 1)}`);
         if (!found)
         {
             throw new Error(`Zone ${zone.code} has no camera for ${end}`);
@@ -92,7 +99,9 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
     };
     const cameraByIndex = manifest.cameras.map(camera => cameraFor(camera.end));
     const ring = (zone.outline as { coordinates: LngLat[][] }).coordinates[0];
-    const placementOffsetM = recordingOffsetM(ring, manifest.sequence, zones.length, manifest.ground_bounds_m[1] - manifest.ground_bounds_m[0]);
+    const placementOffsetM = fixedStations.length
+        ? stationOffsetM(ring, fixedStations.indexOf(firstCode), fixedStations.length, manifest.ground_bounds_m[1] - manifest.ground_bounds_m[0])
+        : recordingOffsetM(ring, manifest.sequence, zones.length, manifest.ground_bounds_m[1] - manifest.ground_bounds_m[0]);
     const frame = shiftedZoneFrame(zoneFrame(ring), placementOffsetM);
 
     const startedAt = new Date(manifest.recording_started_at);

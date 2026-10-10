@@ -42,15 +42,15 @@ describe('pinFeatures', () =>
         expect(fallback.opacity).toBe(0.4);
     });
 
-    it('keeps evidence colours and full opacity while a feed is playing', () =>
+    it('keeps protection colours and age fade while a feed is playing', () =>
     {
         const playing = { key: 'live-000001-abc', t: 5 };
         const [both, one] = pinFeatures([
             siteAlert('a', { detectedAt: minutesAgo(60) }),
             siteAlert('b', {}, { evidenceTier: 'SINGLE_CAMERA' }),
         ], playing, now, 5, null).map(feature => feature.properties);
-        expect(both).toMatchObject({ color: '#4ADE80', opacity: 1 });
-        expect(one).toMatchObject({ color: '#FFB547', strokeWidth: 1.25 });
+        expect(both).toMatchObject({ color: '#E2581F', opacity: 0.4 });
+        expect(one).toMatchObject({ color: '#E2581F', strokeWidth: 1.25 });
     });
 
     it('marks the selected site', () =>

@@ -29,10 +29,10 @@ describe('playback gating', () =>
         expect(isActive(alerts[0], null)).toBe(false);
     });
 
-    it('shows all positioned alerts without playback, only active ones with it', () =>
+    it('keeps all positioned site pins visible during playback', () =>
     {
         expect(visibleAlerts(alerts, null).map(a => a.id)).toEqual(['a', 'b', 'c']);
-        expect(visibleAlerts(alerts, { key: 'R1', t: 15 }).map(a => a.id)).toEqual(['a']);
-        expect(visibleAlerts(alerts, { key: 'R1', t: 50 })).toEqual([]);
+        expect(visibleAlerts(alerts, { key: 'R1', t: 15 }).map(a => a.id)).toEqual(['a', 'b', 'c']);
+        expect(visibleAlerts(alerts, { key: 'R1', t: 50 }).map(a => a.id)).toEqual(['a', 'b', 'c']);
     });
 });

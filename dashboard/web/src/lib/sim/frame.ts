@@ -26,14 +26,22 @@ export function shiftedZoneFrame(frame: ZoneFrame, offsetM: number): ZoneFrame
     return { ...frame, origin: destinationPoint(frame.origin, offsetM > 0 ? frame.alongBearing : frame.alongBearing + 180, Math.abs(offsetM)) };
 }
 
-/** Low-discrepancy placement for repeated demonstration clips in a long zone. */
+/** Eight evenly spaced recording stations, visited in a wide-spread order. */
 export function recordingOffsetM(ring: LngLat[], sequence: number, zoneCount: number, groundWidthM: number): number
 {
     const lengthM = distanceBetween(ring[0], ring[1]);
     const reachM = Math.max(0, lengthM / 2 - groundWidthM / 2 - 6);
     const visit = Math.floor(sequence / Math.max(1, zoneCount));
-    const fraction = ((visit + 1) * 0.6180339887498949) % 1;
+    const slot = (visit * 3) % 8;
+    const fraction = (slot + 0.5) / 8;
     return (fraction * 2 - 1) * reachM;
+}
+
+/** Fixed recording stations within a long monitored beach, spaced at true scale. */
+export function stationOffsetM(ring: LngLat[], station: number, count = 3, groundWidthM = 24): number
+{
+    const reachM = Math.max(0, Math.min(90, distanceBetween(ring[0], ring[1]) / 2 - groundWidthM / 2 - 6));
+    return count <= 1 ? 0 : -reachM + station * (2 * reachM / (count - 1));
 }
 
 export function simPointToLngLat(frame: ZoneFrame, [x, y]: [number, number]): LngLat

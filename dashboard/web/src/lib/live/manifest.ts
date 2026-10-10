@@ -22,7 +22,7 @@ export const liveManifestSchema = z.object({
     published_at: z.iso.datetime(),
     clip_seconds: z.number().positive(),
     fps: z.number().positive(),
-    rendering: z.enum(['synthetic-daylight', 'synthetic-very-dark']),
+    rendering: z.enum(['synthetic-daylight', 'synthetic-very-dark', 'synthetic-active-nir']),
     ground_bounds_m: z.tuple([z.number(), z.number(), z.number(), z.number()]),
     cameras: z.tuple([camera, camera]),
     pins: z.literal('pins/predictions.json'),
