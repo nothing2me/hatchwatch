@@ -4,7 +4,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import { Prisma, type PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
-import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import { recordingOffsetM, shiftedZoneFrame, simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
 import { readRunPaths, storeRunPaths, type StoredSite } from '@/lib/sim/paths';
 import { calibrationSchema, pinsFileSchema, type SimPin } from '@/lib/sim/schema';
 import { ALERT_MESSAGES, type LngLat } from '@/lib/types';
@@ -92,7 +92,8 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
     };
     const cameraByIndex = manifest.cameras.map(camera => cameraFor(camera.end));
     const ring = (zone.outline as { coordinates: LngLat[][] }).coordinates[0];
-    const frame = zoneFrame(ring);
+    const placementOffsetM = recordingOffsetM(ring, manifest.sequence, zones.length, manifest.ground_bounds_m[1] - manifest.ground_bounds_m[0]);
+    const frame = shiftedZoneFrame(zoneFrame(ring), placementOffsetM);
 
     const startedAt = new Date(manifest.recording_started_at);
     const relative = (name: string) => `live/${manifest.chunk_id}/${name}`;
@@ -122,7 +123,7 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         }
         const result = await prisma.$transaction(async tx =>
         {
-            await tx.liveChunk.create({ data: { id: manifest.chunk_id, sequence: manifest.sequence, zoneId: zone.id, startedAt, groundBounds: manifest.ground_bounds_m } });
+            await tx.liveChunk.create({ data: { id: manifest.chunk_id, sequence: manifest.sequence, zoneId: zone.id, startedAt, groundBounds: manifest.ground_bounds_m, placementOffsetM } });
             const videos = await Promise.all(manifest.cameras.map((camera, index) => tx.video.create({
                 data: {
                     cameraId: cameraByIndex[index].id,

@@ -52,8 +52,7 @@ export function relativeTime(iso: string, now: number): string
 
 function sourceLabel(alert: AlertView): string
 {
-    if (alert.simRunId?.startsWith('live-')) return 'Live simulator feed';
-    return alert.simulated ? 'Simulated run' : 'Camera footage';
+    return alert.simRunId ? 'Recorded clip' : 'Camera footage';
 }
 
 interface SiteDrawerProps
@@ -252,6 +251,7 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                             </>)
                             : (<>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Evidence</dt><dd className="mt-0.5 font-medium">{alert.evidenceTier ? tierText[alert.evidenceTier] : '—'}</dd></div>
+                        <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Path</dt><dd className="mt-0.5 font-medium">{alert.colorIndex !== null ? 'Matched motion track' : 'No reliable track'}</dd></div>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Score</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.score !== null ? alert.score.toFixed(2) : '—'}</dd></div>
                         <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">In clip</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.startT.toFixed(1)}–{alert.endT.toFixed(1)} s</dd></div>
                         <div className="col-span-3"><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Detected</dt><dd className="mt-0.5"><span className="font-medium">{relativeTime(detectedAt, now)}</span> <span className="font-mono text-ink-muted">· {absolute.format(new Date(detectedAt))}</span></dd></div>

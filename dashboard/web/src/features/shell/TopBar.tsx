@@ -5,7 +5,7 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'analytics' | 'setup' | 'users';
+export type Page = 'map' | 'cameras' | 'analytics' | 'setup' | 'users';
 
 interface TopBarProps
 {
@@ -22,12 +22,11 @@ interface TopBarProps
 
 const chip = 'inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs';
 
-// `wideOnly` items drop out on phones so the admin bar fits; Setup links to Users.
-const NAV: { page: Page; href: string; label: string; adminOnly?: boolean; wideOnly?: boolean }[] = [
+const NAV: { page: Page; href: string; label: string; adminOnly?: boolean }[] = [
     { page: 'map', href: '/', label: 'Map' },
+    { page: 'cameras', href: '/cameras', label: 'Cameras' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
-    { page: 'setup', href: '/setup', label: 'Setup', adminOnly: true },
-    { page: 'users', href: '/setup/users', label: 'Users', adminOnly: true, wideOnly: true },
+    { page: 'setup', href: '/setup', label: 'Settings', adminOnly: true },
 ];
 
 // Turtle mark from the favicon, drawn inline so it inherits the ink colour.
@@ -58,15 +57,14 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
             <nav aria-label="Main" className="flex items-center gap-0.5 rounded-full bg-night-950/60 p-0.5 ring-1 ring-white/8">
                 {links.map(item =>
                 {
-                    const here = item.page === current;
+                    const here = item.page === current || (item.page === 'setup' && current === 'users');
                     return (
                         <Link
                             key={item.page}
                             href={item.href}
                             aria-current={here ? 'page' : undefined}
                             className={cn('inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-amber sm:px-3',
-                                here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink',
-                                item.wideOnly && 'max-sm:hidden')}
+                                here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink')}
                         >
                             {here && <span aria-hidden className="mr-1.5 h-1 w-1 rounded-full bg-amber" />}
                             {item.label}

@@ -43,6 +43,10 @@ describe('toMapSnapshot', () =>
         expect(overlay?.fitRmseM).toBe(0.12);
         expect(distanceBetween(overlay!.corners[0], overlay!.corners[1])).toBeCloseTo(24, 1);
         expect(distanceBetween(overlay!.corners[1], overlay!.corners[2])).toBeCloseTo(16, 1);
+        const shiftedRows: SnapshotRows = { ...frameRows, cameras: [{ ...frameRows.cameras[0], videos: [{ ...frameRows.cameras[0].videos[0], liveChunk: { groundBounds: [-12, 12, -8, 8], placementOffsetM: 40 } }] }] };
+        const shifted = toMapSnapshot(shiftedRows).cameras[0].video?.motionMap;
+        expect(distanceBetween(overlay!.corners[0], shifted!.corners[0])).toBeCloseTo(40, 1);
+        expect(distanceBetween(shifted!.corners[0], shifted!.corners[1])).toBeCloseTo(24, 1);
     });
 
     it('counts cameras online and carries no NEW-alert count', () =>

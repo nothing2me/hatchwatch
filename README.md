@@ -1,8 +1,36 @@
+<div align="center">
+
+<img src="dashboard/web/src/app/icon.svg" alt="HatchWatch turtle mark" width="72" height="72">
+
 # HatchWatch
 
-A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 1280 × 720 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 84 × 32 m beach is a two-layer bed of **134,400 physical grains**. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times.
+**Camera evidence for human-led sea turtle nest checks**
 
-The team’s **real dashboard** lives in [`dashboard/`](dashboard/README.md): a Docker Compose app (Next.js on port 3000, Postgres) with logins, a satellite map, and camera feeds. It imports reviewed simulation outputs through a separate adapter and never reads simulator state or private truth. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
+[Why it matters](#why-it-matters) · [How HatchWatch works](#how-hatchwatch-works) · [Run locally](#run-locally) · [Dashboard](dashboard/README.md) · [Results](#current-status)
+
+</div>
+
+## Why it matters
+
+**A turtle can come ashore, dig, cover a patch of sand, and leave before a patrol reaches that stretch of beach.** The team then has to work out where to look, whether eggs were laid, and whether a nest needs protection. Finding the right place matters: [Texas conservation teams patrol beaches to locate nests](https://www.nps.gov/pais/learn/nature/kempsridleystory.htm), and [trained staff protect the nests they find](https://www.nps.gov/pais/learn/nature/st-protection.htm).
+
+## How HatchWatch works
+
+HatchWatch uses **OpenCV-based computer vision** to analyze beach camera footage for digging activity and flag possible nesting locations. It brings the relevant video, camera views, and mapped inspection points together in one dashboard, where teams can review the evidence, check the location, and record what they find in the site log. **See the activity, inspect the site, document the outcome.**
+
+## What this repository contains
+
+- **A research simulator and detector** in this directory. A Three.js beach generates two synchronized camera videos; a separate Python/OpenCV process analyzes saved-video differences without access to turtle state or hidden eggs. The simulator makes repeatable tests possible, including missed digs, false alarms, and dark footage.
+- **An operations dashboard** in [`dashboard/`](dashboard/README.md), with a map, camera playback, access roles, and a site log for human follow-up. A continuous **synthetic** feed exercises that workflow through a versioned public-data adapter. The dashboard does not read simulator truth or depend on the local research API; [`agent.md`](agent.md) defines the boundary.
+
+## Current status
+
+> [!IMPORTANT]
+> HatchWatch is an end-to-end **prototype, not a deployed beach monitoring service**. Its continuous demo uses generated footage. No real-camera accuracy or conservation benefit has been measured.
+
+Earlier registered daylight results apply to earlier simulator footage; on the current photoreal scene, a development stress batch missed its digging cases, and the very-dark visible-light detector remains ineffective. The separate [active near-IR night development mode](docs/NEAR_IR.md) models camera-mounted illumination and monochrome capture; it is not a spectral or field validation. Read [the current-scene stress report](docs/STRESS_DEV_RESULTS.md), [night probe](docs/NIGHT_DENOISE.md), and [registered results](SWARM_RESULTS.md) before interpreting a demo pin as evidence of performance.
+
+The beach model is an 84 × 32 m two-layer bed with 134,400 simulated grains. TypeScript/Vite/Three.js render the 1280 × 720 camera views; Python/OpenCV extracts difference signals and runs the blind detector. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times. The sections below explain how to run the prototype and reproduce its experiments.
 
 ## Run locally
 
@@ -21,7 +49,7 @@ In a second terminal:
 npm start
 ```
 
-Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress** or **Six turtles · very dark and noisy**, use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. For `swarm` and `swarm-night` runs it also groups calibrated **digging activity pins** and marks each on the map: green pins have detections from both cameras, amber pins have one view and need review. A pin is an inspection region, never a confirmed nest. The API binds to loopback only. Keep both terminals running. On the development machine a six-turtle two-camera recording took about 100 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
+Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress**, **Six turtles · very dark and noisy**, or the separate **active near-IR night** development scenario; use **Load simulation** to preview, then **Record & analyze** to generate actual videos and predictions. A saved run plays both Pure motion clips, offers synchronized source-camera playback, lets you inspect either camera's predictions and heatmap, and overlays calibrated motion on the beach map. For `swarm`, `swarm-night`, and `swarm-nir` runs it also groups calibrated **digging activity pins** and marks each on the map: green pins have detections from both cameras, amber pins have one view and need review. A pin is an inspection region, never a confirmed nest. The API binds to loopback only. Keep both terminals running. On the development machine a six-turtle two-camera recording took about 100 seconds with hardware rendering; extraction and detection took longer. Timing varies with graphics hardware and CPU.
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 
@@ -145,7 +173,7 @@ Browser checks require the servers and a completed `A-clean-11` run. When the pa
 
 ## Limits
 
-Read `SWARM_RESULTS.md` for the current paired stress measurements, `PIN_RESULTS.md` for the two-camera pin validation, and the earlier reports for historical versions. The very-dark mode uses reduced visible illumination and deterministic camera noise. It is **not an infrared model**, and synthetic performance does not establish nighttime field capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not grain-scale sand. Do not label an alert a confirmed nest.
+Read `SWARM_RESULTS.md` for the current paired stress measurements, `PIN_RESULTS.md` for the two-camera pin validation, and the earlier reports for historical versions. The registered very-dark mode uses reduced visible illumination and deterministic camera noise; it is **not infrared**. The separate `swarm-nir` mode is an exploratory active-illumination proxy described in `docs/NEAR_IR.md`. Synthetic performance does not establish nighttime field capability. Moving shadows and real camera motion are unvalidated. No energy savings are claimed. Videos are near-lossless H.264 sources, not byte-identical cross-driver reference images. The simulator uses bounded surface deformation, not grain-scale sand. Do not label an alert a confirmed nest.
 
 The beach preview now uses uneven sand with stochastic color, normal, and roughness sampling, a continuous inland dune, wave displacement, breaking crest foam, and an animated shoreline wash. Shell fragments, a sparse wrack line, driftwood, and dune grass are static scenery. Night mode has a moon sky, cool directional light, and water glint. See [beach scene design](docs/BEACH_SCENE.md) for shader choices and realistic obstacle scenarios. **Turtle close-up · preview only** follows the first turtle; it is excluded from the recorded camera pair and detector input. The optional textured turtle is installed locally with `node scripts/install-turtle.mjs "D:\D_Downloads\Turtle+Sea"`; see [local model instructions](web/public/models/README.md). Without it, the procedural turtle remains available. The supplied CGTrader model is used only on the local development server and is excluded from Git and production builds. Its geometry is unrigged, so the flipper motion is a lightweight deformation, not a biologically validated nesting animation.
 

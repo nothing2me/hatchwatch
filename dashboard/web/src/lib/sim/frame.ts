@@ -1,4 +1,4 @@
-import { bearingBetween, destinationPoint } from '@/lib/geo';
+import { bearingBetween, destinationPoint, distanceBetween } from '@/lib/geo';
 import type { LngLat } from '@/lib/types';
 
 export interface ZoneFrame
@@ -17,6 +17,23 @@ export function zoneFrame(ring: LngLat[]): ZoneFrame
         corners.reduce((sum, point) => sum + point[1], 0) / corners.length,
     ];
     return { origin, alongBearing: bearingBetween(ring[0], ring[1]) };
+}
+
+/** Shift a true-scale recording along the shore without changing its 24 m camera footprint. */
+export function shiftedZoneFrame(frame: ZoneFrame, offsetM: number): ZoneFrame
+{
+    if (offsetM === 0) return frame;
+    return { ...frame, origin: destinationPoint(frame.origin, offsetM > 0 ? frame.alongBearing : frame.alongBearing + 180, Math.abs(offsetM)) };
+}
+
+/** Low-discrepancy placement for repeated demonstration clips in a long zone. */
+export function recordingOffsetM(ring: LngLat[], sequence: number, zoneCount: number, groundWidthM: number): number
+{
+    const lengthM = distanceBetween(ring[0], ring[1]);
+    const reachM = Math.max(0, lengthM / 2 - groundWidthM / 2 - 6);
+    const visit = Math.floor(sequence / Math.max(1, zoneCount));
+    const fraction = ((visit + 1) * 0.6180339887498949) % 1;
+    return (fraction * 2 - 1) * reachM;
 }
 
 export function simPointToLngLat(frame: ZoneFrame, [x, y]: [number, number]): LngLat

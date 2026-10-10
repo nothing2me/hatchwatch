@@ -96,10 +96,10 @@ describe('MapScreen', () =>
         expect(screen.queryByText('Camera B1')).toBeNull();
     });
 
-    it('hides Setup link for viewers', () =>
+    it('hides Settings link for viewers', () =>
     {
         render(<MapScreen snapshot={snapshot} user={user} />);
-        expect(screen.queryByText('Setup')).toBeNull();
+        expect(screen.queryByText('Settings')).toBeNull();
     });
 
     it('shows zoom, fit, and layer controls and an empty alerts state', () =>
@@ -122,13 +122,13 @@ describe('MapScreen', () =>
     {
         const withVideo: MapSnapshot = {
             ...snapshot,
-            cameras: [{ ...snapshot.cameras[0], video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } }],
+            cameras: [{ ...snapshot.cameras[0], calibrated: true, video: { id: 'v1', source: 'SIMULATION', durationS: 60, hasMotion: true, simRunId: 'R1' } }],
         };
         render(<MapScreen snapshot={withVideo} user={user} />);
         fireEvent.click(screen.getByText('cam B1'));
         expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(screen.queryByText('No footage yet')).toBeNull();
-        expect(screen.getByText('Simulated footage · pins placed approximately')).toBeTruthy();
+        expect(screen.queryByText(/Simulated/)).toBeNull();
         expect(screen.queryByText(/Calibrate this camera/)).toBeNull();
     });
 

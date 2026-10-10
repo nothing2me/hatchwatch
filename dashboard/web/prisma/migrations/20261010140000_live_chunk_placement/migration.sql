@@ -1,0 +1,1 @@
+ALTER TABLE "LiveChunk" ADD COLUMN "placementOffsetM" DOUBLE PRECISION;

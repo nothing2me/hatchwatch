@@ -39,7 +39,7 @@ if (!['along', 'seaward'].includes(layout) || !Number.isInteger(humans) || human
     throw Error(`Unsupported live configuration: layout ${args.layout}, humans ${args.humans} (along|seaward, 0-4)`);
 }
 
-const supportedScenarios = {'swarm-spread': 'synthetic-daylight', swarm: 'synthetic-daylight', 'swarm-night': 'synthetic-very-dark'};
+const supportedScenarios = {'swarm-spread': 'synthetic-daylight', swarm: 'synthetic-daylight', 'swarm-night': 'synthetic-very-dark', 'swarm-nir': 'synthetic-active-nir'};
 if (!supportedScenarios[scenario] || !['A', 'B'].includes(model))
 {
     throw Error(`Unsupported live configuration: scenario ${scenario}, model ${model}`);
@@ -171,7 +171,7 @@ async function analyzeAndPublish(chunk)
 {
     const publicRun = resolve(publicRoot, chunk.chunkId);
     log(`Analyzing ${chunk.chunkId}`);
-    await run(python, ['scripts/analyze.py', chunk.chunkId, '--both', '--settings', 'config/settings-swarm.json', '--no-evaluate']);
+    await run(python, ['scripts/analyze.py', chunk.chunkId, '--both', '--settings', scenario === 'swarm-nir' ? 'config/settings-nir-dev.json' : 'config/settings-swarm.json', '--no-evaluate']);
     await run(python, ['pipeline/pin_fuse.py',
         '--camera-0', resolve(publicRun, 'view-0/detection/predictions.json'),
         '--camera-1', resolve(publicRun, 'view-1/detection/predictions.json'),

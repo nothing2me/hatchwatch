@@ -107,6 +107,7 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                         </span>
                         Turtle trail — colour matches its site
                     </p>
+                    <p className="text-[10px] leading-snug text-ink-muted">Gray trails have no matched site. A site pin can have no path when motion could not be tracked reliably. Hollow motion candidates are separate from site pins.</p>
                     <p className="flex items-center gap-2">
                         <span className={symbol}>
                             <span className="relative grid h-3.5 w-3.5 place-items-center rounded-full border-2 border-alarm bg-alarm/30 shadow-[0_0_8px_rgba(255,77,94,0.7)]">

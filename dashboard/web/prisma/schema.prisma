@@ -282,6 +282,8 @@ model LiveChunk {
   startedAt   DateTime
   /// [x_min, x_max, z_min, z_max] metres of the public motion projection.
   groundBounds Json?
+  /// Along-shore placement of this true-scale recording in its zone.
+  placementOffsetM Float?
   importedAt  DateTime @default(now())
   mediaPruned Boolean  @default(false)
   videos      Video[]

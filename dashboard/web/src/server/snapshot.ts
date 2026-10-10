@@ -3,7 +3,7 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
 import { outcomeCounts } from '@/lib/sites/outcomes';
 import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, securedOf, summarizeSite } from '@/lib/sites/summary';
-import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import { shiftedZoneFrame, simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
 import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, MotionCandidateView, SiteEventType, TrackView, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
@@ -17,7 +17,7 @@ export interface CameraRow
 {
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
-    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown } | null }[];
+    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown; placementOffsetM?: number | null } | null }[];
 }
 
 export interface AlertRow
@@ -142,7 +142,10 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
     const zoneFrames = new Map(rows.zones.map(zone => [zone.code, zoneFrame(ringOf(zone.outline))]));
     const cameras = rows.cameras.map(camera =>
     {
-        const motionMap = camera.videos[0] ? motionMapFor(camera.videos[0], zoneFrames.get(camera.zone.code)) : undefined;
+        const video = camera.videos[0];
+        const baseFrame = zoneFrames.get(camera.zone.code);
+        const frame = baseFrame && video ? shiftedZoneFrame(baseFrame, video.liveChunk?.placementOffsetM ?? 0) : undefined;
+        const motionMap = video ? motionMapFor(video, frame) : undefined;
         return {
         id: camera.id,
         code: camera.code,
@@ -224,7 +227,8 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
     const motionCandidates: MotionCandidateView[] = rows.cameras.flatMap(camera =>
     {
         const video = camera.videos[0];
-        const frame = zoneFrames.get(camera.zone.code);
+        const baseFrame = zoneFrames.get(camera.zone.code);
+        const frame = baseFrame ? shiftedZoneFrame(baseFrame, video?.liveChunk?.placementOffsetM ?? 0) : undefined;
         if (!video?.simRunId || !frame || !Array.isArray(video.motionCandidates)) return [];
         return video.motionCandidates.flatMap((item: unknown) =>
         {
@@ -283,7 +287,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
                 videos: {
                     // Live media that was pruned is skipped; chunks without a live record are unaffected.
                     where: { AND: [{ OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] }, { OR: [{ liveChunkId: null }, { liveChunk: { mediaPruned: false } }] }] },
-                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true, motionMapPath: true, motionFitRmseM: true, motionCandidates: true, maskPolygon: true, liveChunk: { select: { groundBounds: true } } },
+                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true, motionMapPath: true, motionFitRmseM: true, motionCandidates: true, maskPolygon: true, liveChunk: { select: { groundBounds: true, placementOffsetM: true } } },
                     orderBy: { createdAt: 'desc' },
                     take: 1,
                 },

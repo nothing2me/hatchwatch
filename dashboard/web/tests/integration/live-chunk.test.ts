@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPrismaClient } from '@/lib/db';
 import { importLiveChunk } from '@/lib/live/importChunk';
-import { ageSites, pruneMedia, scanOnce, type LiveSettings } from '@/lib/live/watcher';
+import { ageSites, pruneMedia, retireMissingMedia, scanOnce, type LiveSettings } from '@/lib/live/watcher';
 import { addSiteEvent } from '@/lib/sites/events';
 import { importSimRun } from '@/lib/sim/importRun';
 import { seedDatabase } from '../../prisma/seed';
@@ -256,6 +256,17 @@ describe('ageSites guards', () =>
 
 describe('pruneMedia', () =>
 {
+    it('retires a committed recording whose media folder is missing', async () =>
+    {
+        await importLiveChunk(prisma, { chunkDir: makeChunk(0), mediaRoot: settings.mediaRoot });
+        await importLiveChunk(prisma, { chunkDir: makeChunk(4), mediaRoot: settings.mediaRoot });
+        rmSync(join(settings.mediaRoot, 'live/live-000004-abc4'), { recursive: true, force: true });
+        expect(await retireMissingMedia(prisma, settings)).toBe(1);
+        expect(await retireMissingMedia(prisma, settings)).toBe(0);
+        const snapshot = await loadMapSnapshot(prisma);
+        expect(snapshot.cameras.find(camera => camera.code === 'A1')?.video?.simRunId).toBe('live-000000-abc0');
+    });
+
     it('deletes media of older chunks but keeps rows', async () =>
     {
         settings.keep = 2;

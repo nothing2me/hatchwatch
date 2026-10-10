@@ -8,14 +8,14 @@ const video = { id: 'v1', source: 'SIMULATION' as const, durationS: 60, hasMotio
 
 describe('CameraVideo', () =>
 {
-    it('loops the raw feed muted with a SIMULATED badge', () =>
+    it('loops the camera feed muted without an origin badge', () =>
     {
         render(<CameraVideo video={video} />);
         const element = screen.getByTestId('camera-video') as HTMLVideoElement;
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         expect(element.loop).toBe(true);
         expect(element.muted).toBe(true);
-        expect(screen.getByText('Simulated')).toBeTruthy();
+        expect(screen.queryByText('Simulated')).toBeNull();
     });
 
     it('switches to motion and resumes from the same time', () =>
@@ -27,6 +27,17 @@ describe('CameraVideo', () =>
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=motion');
         fireEvent(element, new Event('loadedmetadata'));
         expect(element.currentTime).toBeCloseTo(12.5);
+    });
+
+    it('clips motion to the saved watch mask while leaving the camera image intact', () =>
+    {
+        render(<CameraVideo video={{ ...video, maskPolygon: [[0, 360], [640, 360], [640, 720], [0, 720]] }} />);
+        const element = screen.getByTestId('camera-video') as HTMLVideoElement;
+        expect(element.style.clipPath).toBe('');
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion diff' }));
+        expect(element.style.clipPath).toBe('polygon(0% 50%, 50% 50%, 50% 100%, 0% 100%)');
+        fireEvent.click(screen.getByRole('radio', { name: 'Camera' }));
+        expect(element.style.clipPath).toBe('');
     });
 
     it('hides the toggle when there is no motion variant', () =>

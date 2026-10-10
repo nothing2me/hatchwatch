@@ -185,9 +185,9 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
                                         ? (<><StatusPill tone={PROTECTION[alert.site.protection]} />{alert.site.patrolVisited && <PatrolledMark />}<span className="text-[11px] text-ink-muted">{NESTING[alert.site.nesting]}</span></>)
                                         : (<><StatusPill tone={inactiveState(alert.site)} />{note && <span className="text-[11px] text-ink-muted">{note}</span>}</>)}
                                 </span>
-                                {alert.simulated && (
+                                {alert.evidenceTier && (
                                     <span className="mt-1 block text-[11px] text-ink-muted/80">
-                                        Simulated · approximate position{alert.evidenceTier ? tierNote[alert.evidenceTier] : ''}
+                                        Approximate position{tierNote[alert.evidenceTier]}
                                     </span>
                                 )}
                             </button>

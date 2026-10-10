@@ -132,21 +132,22 @@ describe('TopBar', () =>
         expect(screen.getByText('active sites')).toBeTruthy();
         expect(screen.getByRole('link', { name: 'Analytics' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBeNull();
-        expect(screen.queryByRole('link', { name: 'Setup' })).toBeNull();
+        expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
     });
 
-    it('shows Setup to admins and uses the singular for one site', () =>
+    it('shows Settings to admins and uses the singular for one site', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
-        expect(screen.getByRole('link', { name: 'Setup' }).getAttribute('href')).toBe('/setup');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
         expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBe('page');
         expect(screen.getByText('active site')).toBeTruthy();
     });
 
-    it('drops the Users link on phones only (Setup links to it)', () =>
+    it('keeps Cameras and Settings in the main navigation and Users inside Settings', () =>
     {
         render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
-        expect(screen.getByRole('link', { name: 'Users' }).className).toContain('max-sm:hidden');
-        expect(screen.getByRole('link', { name: 'Setup' }).className).not.toContain('max-sm:hidden');
+        expect(screen.getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
+        expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/setup');
+        expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
     });
 });

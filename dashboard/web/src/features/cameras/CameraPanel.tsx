@@ -13,7 +13,6 @@ import { PANEL_MAX, PANEL_MIN, PANEL_STEP, usePanelWidth } from './usePanelWidth
 // Selected camera details. Online cameras with footage play it on a loop; the rest keep the status card.
 export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera: CameraView; onClose: () => void; onTime?: (t: number) => void; seekTo?: SeekRequest | null })
 {
-    const simulated = camera.video?.source === 'SIMULATION';
     const online = camera.status === 'ONLINE';
     const heading = Math.round(camera.headingDeg);
     const { width, setWidth, nudge } = usePanelWidth();
@@ -122,10 +121,10 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera
                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Range</dt><dd className="mt-0.5 font-mono tabular-nums">{Math.round(camera.rangeM)} m</dd></div>
             </dl>
             {playable?.motionMap && <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">Projected motion covers the calibrated ground area. Marker fit RMSE: {playable.motionMap.fitRmseM?.toPrecision(2) ?? 'unavailable'} m. Independent pin location accuracy has not been measured.</p>}
-            {(simulated || !camera.calibrated) && (
+            {!camera.calibrated && !camera.video?.motionMap && (
                 <p className="mt-3 flex gap-2 border-t border-white/8 pt-2.5 text-xs leading-relaxed text-ink-muted">
                     <Info aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    {simulated ? 'Simulated footage · pins placed approximately' : 'Calibrate this camera in Setup to place its tracks on the map.'}
+                    Calibrate this camera in Settings to place its tracks on the map.
                 </p>
             )}
         </GlassPanel>
