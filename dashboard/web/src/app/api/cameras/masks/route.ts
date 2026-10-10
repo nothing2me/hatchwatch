@@ -46,6 +46,15 @@ export async function PUT(request: Request): Promise<Response>
     {
         return new Response(`polygon must be 3-32 in-frame points, e.g. [[x,y],...]`, { status: 400 });
     }
-    const result = writeMask(liveSettings().root, body.camera, clampPolygon(body.polygon as [number, number][]));
-    return NextResponse.json({ ok: true, cameras: result.cameras });
+    try
+    {
+        const result = writeMask(liveSettings().root, body.camera, clampPolygon(body.polygon as [number, number][]));
+        return NextResponse.json({ ok: true, cameras: result.cameras });
+    }
+    catch (error)
+    {
+        // Usually a read-only or missing masks folder (see MASKS_ROOT in docker-compose.yml).
+        console.error('[masks] could not save:', (error as Error).message);
+        return NextResponse.json({ ok: false, error: `Could not save the mask: ${(error as NodeJS.ErrnoException).code ?? (error as Error).message}. Check that MASKS_ROOT is writable.` }, { status: 500 });
+    }
 }

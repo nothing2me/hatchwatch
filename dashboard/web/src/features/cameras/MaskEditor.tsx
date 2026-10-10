@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, RotateCcw } from 'lucide-react';
-import { DEFAULT_MASK, MASK_FRAME, MAX_MASK_POINTS, toNormalized, toPixels } from '@/lib/cameras/masks';
+import { DEFAULT_MASK, MASK_FRAME, MAX_MASK_POINTS, clampPolygon } from '@/lib/cameras/masks';
 import { cn } from '@/lib/cn';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
@@ -16,7 +16,8 @@ function pointOf(svg: SVGSVGElement, event: { clientX: number; clientY: number }
 }
 
 // Click to spawn mask points, drag points to adjust, double-click to remove one.
-// Saving writes the shared public camera-masks.json the runner applies.
+// Saving writes the shared camera-masks.json the runner applies.
+// Points stay in source-frame pixels (the SVG's viewBox) from load to save.
 export function MaskEditor({ cameraIndex, code, videoUrl }: { cameraIndex: number; code: string; videoUrl: string | null })
 {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -37,9 +38,9 @@ export function MaskEditor({ cameraIndex, code, videoUrl }: { cameraIndex: numbe
                 const masks = data as { source?: string; cameras?: { camera: number; polygon: [number, number][] }[] };
                 setSource(masks.source ?? '');
                 const entry = (masks.cameras ?? []).find(candidate => candidate.camera === cameraIndex);
-                setPoints(toNormalized(entry?.polygon ?? DEFAULT_MASK));
+                setPoints(clampPolygon(entry?.polygon ?? DEFAULT_MASK));
             })
-            .catch(() => { if (!cancelled) setPoints(toNormalized(DEFAULT_MASK)); });
+            .catch(() => { if (!cancelled) setPoints(clampPolygon(DEFAULT_MASK)); });
         return () => { cancelled = true; };
     }, [cameraIndex]);
 
@@ -111,12 +112,15 @@ export function MaskEditor({ cameraIndex, code, videoUrl }: { cameraIndex: numbe
             const response = await fetch('/api/cameras/masks', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ camera: cameraIndex, polygon: toPixels(points) }),
+                body: JSON.stringify({ camera: cameraIndex, polygon: clampPolygon(points) }),
             });
-            const data = await response.json();
+            // Errors come back as plain text, successes as JSON.
+            const text = await response.text();
+            let data: { ok?: boolean; error?: string } = {};
+            try { data = JSON.parse(text) as typeof data; } catch { /* plain-text error */ }
             if (!response.ok || !data.ok)
             {
-                throw new Error(data.error ?? `Save failed (${response.status})`);
+                throw new Error(data.error ?? (text.trim() || `Save failed (${response.status})`));
             }
             setSource('public');
             setNotice({ kind: 'ok', text: `Saved ${code} mask — the next recorded clip will compute motion only inside it.` });
@@ -133,7 +137,7 @@ export function MaskEditor({ cameraIndex, code, videoUrl }: { cameraIndex: numbe
 
     const reset = () =>
     {
-        setPoints(toNormalized(DEFAULT_MASK));
+        setPoints(clampPolygon(DEFAULT_MASK));
         setNotice(null);
     };
 

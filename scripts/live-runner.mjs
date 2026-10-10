@@ -115,6 +115,8 @@ function groundBoundsFor(chunkScenario)
 // and the runner seeds it from config/ and applies it at extraction.
 const publicMasks = resolve(publicRoot, 'camera-masks.json');
 const masksFallback = resolve('config/camera-masks.json');
+// Masks saved by admins in the dashboard (its writable MASKS_ROOT); used before the public copy.
+const operatorMasks = resolve('artifacts/operator/camera-masks.json');
 
 let stopping = false;
 const children = new Set();
@@ -258,7 +260,7 @@ async function analyzeAndPublish(chunk)
         }
     }
 
-    const masksFile = scenario === 'swarm-spread' ? null : (existsSync(publicMasks) ? publicMasks : (existsSync(masksFallback) ? masksFallback : null));
+    const masksFile = scenario === 'swarm-spread' ? null : [operatorMasks, publicMasks, masksFallback].find(file => existsSync(file)) ?? null;
     if (masksFile)
     {
         await copyFile(masksFile, resolve(publicRun, 'mask.json'));

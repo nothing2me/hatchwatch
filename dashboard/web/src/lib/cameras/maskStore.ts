@@ -2,15 +2,25 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { resolve } from 'node:path';
 import 'server-only';
 
-// Camera masks are shared with the research runner through the PUBLIC artifacts
-// directory: the runner seeds artifacts/public/camera-masks.json from config/
-// and applies it at extraction; admins edit it here. Never private truth.
+// Camera masks are operator configuration shared with the research runner. Admins
+// edit them here; the runner applies them at extraction. Never private truth.
+//
+// Saved to MASKS_ROOT (artifacts/operator, mounted writable in Compose), so the
+// simulator's public output folder can stay read-only for the dashboard. Reads
+// fall back to the older shared location in the public folder, then the repo default.
 
 const fallbackConfig = resolve(process.cwd(), '../../config/camera-masks.json');
+const MASKS_FILE = 'camera-masks.json';
+
+/** Where admins' masks are saved: MASKS_ROOT, else (older setups) the live public folder. */
+export function masksRoot(liveRoot: string, env: NodeJS.ProcessEnv = process.env): string
+{
+    return env.MASKS_ROOT ? resolve(process.cwd(), env.MASKS_ROOT) : liveRoot;
+}
 
 export function publicMasksPath(liveRoot: string): string
 {
-    return resolve(liveRoot, 'camera-masks.json');
+    return resolve(liveRoot, MASKS_FILE);
 }
 
 export interface MaskEntry
@@ -42,13 +52,15 @@ function parseMasksFile(path: string): MaskEntry[]
     });
 }
 
-/** The active mask set: the dashboard-edited public file, else the repo default. */
-export function readMasks(liveRoot: string): MasksFile
+/** The active mask set: the admin-saved file, else the older public copy, else the repo default. */
+export function readMasks(liveRoot: string, root: string = masksRoot(liveRoot)): MasksFile
 {
-    const publicFile = publicMasksPath(liveRoot);
-    if (existsSync(publicFile))
+    for (const file of [resolve(root, MASKS_FILE), publicMasksPath(liveRoot)])
     {
-        return { cameras: parseMasksFile(publicFile), source: 'public' };
+        if (existsSync(file))
+        {
+            return { cameras: parseMasksFile(file), source: 'public' };
+        }
     }
     if (existsSync(fallbackConfig))
     {
@@ -57,11 +69,11 @@ export function readMasks(liveRoot: string): MasksFile
     return { cameras: [], source: 'default' };
 }
 
-/** Atomically updates one camera's mask in the shared public file (tmp + rename). */
-export function writeMask(liveRoot: string, camera: number, polygon: [number, number][], label?: string): { ok: true; cameras: MaskEntry[] }
+/** Atomically updates one camera's mask in the saved file (tmp + rename), starting from the active set. */
+export function writeMask(liveRoot: string, camera: number, polygon: [number, number][], label?: string, root: string = masksRoot(liveRoot)): { ok: true; cameras: MaskEntry[] }
 {
-    const file = publicMasksPath(liveRoot);
-    const current = existsSync(file) ? parseMasksFile(file) : (existsSync(fallbackConfig) ? parseMasksFile(fallbackConfig) : []);
+    const file = resolve(root, MASKS_FILE);
+    const current = readMasks(liveRoot, root).cameras;
     const others = current.filter(entry => entry.camera !== camera);
     const next: MaskEntry[] = [...others, { camera, label, polygon }].sort((a, b) => a.camera - b.camera);
     const payload = {
@@ -70,8 +82,8 @@ export function writeMask(liveRoot: string, camera: number, polygon: [number, nu
         note: 'Operator-drawn per-camera watch areas in source-frame pixels (1280x720). The runner applies these at extraction: everything outside the polygon is excluded from the motion-signal grid (skies, surf, water, dune edges) while the raw camera feed is unchanged. This is operator configuration, never simulator truth. Changing a mask changes the video-to-signal distribution: registered experiments must be re-validated after any mask change.',
         cameras: next,
     };
-    mkdirSync(liveRoot, { recursive: true });
-    const temporary = resolve(liveRoot, `camera-masks.json.tmp-${process.pid}`);
+    mkdirSync(root, { recursive: true });
+    const temporary = resolve(root, `${MASKS_FILE}.tmp-${process.pid}`);
     writeFileSync(temporary, JSON.stringify(payload, null, 2));
     renameSync(temporary, file);
     return { ok: true, cameras: next };

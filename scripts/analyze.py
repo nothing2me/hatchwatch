@@ -11,9 +11,9 @@ from common import read_json, write_json, sha
 def run(run_id, cameras=(0,), settings=None, evaluate=True, mask=None):
     settings=Path(settings or ROOT/'config/settings.json').resolve();public=ROOT/'artifacts/public'/run_id;private=ROOT/'artifacts/private'/run_id;start=time.perf_counter()
     if mask is None:
-        public_mask=ROOT/'artifacts/public/camera-masks.json'
-        fallback_mask=ROOT/'config/camera-masks.json'
-        mask=str(public_mask) if public_mask.exists() else (str(fallback_mask) if fallback_mask.exists() else None)
+        # Admin-saved masks (dashboard MASKS_ROOT) first, then the older public copy, then the repo default.
+        candidates=[ROOT/'artifacts/operator/camera-masks.json',ROOT/'artifacts/public/camera-masks.json',ROOT/'config/camera-masks.json']
+        mask=next((str(candidate) for candidate in candidates if candidate.exists()),None)
     for view in cameras:
         signal=public/f'view-{view}';prediction=signal/'detection'
         cmd=[sys.executable,str(ROOT/'pipeline/extract.py'),'--video',str(public/f'camera-{view}.mp4'),'--calibration',str(public/f'calibration-{view}.json'),'--settings',str(settings),'--output',str(signal)]
