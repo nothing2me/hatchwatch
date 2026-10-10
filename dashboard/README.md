@@ -112,6 +112,16 @@ Signed-in volunteers and admins can turn a phone on the same Wi-Fi into a live c
 4. Recording: every phone is recorded as 10-minute mp4 segments (5 fps) under `RECORDINGS_ROOT` (`./recordings`, git-ignored; Compose mounts it at `/recordings`). Segments are deleted after `RECORDING_RETENTION_HOURS` (default 72, swept hourly). `RECORDING=off` turns recording off, and `FFMPEG_PATH` overrides the `ffmpeg` binary (the web image includes ffmpeg; without it segments stay as `.avi`). Admins see the Recordings list on **Live cameras** with Play and Download; a new recording can take up to about 45 s to appear and be playable.
 5. Limits: one `web` instance holds the newest frames in memory, about 6 phones at once, no audio, LAN only. Phone footage is real beach footage: it stays on local disk, is never committed, and never reaches the detector.
 
+## ESP32 camera boards
+
+An ESP32-S3 camera board (`firmware/esp32s3-cam`) can send its picture to the dashboard like a phone.
+
+1. An admin opens **Live cameras > Add board camera** and names the board. The dialog shows the device id and a token **once**, as `secrets.h` lines with `DASHBOARD_URL` from `LAN_HOST`. Only a SHA-256 hash of the token is stored. **Rotate token** in the Devices list issues a new one (the old one stops working), and **Remove** stops the board. Both are audited (`device.create`, `device.rotate`, `device.remove`) without the token.
+2. Paste the lines into `firmware/esp32s3-cam/secrets.h`, add Caddy's root certificate (`docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt`), and upload the firmware (see `firmware/esp32s3-cam/README.md`).
+3. The board POSTs JPEGs to `/api/live/frame/<id>` with `Authorization: Bearer <token>` and the `X-NestTrace-Motion` header (`schemas/esp32-frame.v1.md`), at most 5 per second. It then behaves like a phone: tile, Motion view, recording, Source linking.
+4. Board tiles show **Moving x%** / **Still** and the motion box, labelled "Motion measured on the camera board". It is a viewing aid: no alerts, never the detector. The badge refreshes with the device list (about every 3 s).
+5. Board, laptop and phones must share one 2.4 GHz-capable network. `LAN_HOST` must be the laptop's address on it.
+
 ## Limits
 
 Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.

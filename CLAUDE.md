@@ -42,7 +42,9 @@ Live feed: with `npm run dev` running, `node scripts/live-runner.mjs [--chunks N
 
 Seaward layout and walkers (opt-in; not registered experiments): `node scripts/record.mjs ... --layout seaward --humans 2` or `node scripts/live-runner.mjs --layout seaward --humans 2`. Blind post-steps: `.venv/bin/python scripts/track_paths.py <run>` (tracks) and `.venv/bin/python scripts/people_detect.py <run>` (people), run by `demo_runs.py` and the live runner; schemas in `schemas/tracks.v1.json` and `schemas/people.v1.json`. Demo runs `A-seaward-humans-demo-929/937` and `A-seaward-demo-941` import with `npm run sim:import`; then use Setup > Cameras > Face ocean on that pair.
 
-Phone cameras (dashboard): set `LAN_HOST` (the laptop's LAN IP) in `dashboard/.env`, run `docker compose up -d --build`, then open `https://<LAN_HOST>:3443/cam` on a phone (VOLUNTEER/ADMIN) and watch on `/live`. Recordings go to `dashboard/recordings/` (git-ignored, never staged). Host dev `npm run dev` also records there (as `.avi` without ffmpeg). Standalone ESP32-S3 camera firmware (not connected to the dashboard) is in `firmware/esp32s3-cam/README.md`.
+Phone cameras (dashboard): set `LAN_HOST` (the laptop's LAN IP) in `dashboard/.env`, run `docker compose up -d --build`, then open `https://<LAN_HOST>:3443/cam` on a phone (VOLUNTEER/ADMIN) and watch on `/live`. Recordings go to `dashboard/recordings/` (git-ignored, never staged). Host dev `npm run dev` also records there (as `.avi` without ffmpeg). ESP32-S3 camera firmware is in `firmware/esp32s3-cam/README.md`.
+
+ESP32 board: on `/live` an admin uses Add board camera, pastes the shown `secrets.h` lines plus Caddy's root certificate into `firmware/esp32s3-cam/secrets.h` (git-ignored, never staged), and compiles with the arduino-cli command in the firmware README. The board pushes frames with a bearer device token and the `esp32-frame.v1` motion header (`schemas/esp32-frame.v1.md`).
 
 ## Pipeline architecture and detector isolation
 
