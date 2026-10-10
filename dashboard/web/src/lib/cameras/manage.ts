@@ -165,12 +165,27 @@ async function mapMadeZone(tx: Tx, code: string, verb: 'moved' | 'deleted')
     return { zone, others: zones.filter(candidate => candidate.code !== code) };
 }
 
+async function zoneHasData(tx: Tx, zoneId: string): Promise<boolean>
+{
+    const [videos, alerts, chunks] = await Promise.all([
+        tx.video.count({ where: { camera: { zoneId } } }),
+        tx.alert.count({ where: { OR: [{ zoneId }, { camera: { zoneId } }] } }),
+        tx.liveChunk.count({ where: { zoneId } }),
+    ]);
+    return videos + alerts + chunks > 0;
+}
+
 // Drags a map-made zone: its outline and cameras shift by the same offset (from → to), headings kept.
 export function moveZone(prisma: PrismaClient, actorId: string, code: string, from: LngLat, to: LngLat): Promise<{ code: string }>
 {
     return inTransaction(prisma, async tx =>
     {
         const { zone, others } = await mapMadeZone(tx, code, 'moved');
+        // Sites, trails and danger points store absolute positions; moving would strand them.
+        if (await zoneHasData(tx, zone.id))
+        {
+            throw new CameraEditError(`Zone ${zone.code} has footage, alerts or live chunks; it can't be moved.`);
+        }
         const cameras = await tx.camera.findMany({ where: { zoneId: zone.id }, orderBy: { code: 'asc' } });
         const moved = translateZone(zone.ring, cameras.map(camera => [camera.lng, camera.lat] as LngLat), from, to);
         placement(() => checkZoneClear(moved.ring, others));
@@ -199,12 +214,7 @@ export function deleteZone(prisma: PrismaClient, actorId: string, code: string):
     return inTransaction(prisma, async tx =>
     {
         const { zone } = await mapMadeZone(tx, code, 'deleted');
-        const [videos, alerts, chunks] = await Promise.all([
-            tx.video.count({ where: { camera: { zoneId: zone.id } } }),
-            tx.alert.count({ where: { OR: [{ zoneId: zone.id }, { camera: { zoneId: zone.id } }] } }),
-            tx.liveChunk.count({ where: { zoneId: zone.id } }),
-        ]);
-        if (videos + alerts + chunks > 0)
+        if (await zoneHasData(tx, zone.id))
         {
             throw new CameraEditError(`Zone ${zone.code} has footage, alerts or live chunks; merge it into a neighbour instead.`);
         }

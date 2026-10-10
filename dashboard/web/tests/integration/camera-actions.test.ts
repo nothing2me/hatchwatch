@@ -201,6 +201,14 @@ describe('moveZone', () =>
         await rejects(moveZone(prisma, adminId, 'Q', dRing[0], kmNorthOfD), 'That zone no longer exists.');
         expect(await prisma.auditLog.count({ where: { action: 'zone.move' } })).toBe(0);
     });
+
+    it('refuses to move a zone that holds footage, alerts or live chunks', async () =>
+    {
+        const { zone } = await makeZoneE();
+        await rejects(moveZone(prisma, adminId, 'E', ringOf(zone)[0], kmNorthOfD), "Zone E has footage, alerts or live chunks; it can't be moved.");
+        expect(ringOf(await prisma.zone.findUniqueOrThrow({ where: { code: 'E' } }))).toEqual(ringOf(zone));
+        expect(await prisma.auditLog.count({ where: { action: 'zone.move' } })).toBe(0);
+    });
 });
 
 describe('deleteZone', () =>
