@@ -6,11 +6,14 @@ import { isNestSite } from '@/lib/danger';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CameraView, MapSnapshot } from '@/lib/types';
 import { cn } from '@/lib/cn';
+import { LiveVideo } from '@/features/live/LiveVideo';
 import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
+import { useLiveStatus } from '@/features/live/useLiveStatus';
 import { TopBar } from '@/features/shell/TopBar';
 import { CameraVideo } from './CameraVideo';
+import { feedFor, type Feed } from './feed';
 
-function CameraCard({ camera }: { camera: CameraView })
+function CameraCard({ camera, feed }: { camera: CameraView; feed: Feed })
 {
     return (
         <GlassPanel className="min-w-0 overflow-hidden p-3">
@@ -19,13 +22,25 @@ function CameraCard({ camera }: { camera: CameraView })
                     <h3 className="text-sm font-semibold text-ink">Camera {camera.code}</h3>
                     <p className="text-xs text-ink-muted">Zone {camera.zoneCode}</p>
                 </div>
-                <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-medium', camera.status === 'ONLINE' ? 'bg-ok/10 text-ok' : 'bg-white/8 text-ink-muted')}>
-                    {camera.status === 'ONLINE' ? 'Online' : 'Offline'}
-                </span>
+                {feed.kind === 'live'
+                    ? (
+                        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-semibold text-danger ring-1 ring-danger/40">
+                            <span aria-hidden className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-danger" />
+                            <span className="truncate">LIVE · {feed.deviceName}</span>
+                        </span>
+                    )
+                    : (
+                        <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-medium', camera.status === 'ONLINE' ? 'bg-ok/10 text-ok' : 'bg-white/8 text-ink-muted')}>
+                            {camera.status === 'ONLINE' ? 'Online' : 'Offline'}
+                        </span>
+                    )}
             </div>
-            {camera.status === 'ONLINE' && camera.video
-                ? <CameraVideo key={camera.video.id} video={camera.video} />
+            {feed.kind === 'live'
+                ? <LiveVideo key={feed.deviceId} deviceId={feed.deviceId} large />
+                : feed.kind === 'sim'
+                ? <CameraVideo key={feed.video.id} video={feed.video} />
                 : <div className="mt-2 grid aspect-video place-content-center gap-2 rounded-lg bg-night-950 text-center text-sm text-ink-muted"><VideoOff aria-hidden className="mx-auto h-6 w-6" />{camera.status === 'ONLINE' ? 'No footage yet' : 'Camera offline'}</div>}
+            {feed.kind === 'sim' && feed.deviceOffline && <p className="mt-2 px-1 text-xs text-ink-muted">{feed.deviceOffline} offline · showing simulation</p>}
         </GlassPanel>
     );
 }
@@ -33,6 +48,7 @@ function CameraCard({ camera }: { camera: CameraView })
 export function AllCamerasScreen({ user, initialSnapshot }: { user: SessionUser; initialSnapshot: MapSnapshot })
 {
     const snapshot = useLiveSnapshot(initialSnapshot);
+    const live = useLiveStatus();
     const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
     const firstDangerId = snapshot.alerts.find(alert => alert.kind === 'DANGER' && alert.site.active)?.id ?? null;
 
@@ -58,7 +74,7 @@ export function AllCamerasScreen({ user, initialSnapshot }: { user: SessionUser;
                                     <span className="text-xs text-ink-muted">{zone.name}</span>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    {cameras.map(camera => <CameraCard key={camera.id} camera={camera} />)}
+                                    {cameras.map(camera => <CameraCard key={camera.id} camera={camera} feed={feedFor(camera, live)} />)}
                                 </div>
                             </section>
                         );

@@ -40,6 +40,11 @@ vi.mock('@/app/(app)/camera-actions', () => ({
     moveZone: (...args: unknown[]) => moveZone(...args), deleteZone: (...args: unknown[]) => deleteZone(...args),
 }));
 vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-testid="close-up" /> }));
+// Live device feeds: the status poll and the WebRTC player are replaced; tests set `liveStatus`.
+let liveStatus: Record<string, { deviceId: string; name: string; online: boolean }> = {};
+vi.mock('@/features/live/useLiveStatus', () => ({ useLiveStatus: () => liveStatus }));
+vi.mock('@/features/live/LiveVideo', () => ({ LiveVideo: ({ deviceId }: { deviceId: string }) => <div data-testid="live-player">live {deviceId}</div> }));
+vi.mock('@/app/(app)/live-actions', () => ({ assignCameraSource: vi.fn() }));
 
 class FakeEventSource
 {
@@ -73,6 +78,7 @@ const user = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
 beforeEach(() =>
 {
     FakeEventSource.instances = [];
+    liveStatus = {};
     fetchMock.mockClear();
     addCameraPair.mockReset();
     updateCamera.mockReset();
@@ -383,5 +389,49 @@ describe('MapScreen', () =>
             }
         });
     });
-});
 
+    it('plays an online live device instead of the loop and shows every pin', () =>
+    {
+        liveStatus = { B1: { deviceId: 'd1', name: 'Pixel', online: true } };
+        const live: MapSnapshot = { ...twoRuns, cameras: [{ ...twoRuns.cameras[0], liveDeviceId: 'd1' }, twoRuns.cameras[1]] };
+        render(<MapScreen snapshot={live} user={user} />);
+        fireEvent.click(screen.getByText('cam B1'));
+        expect(screen.getByTestId('live-player').textContent).toBe('live d1');
+        expect(screen.getByText('LIVE · Pixel')).toBeTruthy();
+        expect(screen.queryByTestId('camera-video')).toBeNull();
+        // A live feed has no clock, so no pin is gated.
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
+        // Viewers get no Source picker.
+        expect(screen.queryByLabelText('Source')).toBeNull();
+    });
+
+    it('falls back to the loop and names the device while it is offline', () =>
+    {
+        liveStatus = { B1: { deviceId: 'd1', name: 'Pixel', online: false } };
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        fireEvent.click(screen.getByText('cam B1'));
+        expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
+        expect(screen.getByText('Pixel offline · showing simulation')).toBeTruthy();
+        expect(screen.queryByTestId('live-player')).toBeNull();
+    });
+
+    it('re-gates pins when the device of the open camera stops streaming', () =>
+    {
+        liveStatus = { B1: { deviceId: 'd1', name: 'Pixel', online: true } };
+        const { rerender } = render(<MapScreen snapshot={twoRuns} user={user} />);
+        fireEvent.click(screen.getByText('cam B1'));
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
+        liveStatus = { B1: { deviceId: 'd1', name: 'Pixel', online: false } };
+        rerender(<MapScreen snapshot={{ ...twoRuns }} user={user} />);
+        expect(screen.getByTestId('camera-video')).toBeTruthy();
+        expect(screen.getByTestId('visible-pins').textContent).toBe('');
+    });
+
+    it('gives admins a Source picker on the camera panel', () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={{ ...user, role: 'ADMIN' }} />);
+        fireEvent.click(screen.getByText('cam B1'));
+        expect((screen.getByLabelText('Source') as HTMLSelectElement).value).toBe('');
+        expect(screen.getByText('No devices streaming. Use Connect device in the top bar.')).toBeTruthy();
+    });
+});

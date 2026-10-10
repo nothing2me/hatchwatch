@@ -3,14 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
-import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
+import type { AlertView, CameraView, LngLat, MapSnapshot } from '@/lib/types';
 import { isNestSite } from '@/lib/danger';
 import { addCameraPair, deleteZone, moveZone, updateCamera } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
 import { CameraPanel } from '@/features/cameras/CameraPanel';
 import type { SeekRequest } from '@/features/cameras/CameraVideo';
+import { feedFor } from '@/features/cameras/feed';
+import { useLiveDevices } from '@/features/live/useLiveDevices';
 import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
+import { useLiveStatus } from '@/features/live/useLiveStatus';
 import { useNow } from '@/features/live/useNow';
 import { SiteDrawer } from '@/features/sites/SiteDrawer';
 import { EditCamerasBanner, type EditNotice } from './EditCamerasBanner';
@@ -46,7 +49,32 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
     const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
     const [playback, setPlayback] = useState<Playback | null>(null);
     const [seek, setSeek] = useState<SeekRequest | null>(null);
-    const selectedVideo = selectedCamera?.status === 'ONLINE' ? selectedCamera.video : null;
+    // A camera with an online live device shows that instead of its loop; only loops drive the map clock.
+    const live = useLiveStatus();
+    const devices = useLiveDevices(user.role === 'ADMIN');
+    const loopOf = useCallback((camera: CameraView | undefined | null) =>
+    {
+        const feed = camera ? feedFor(camera, live) : null;
+        return feed?.kind === 'sim' ? feed.video : null;
+    }, [live]);
+    const selectedFeed = selectedCamera ? feedFor(selectedCamera, live) : null;
+    const selectedVideo = selectedFeed?.kind === 'sim' ? selectedFeed.video : null;
+
+    // The open camera switching between live and loop (a device starts or stops) restarts the map clock:
+    // a live feed has none, so every pin shows; a loop gates pins until its clock ticks.
+    const feedMode = selectedFeed ? `${selectedCameraId}|${selectedFeed.kind === 'live' ? `live:${selectedFeed.deviceId}` : selectedFeed.kind}` : null;
+    const lastFeedMode = useRef(feedMode);
+    useEffect(() =>
+    {
+        const previous = lastFeedMode.current;
+        lastFeedMode.current = feedMode;
+        if (previous === feedMode || previous === null || feedMode === null || previous.split('|')[0] !== feedMode.split('|')[0])
+        {
+            return;
+        }
+        setSeek(null);
+        setPlayback(selectedVideo ? { key: playbackKey(selectedVideo), t: -Infinity } : null);
+    }, [feedMode, selectedVideo]);
 
     // The playing feed drives the map clock; pins outside its window stay hidden.
     const handleTime = useCallback((t: number) =>
@@ -66,7 +94,7 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
             return;
         }
         const camera = snapshot.cameras.find(candidate => candidate.id === cameraId);
-        const video = camera?.status === 'ONLINE' ? camera.video : null;
+        const video = loopOf(camera);
         if (video?.motionMap)
         {
             const lngs = video.motionMap.corners.map(point => point[0]);
@@ -76,7 +104,7 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
         setSelectedCameraId(cameraId);
         setSeek(null);
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
-    }, [selectedCameraId, snapshot.cameras]);
+    }, [selectedCameraId, snapshot.cameras, loopOf]);
 
     // Admin camera editing: a click joins a zone within 150 m or makes a new zone there; cameras and map-made zones drag.
     const isAdmin = user.role === 'ADMIN';
@@ -198,7 +226,7 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
             return;
         }
         setSelectedCameraId(camera.id);
-        const video = camera.status === 'ONLINE' ? camera.video : null;
+        const video = loopOf(camera);
         if (video && playbackKey(video) === alertKey(alert))
         {
             // Jump the feed to the alert so its pin shows now instead of when the loop reaches it.
@@ -210,7 +238,7 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
             setSeek(null);
             setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
         }
-    }, [snapshot.cameras]);
+    }, [snapshot.cameras, loopOf]);
 
     // Cards and pins both open the site drawer and keep Plan A's fly-and-seek.
     const openSite = useCallback((alert: AlertView) =>
@@ -270,7 +298,7 @@ const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, c
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
                         {selectedCamera && (
                             <div className="max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:z-10">
-                                <CameraPanel key={selectedCamera.id} camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} />
+                                <CameraPanel key={selectedCamera.id} camera={selectedCamera} feed={selectedFeed ?? undefined} isAdmin={isAdmin} devices={devices} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} />
                             </div>
                         )}
                         <MapControls

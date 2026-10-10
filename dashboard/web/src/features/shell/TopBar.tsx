@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { LogOut, Siren, TriangleAlert, Video } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { logoutAction } from '@/app/(app)/actions';
+import { ConnectDeviceButton } from '@/features/live/ConnectDeviceDialog';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
@@ -95,6 +96,7 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                         <span className="max-sm:sr-only">danger</span>
                     </Link>
                 )}
+                {user.role === 'ADMIN' && <ConnectDeviceButton />}
                 <span className={cn(chip, 'hidden bg-white/5 md:inline-flex')}>
                     <Video aria-hidden className="h-3.5 w-3.5 text-ok" />
                     <span className="font-mono tabular-nums">{camerasOnline}/{camerasTotal}</span>

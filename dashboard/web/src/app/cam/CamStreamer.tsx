@@ -21,6 +21,8 @@ interface Session
     deviceId: string;
     client: SignalClient;
     peers: Map<string, RTCPeerConnection>;
+    // Viewer ICE that arrived before that viewer's answer was applied.
+    pendingIce: Map<string, RTCIceCandidateInit[]>;
     heartbeat: ReturnType<typeof setInterval>;
     wakeLock: { release(): Promise<void> } | null;
 }
@@ -116,6 +118,7 @@ export function CamStreamer({ userName }: { userName: string })
     async function offerTo(session: Session, viewerId: string)
     {
         session.peers.get(viewerId)?.close();
+        session.pendingIce.delete(viewerId);
         const pc = new RTCPeerConnection({ iceServers: [] });
         session.peers.set(viewerId, pc);
         setViewers(session.peers.size);
@@ -153,16 +156,36 @@ export function CamStreamer({ userName }: { userName: string })
         }
         else if (event.type === 'answer')
         {
-            session.peers.get(event.from)?.setRemoteDescription(event.payload as RTCSessionDescriptionInit).catch(() => undefined);
+            const pc = session.peers.get(event.from);
+            pc?.setRemoteDescription(event.payload as RTCSessionDescriptionInit)
+                .then(async () =>
+                {
+                    const queued = session.pendingIce.get(event.from) ?? [];
+                    session.pendingIce.delete(event.from);
+                    for (const candidate of queued)
+                    {
+                        await pc.addIceCandidate(candidate).catch(() => undefined);
+                    }
+                })
+                .catch(() => undefined);
         }
         else if (event.type === 'ice')
         {
-            session.peers.get(event.from)?.addIceCandidate(event.payload as RTCIceCandidateInit).catch(() => undefined);
+            const pc = session.peers.get(event.from);
+            if (pc?.remoteDescription)
+            {
+                pc.addIceCandidate(event.payload as RTCIceCandidateInit).catch(() => undefined);
+            }
+            else if (pc)
+            {
+                session.pendingIce.set(event.from, [...(session.pendingIce.get(event.from) ?? []), event.payload as RTCIceCandidateInit]);
+            }
         }
         else if (event.type === 'leave')
         {
             session.peers.get(event.from)?.close();
             session.peers.delete(event.from);
+            session.pendingIce.delete(event.from);
             setViewers(session.peers.size);
         }
     }
@@ -221,7 +244,7 @@ export function CamStreamer({ userName }: { userName: string })
                 })
                 .catch(() => undefined);
         }, HEARTBEAT_MS);
-        sessionRef.current = { stream, deviceId, client: openSignalClient('device', deviceId, onEvent), peers: new Map(), heartbeat, wakeLock };
+        sessionRef.current = { stream, deviceId, client: openSignalClient('device', deviceId, onEvent), peers: new Map(), pendingIce: new Map(), heartbeat, wakeLock };
         setStatus('live');
     }
 
