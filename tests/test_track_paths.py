@@ -84,3 +84,10 @@ def test_decimated_and_schema_shape():
             assert set(tr) == {'id', 'pin_id', 'points'}
             assert tr['pin_id'] is None or isinstance(tr['pin_id'], str)
             assert len(tr['points']) >= 2 and all(len(p) == 3 for p in tr['points'])
+
+
+def test_unmatched_surf_dropped_inland_kept_matched_kept():
+    m, ts = _grid(10, [(-8, -6.5, -4, 0.5, 8.5), (0, -7, -1, 0.5, 8.5), (8, -7, -4, 0.5, 8.5)])
+    doc = _build(m, ts, [_pin('p', 8, -4, 7, 9)])
+    by_x = {round(t['points'][0][1]): t['pin_id'] for t in doc['tracks']}
+    assert by_x == {0: None, 8: 'p'}

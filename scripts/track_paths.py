@@ -17,6 +17,7 @@ FUSE_M = 1.0           # same-frame detections from two views closer than this a
 LINK_M = 1.2           # max step between linked detections
 MAX_GAP_FRAMES = 4     # missing frames tolerated inside a track
 MIN_DURATION_S = 3.0
+UNMATCHED_MIN_INLAND_Y = -2.5  # unmatched trails must reach this y (drops surf/foam motion)
 START_Y_MAX = -5.0     # a trail must begin near the water
 PIN_MATCH_M = 2.0
 PIN_PAD_S = 2.0
@@ -68,7 +69,7 @@ def _fuse(per_view):
 
 
 def _link(frames, times):
-    tracks = []  # each: {'pts': [(frame, x, y)], 'last': frame}
+    tracks = []  # each: {'pts': [(frame, x, y)]}
     for t, dets in enumerate(frames):
         open_tracks = [tr for tr in tracks if 0 < t - tr['pts'][-1][0] <= MAX_GAP_FRAMES + 1]
         pairs = []
@@ -130,8 +131,10 @@ def build_tracks(signals, calibration, pins, timestamps, motion_threshold):
             pin_of[ti] = pid
             used_pins.add(pid)
 
-    tracks = [{'id': f'track-{i + 1}', 'pin_id': pin_of.get(i), 'points': _decimate(tr)}
-              for i, tr in enumerate(kept)]
+    keep = [i for i, tr in enumerate(kept)
+            if i in pin_of or max(y for _, _, y in tr) >= UNMATCHED_MIN_INLAND_Y]
+    tracks = [{'id': f'track-{n + 1}', 'pin_id': pin_of.get(i), 'points': _decimate(kept[i])}
+              for n, i in enumerate(keep)]
     return {'schema': 'nesttrace.tracks', 'version': 1, 'tracks': tracks, 'note': NOTE}
 
 
