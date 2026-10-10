@@ -7,7 +7,7 @@ import { TopBar, type TopBarCounts } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 import { ANALYSIS_WIDTH, DEFAULT_THRESHOLD, isSameFrame, paintDifference, toBlurredGray, updateBackground, type MotionMode } from './motion';
-import { LivePicture, RecBadge } from './LiveScreen';
+import { LivePicture, RecBadge } from './DeviceTile';
 import { useLiveDevices } from './useLiveDevices';
 import { useLiveFrame } from './useLiveFrame';
 
@@ -127,13 +127,13 @@ export function MotionScreen({ user, bar, deviceId }: { user: SessionUser; bar: 
             <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(215,227,234,0.06)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_70%)] bg-[size:22px_22px]" />
 
             <div className="sticky top-0 z-20 p-3">
-                <TopBar user={user} current="live" {...bar} />
+                <TopBar user={user} current="cameras" {...bar} />
             </div>
 
             <div className="relative mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
-                <Link href="/live" className="inline-flex items-center gap-1.5 rounded-md text-sm text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">
+                <Link href="/cameras" className="inline-flex items-center gap-1.5 rounded-md text-sm text-ink-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">
                     <ArrowLeft aria-hidden className="h-4 w-4" />
-                    Live cameras
+                    Cameras
                 </Link>
                 <h1 className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
                     <span className="min-w-0 break-words">Motion view{deviceId && <span className="text-ink-muted"> · {name}</span>}</span>
@@ -148,8 +148,8 @@ export function MotionScreen({ user, bar, deviceId }: { user: SessionUser; bar: 
                 {!deviceId
                     ? (
                         <div className="mt-8 rounded-2xl border border-dashed border-white/12 bg-night-900/40 px-6 py-12 text-center">
-                            <p className="font-medium text-ink">Choose a phone on Live cameras.</p>
-                            <Link href="/live" className="mt-3 inline-flex h-9 items-center rounded-lg border border-white/12 px-3 text-sm text-ink transition-colors hover:bg-white/8 focus-visible:outline-2 focus-visible:outline-amber">Open Live cameras</Link>
+                            <p className="font-medium text-ink">Choose a phone or board on Cameras.</p>
+                            <Link href="/cameras" className="mt-3 inline-flex h-9 items-center rounded-lg border border-white/12 px-3 text-sm text-ink transition-colors hover:bg-white/8 focus-visible:outline-2 focus-visible:outline-amber">Open Cameras</Link>
                         </div>
                     )
                     : (
@@ -167,7 +167,7 @@ export function MotionScreen({ user, bar, deviceId }: { user: SessionUser; bar: 
                                         Live
                                     </h2>
                                     <div ref={holderRef}>
-                                        <LivePicture url={url} state={state} name={name} className="aspect-video" />
+                                        <LivePicture url={url} state={state} name={name} kind={device?.kind} className="aspect-video" />
                                     </div>
                                 </section>
                                 <section aria-labelledby="pane-motion" className={pane}>

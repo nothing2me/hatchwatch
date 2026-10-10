@@ -26,7 +26,7 @@ describe('CameraPanel with a linked phone', () =>
         render(<CameraPanel camera={camera} onClose={() => undefined} />);
         expect(screen.getByRole('img', { name: 'Live picture from Dune phone' }).getAttribute('src')).toBe('blob:1');
         expect(screen.getByText('LIVE')).toBeTruthy();
-        expect(screen.getByRole('link', { name: 'Motion view' }).getAttribute('href')).toBe('/live/motion?device=ck1');
+        expect(screen.getByRole('link', { name: 'Motion view' }).getAttribute('href')).toBe('/cameras/motion?device=ck1');
         expect(document.querySelector('video')).toBeNull();
     });
 
@@ -37,6 +37,14 @@ describe('CameraPanel with a linked phone', () =>
         expect(screen.queryByText('LIVE')).toBeNull();
         expect(document.querySelector('video')).not.toBeNull();
         expect(screen.getByText('Phone offline · Dune phone')).toBeTruthy();
+    });
+
+    it('says Board offline for a linked camera board', () =>
+    {
+        live = { url: null, state: 'offline' };
+        render(<CameraPanel camera={{ ...camera, liveDevice: { id: 'cb1', name: 'Dune board', kind: 'BOARD' } }} onClose={() => undefined} />);
+        expect(screen.getByText('Board offline · Dune board')).toBeTruthy();
+        expect(screen.queryByText(/Phone offline/)).toBeNull();
     });
 
     it('offers the Source picker to admins only', () =>

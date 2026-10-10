@@ -119,7 +119,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
                             </span>
                             <span className="truncate rounded bg-night-950/80 px-1.5 py-0.5 text-[11px] text-ink">{phone.name}</span>
                         </span>
-                        <Link href={`/live/motion?device=${encodeURIComponent(phone.id)}`} className="absolute right-2 bottom-2 inline-flex h-7 items-center gap-1.5 rounded-md bg-night-950/85 px-2 text-[11px] text-ink ring-1 ring-white/10 transition-colors hover:bg-night-900 focus-visible:outline-2 focus-visible:outline-amber">
+                        <Link href={`/cameras/motion?device=${encodeURIComponent(phone.id)}`} className="absolute right-2 bottom-2 inline-flex h-7 items-center gap-1.5 rounded-md bg-night-950/85 px-2 text-[11px] text-ink ring-1 ring-white/10 transition-colors hover:bg-night-900 focus-visible:outline-2 focus-visible:outline-amber">
                             <Activity aria-hidden className="h-3.5 w-3.5" />
                             Motion view
                         </Link>
@@ -151,7 +151,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null, canEditSou
             {phoneOffline && phone && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
                     <VideoOff aria-hidden className="h-3.5 w-3.5" />
-                    Phone offline · {phone.name}
+                    {phone.kind === 'BOARD' ? 'Board offline' : 'Phone offline'} · {phone.name}
                 </p>
             )}
 

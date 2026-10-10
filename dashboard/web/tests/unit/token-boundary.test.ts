@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = join(import.meta.dirname, '..', '..');
 const ALLOWED = ['src/lib/phones/deviceToken.ts', 'src/lib/phones/devices.ts', 'src/lib/phones/boards.ts'];
 // Every file that holds a token, its hash or the raw bearer header.
-const NO_LOGS = [...ALLOWED, 'src/app/(app)/live/actions.ts', 'src/features/phones/BoardToken.tsx', 'src/lib/phones/boardSecrets.ts', 'src/lib/phones/http.ts', 'src/app/api/live/frame/[deviceId]/route.ts'];
+const NO_LOGS = [...ALLOWED, 'src/app/(app)/cameras/actions.ts', 'src/features/phones/BoardToken.tsx', 'src/features/phones/DevicesPanel.tsx', 'src/lib/phones/boardSecrets.ts', 'src/lib/phones/http.ts', 'src/app/api/live/frame/[deviceId]/route.ts'];
 
 function files(dir: string): string[]
 {

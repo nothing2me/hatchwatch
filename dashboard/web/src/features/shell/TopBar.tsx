@@ -5,7 +5,7 @@ import { logoutAction } from '@/app/(app)/actions';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
 
-export type Page = 'map' | 'cameras' | 'analytics' | 'live' | 'settings' | 'users';
+export type Page = 'map' | 'cameras' | 'analytics' | 'settings' | 'users';
 
 // Counts a server page passes through to the bar.
 export interface TopBarCounts
@@ -36,7 +36,6 @@ const NAV: { page: Page; href: string; label: string; adminOnly?: boolean }[] = 
     { page: 'map', href: '/', label: 'Map' },
     { page: 'cameras', href: '/cameras', label: 'Cameras' },
     { page: 'analytics', href: '/analytics', label: 'Analytics' },
-    { page: 'live', href: '/live', label: 'Live cameras' },
     { page: 'settings', href: '/settings', label: 'Settings', adminOnly: true },
 ];
 
@@ -76,13 +75,11 @@ export function TopBar({ user, current, camerasOnline, camerasTotal, activeSites
                             key={item.page}
                             href={item.href}
                             aria-current={here ? 'page' : undefined}
-                            aria-label={item.page === 'live' ? item.label : undefined}
                             className={cn('inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber sm:px-3',
                                 here ? 'bg-white/10 text-ink shadow-sm shadow-black/40' : 'text-ink-muted hover:text-ink')}
                         >
                             {here && <span aria-hidden className="mr-1.5 h-1 w-1 rounded-full bg-amber max-sm:hidden" />}
-                            {/* "Live" alone on phones so the admin bar still fits 360 px. */}
-                            {item.page === 'live' ? <>Live<span className="ml-[0.3em] max-sm:hidden">cameras</span></> : item.label}
+                            {item.label}
                         </Link>
                     );
                 })}

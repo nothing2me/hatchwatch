@@ -32,6 +32,12 @@ describe('toMapSnapshot', () =>
         expect(snapshot.cameras[1].video).toBeNull();
     });
 
+    it('carries the linked device kind for the Cameras page', () =>
+    {
+        const linked = toMapSnapshot({ ...rows, cameras: [{ ...rows.cameras[0], liveDevice: { id: 'cb1', name: 'Dune board', kind: 'BOARD' } }] });
+        expect(linked.cameras[0].liveDevice).toEqual({ id: 'cb1', name: 'Dune board', kind: 'BOARD' });
+    });
+
     it('places a public motion image at its declared ground scale', () =>
     {
         const frameRows: SnapshotRows = { ...rows,

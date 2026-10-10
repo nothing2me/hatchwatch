@@ -82,7 +82,7 @@ export interface CameraView
     status: CameraStatus;
     calibrated: boolean;
     video: FeedVideo | null;
-    liveDevice: { id: string; name: string } | null;
+    liveDevice: { id: string; name: string; kind?: LiveDeviceKind } | null;   // kind defaults to PHONE when absent
 }
 
 export interface AlertView

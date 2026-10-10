@@ -33,7 +33,7 @@ export async function removePhone(deviceId: string): Promise<{ ok: true } | { ok
     }
     // GET frame has no database check, so the in-memory frame must go now.
     frameStore.forget(parsed.data);
-    revalidatePath('/live');
+    revalidatePath('/cameras');
     return { ok: true };
 }
 
@@ -59,7 +59,7 @@ export async function addBoardCamera(name: string): Promise<IssuedTokenResult>
     try
     {
         const board = await createBoard(prisma, actor.id, parsed.data);
-        revalidatePath('/live');
+        revalidatePath('/cameras');
         return issued(board);
     }
     catch (error)
@@ -85,7 +85,7 @@ export async function rotateDeviceToken(deviceId: string): Promise<IssuedTokenRe
         const board = await rotateBoardToken(prisma, actor.id, parsed.data);
         // A frame sent with the old token must not linger in the in-memory store.
         frameStore.forget(parsed.data);
-        revalidatePath('/live');
+        revalidatePath('/cameras');
         return issued(board);
     }
     catch (error)

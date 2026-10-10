@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type RefObject } from 'react';
 import { Check, Copy, TriangleAlert, X } from 'lucide-react';
-import { addBoardCamera, type IssuedTokenResult } from '@/app/(app)/live/actions';
+import { addBoardCamera, type IssuedTokenResult } from '@/app/(app)/cameras/actions';
 import { cn } from '@/lib/cn';
 import { useModal } from './ConnectPhone';
 

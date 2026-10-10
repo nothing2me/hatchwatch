@@ -15,7 +15,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@/lib/auth/session', () => ({ SESSION_COOKIE: 's', readSessionToken: vi.fn(async () => ({ id: sessionId, email: 'x@test.local', name: 'X', role })) }));
 
 const { prisma } = await import('@/lib/db') as { prisma: PrismaClient };
-const { addBoardCamera, rotateDeviceToken, removePhone } = await import('@/app/(app)/live/actions');
+const { addBoardCamera, rotateDeviceToken, removePhone } = await import('@/app/(app)/cameras/actions');
 const { registerDevice } = await import('@/lib/phones/devices');
 const { hashDeviceToken } = await import('@/lib/phones/deviceToken');
 const { FrameStore, frameStore } = await import('@/lib/phones/frameStore');

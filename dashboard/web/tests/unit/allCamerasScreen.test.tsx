@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { CameraView, MapSnapshot } from '@/lib/types';
+import type { SessionUser } from '@/lib/auth/session';
 
 const frame = vi.hoisted(() => ({ url: null as string | null }));
 vi.mock('@/features/phones/useLiveFrame', () => ({ useLiveFrame: () => ({ url: frame.url, state: frame.url ? 'live' : 'loading' }) }));
@@ -7,21 +9,47 @@ vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
 const removePhone = vi.fn();
 const addBoardCamera = vi.fn();
 const rotateDeviceToken = vi.fn();
-vi.mock('@/app/(app)/live/actions', () => ({
+vi.mock('@/app/(app)/cameras/actions', () => ({
     removePhone: (...args: unknown[]) => removePhone(...args),
     addBoardCamera: (...args: unknown[]) => addBoardCamera(...args),
     rotateDeviceToken: (...args: unknown[]) => rotateDeviceToken(...args),
 }));
-const { LiveScreen, MotionBox } = await import('@/features/phones/LiveScreen');
+const { AllCamerasScreen } = await import('@/features/cameras/AllCamerasScreen');
+const { MotionBox } = await import('@/features/phones/DeviceTile');
 const { RecordingsPanel, formatStart } = await import('@/features/phones/RecordingsPanel');
 
-const bar = { camerasOnline: 1, camerasTotal: 2, activeSites: 0 };
 const admin = { id: 'a', email: 'a@x.y', name: 'Ad', role: 'ADMIN' as const };
 const viewer = { ...admin, id: 'v', role: 'VIEWER' as const };
-const phone = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: 'B1', online: true, recording: true, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null, detections: null };
-const board = { ...phone, id: 'ckb', name: 'Dune board', kind: 'BOARD' as const, ownerName: 'Ad', recording: false, motion: { percent: 4.2, active: true, box: [96, 40, 64, 72] as [number, number, number, number], at: '2026-10-10T20:00:00.000Z' } };
+const phone = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: 'A1', online: true, recording: true, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null, detections: null };
+const board = { ...phone, id: 'ckb', name: 'Dune board', kind: 'BOARD' as const, ownerName: 'Ad', cameraCode: null, recording: false, motion: { percent: 4.2, active: true, box: [96, 40, 64, 72] as [number, number, number, number], at: '2026-10-10T20:00:00.000Z' } };
+const linkedBoard = { ...board, id: 'cb1', name: 'Shore board', cameraCode: 'B1', online: false, motion: null };
 const token = 'A'.repeat(43);
 const issuedResult = { ok: true, deviceId: 'ckb', name: 'Dune board', token, dashboardUrl: 'https://10.47.138.152:3443', secrets: `#define DASHBOARD_URL "https://10.47.138.152:3443"\n#define DEVICE_ID "ckb"\n#define DEVICE_TOKEN "${token}"\n` };
+
+function camera(code: string, zoneCode: string, extra: Partial<CameraView>): CameraView
+{
+    return { id: `c-${code}`, code, zoneCode, position: [0, 0], headingDeg: 90, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null, liveDevice: null, ...extra };
+}
+const clip = (id: string) => ({ id, source: 'SIMULATION' as const, durationS: 40, hasMotion: false, simRunId: 'A-demo-1' });
+// Zone A: A1 linked to the phone ck1, A2 unlinked with a simulated clip. Zone B: B1 linked to the board cb1.
+const snapshot: MapSnapshot = {
+    zones: [
+        { id: 'za', code: 'A', name: 'North', activityLevel: 'LOW', ring: [] },
+        { id: 'zb', code: 'B', name: 'Holiday', activityLevel: 'HIGH', ring: [] },
+    ],
+    cameras: [
+        camera('A1', 'A', { video: clip('v1'), liveDevice: { id: 'ck1', name: 'Dune phone' } }),
+        camera('A2', 'A', { video: clip('v2') }),
+        camera('B1', 'B', { video: clip('v3'), liveDevice: { id: 'cb1', name: 'Shore board', kind: 'BOARD' } }),
+    ],
+    alerts: [], camerasOnline: 3, camerasTotal: 3, inactiveCount: 0, tracks: [], dangerCount: 0, dangerTotal: 0,
+    outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 30,
+} as unknown as MapSnapshot;
+
+function show(user: SessionUser, connect: { url: string | null; qrSvg: string | null } | null = null)
+{
+    return render(<AllCamerasScreen user={user} initialSnapshot={snapshot} connect={connect} />);
+}
 
 function stubFetch(devices: unknown[])
 {
@@ -29,30 +57,34 @@ function stubFetch(devices: unknown[])
         ? Response.json({ devices })
         : Response.json({ enabled: true, convertsToMp4: true, recordings: [] })));
 }
+const zone = (code: string) => screen.getByRole('region', { name: `Zone ${code}` });
+const card = (code: string) => screen.getByRole('article', { name: `Camera ${code}` });
+const devicesSection = () => screen.getByRole('region', { name: 'Devices' });
 beforeEach(() => localStorage.clear());
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); frame.url = null; });
 
-describe('LiveScreen', () =>
+describe('AllCamerasScreen devices', () =>
 {
-    it('explains how to connect a phone when none is sending', async () =>
+    it('explains how to connect a phone when no unlinked one is sending', async () =>
     {
         stubFetch([]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
-        expect(await screen.findByText('No phones are sending right now.')).toBeTruthy();
+        show(viewer);
+        expect(await screen.findByText('No unlinked phones or boards are sending.')).toBeTruthy();
+        expect(screen.getByText(/Ask an admin for the Connect phone QR code/)).toBeTruthy();
         expect(screen.queryByRole('button', { name: 'Connect phone' })).toBeNull();
         expect(screen.queryByRole('heading', { name: 'Recordings' })).toBeNull();
     });
 
     it('shows a tile per online phone with owner, camera, REC and actions', async () =>
     {
-        stubFetch([phone, { ...phone, id: 'ck2', name: 'Silent', online: false, recording: false }]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
-        expect(await screen.findByText('Dune phone')).toBeTruthy();
+        stubFetch([phone, { ...phone, id: 'ck2', name: 'Silent', cameraCode: null, online: false, recording: false }]);
+        show(viewer);
+        const tile = await screen.findByRole('article', { name: 'Dune phone' });
         expect(screen.queryByText('Silent')).toBeNull();
-        expect(screen.getByText('by Vo')).toBeTruthy();
-        expect(screen.getByText('Camera B1')).toBeTruthy();
-        expect(screen.getByText('REC')).toBeTruthy();
-        expect(screen.getByRole('link', { name: 'Motion view' }).getAttribute('href')).toBe('/live/motion?device=ck1');
+        expect(within(tile).getByText('by Vo')).toBeTruthy();
+        expect(within(tile).getByText('Camera A1')).toBeTruthy();
+        expect(within(tile).getByText('REC')).toBeTruthy();
+        expect(within(tile).getByRole('link', { name: 'Motion view' }).getAttribute('href')).toBe('/cameras/motion?device=ck1');
         fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
         expect(screen.getByRole('dialog', { name: 'Dune phone' })).toBeTruthy();
         fireEvent.keyDown(document, { key: 'Escape' });
@@ -62,7 +94,7 @@ describe('LiveScreen', () =>
     it('gives admins Connect phone with the QR and the Recordings list', async () =>
     {
         stubFetch([]);
-        render(<LiveScreen user={admin} bar={bar} connect={{ url: 'https://192.168.1.20:3443/cam', qrSvg: '<svg data-testid="qr"></svg>' }} />);
+        show(admin, { url: 'https://192.168.1.20:3443/cam', qrSvg: '<svg data-testid="qr"></svg>' });
         fireEvent.click(screen.getByRole('button', { name: 'Connect phone' }));
         expect(screen.getByText('https://192.168.1.20:3443/cam')).toBeTruthy();
         expect(screen.getByTestId('qr')).toBeTruthy();
@@ -74,10 +106,10 @@ describe('LiveScreen', () =>
     {
         stubFetch([{ ...phone, online: false, recording: false }]);
         removePhone.mockResolvedValueOnce({ ok: false, error: 'That phone was already removed.' }).mockResolvedValueOnce({ ok: true });
-        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        show(admin);
         const row = await screen.findByRole('listitem', { name: 'Dune phone' });
         expect(within(row).getByText(/last seen/)).toBeTruthy();
-        expect(within(row).getByText('Camera B1')).toBeTruthy();
+        expect(within(row).getByText('Camera A1')).toBeTruthy();
         fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune phone' }));
         expect(within(row).getByText('Remove Dune phone? Its camera returns to the simulation loop. The person can start again with a new phone name; to block a person, disable their account on the Users page.')).toBeTruthy();
         fireEvent.click(within(row).getByRole('button', { name: 'Remove' }));
@@ -89,12 +121,17 @@ describe('LiveScreen', () =>
         expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).startsWith('/api/live/devices')).length).toBeGreaterThanOrEqual(2);
     });
 
-    it('hides the phones list from viewers', async () =>
+    it('hides the devices list and admin controls from viewers', async () =>
     {
-        stubFetch([phone]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
-        expect(await screen.findByText('Dune phone')).toBeTruthy();
-        expect(screen.queryByRole('heading', { name: 'Devices' })).toBeNull();
+        stubFetch([phone, board]);
+        show(viewer);
+        expect(await screen.findByRole('article', { name: 'Dune phone' })).toBeTruthy();
+        expect(within(devicesSection()).getByRole('article', { name: 'Dune board' })).toBeTruthy();
+        expect(screen.queryByRole('heading', { name: 'All devices' })).toBeNull();
+        expect(screen.queryByRole('listitem')).toBeNull();
+        expect(screen.queryByRole('button', { name: /Remove|Rotate token/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Add board camera' })).toBeNull();
+        expect(screen.queryByRole('heading', { name: 'Recordings' })).toBeNull();
     });
 });
 
@@ -103,7 +140,7 @@ describe('camera boards', () =>
     it('shows the on-board motion badge and label on board tiles only', async () =>
     {
         stubFetch([board, { ...board, id: 'ckb2', name: 'Still board', motion: { ...board.motion, percent: 0.4, active: false, box: [0, 0, 0, 0] } }, phone]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         const moving = await screen.findByRole('article', { name: 'Dune board' });
         expect(within(moving).getByText('Moving 4.2%')).toBeTruthy();
         expect(within(moving).getByText('Motion measured on the camera board')).toBeTruthy();
@@ -128,7 +165,7 @@ describe('camera boards', () =>
     {
         frame.url = 'blob:frame';
         stubFetch([board, { ...board, id: 'ckb2', name: 'Still board', motion: { ...board.motion, percent: 0.4, active: false, box: [0, 0, 0, 0] } }]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         const moving = await screen.findByRole('article', { name: 'Dune board' });
         const still = screen.getByRole('article', { name: 'Still board' });
         expect(moving.querySelector('svg[preserveAspectRatio]')).toBeNull();
@@ -150,7 +187,7 @@ describe('camera boards', () =>
     {
         stubFetch([]);
         addBoardCamera.mockResolvedValueOnce(issuedResult);
-        render(<LiveScreen user={admin} bar={bar} connect={{ url: null, qrSvg: null }} />);
+        show(admin, { url: null, qrSvg: null });
         fireEvent.click(await screen.findByRole('button', { name: 'Add board camera' }));
         const dialog = screen.getByRole('dialog', { name: 'Add board camera' });
         fireEvent.change(within(dialog).getByLabelText('Board name'), { target: { value: 'Dune board' } });
@@ -173,7 +210,7 @@ describe('camera boards', () =>
     {
         stubFetch([]);
         addBoardCamera.mockResolvedValueOnce({ ok: false, error: 'A device with that name already exists.' });
-        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        show(admin);
         fireEvent.click(await screen.findByRole('button', { name: 'Add board camera' }));
         const dialog = screen.getByRole('dialog', { name: 'Add board camera' });
         fireEvent.change(within(dialog).getByLabelText('Board name'), { target: { value: 'Dune board' } });
@@ -186,7 +223,7 @@ describe('camera boards', () =>
     {
         stubFetch([{ ...board, online: false }, { ...phone, online: false }]);
         rotateDeviceToken.mockResolvedValueOnce({ ...issuedResult, token: 'B'.repeat(43) });
-        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        show(admin);
         expect(await screen.findByRole('heading', { name: 'Devices' })).toBeTruthy();
         const boardRow = await screen.findByRole('listitem', { name: 'Dune board' });
         const phoneRow = screen.getByRole('listitem', { name: 'Dune phone' });
@@ -206,14 +243,14 @@ describe('camera boards', () =>
     it('uses the board wording when removing a board', async () =>
     {
         stubFetch([{ ...board, online: false }]);
-        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        show(admin);
         const row = await screen.findByRole('listitem', { name: 'Dune board' });
         fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune board' }));
         expect(within(row).getByText('Remove Dune board? Its camera returns to the simulation loop and the board\'s token stops working. Add it again to get a new token.')).toBeTruthy();
     });
 });
 
-describe('LiveScreen detections', () =>
+describe('AllCamerasScreen detections', () =>
 {
     const seen = { ...phone, detections: { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person' as const, score: 0.82, box: [1, 2, 3, 4] as [number, number, number, number] }], trails: [] } };
 
@@ -221,7 +258,7 @@ describe('LiveScreen detections', () =>
     {
         frame.url = 'blob:1';
         stubFetch([seen]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         expect(await screen.findByText('person 0.82')).toBeTruthy();
         expect(screen.getByText('People 1 · Possible turtles 0')).toBeTruthy();
         expect(screen.getByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeTruthy();
@@ -230,7 +267,7 @@ describe('LiveScreen detections', () =>
     it('says Detection off when the worker sends nothing', async () =>
     {
         stubFetch([phone]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         expect(await screen.findByText('Detection off')).toBeTruthy();
     });
 
@@ -238,7 +275,7 @@ describe('LiveScreen detections', () =>
     {
         frame.url = 'blob:1';
         stubFetch([{ ...seen, detections: { ...seen.detections, dark: true, objects: [], trails: [] } }]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         const tile = await screen.findByRole('article', { name: 'Dune phone' });
         expect(await within(tile).findByText('Too dark to detect')).toBeTruthy();
         expect(tile.querySelector('svg[preserveAspectRatio]')).toBeNull();
@@ -248,7 +285,7 @@ describe('LiveScreen detections', () =>
     {
         frame.url = 'blob:1';
         stubFetch([seen]);
-        const { unmount } = render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        const { unmount } = show(viewer);
         const toggle = await screen.findByRole('button', { name: 'Detections' });
         expect(toggle.getAttribute('aria-pressed')).toBe('true');
         await screen.findByText('person 0.82');
@@ -258,7 +295,7 @@ describe('LiveScreen detections', () =>
         expect(screen.queryByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeNull();
         expect(localStorage.getItem('nesttrace.detections')).toBe('off');
         unmount();
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         expect((await screen.findByRole('button', { name: 'Detections' })).getAttribute('aria-pressed')).toBe('false');
     });
 
@@ -266,10 +303,106 @@ describe('LiveScreen detections', () =>
     {
         frame.url = 'blob:1';
         stubFetch([seen]);
-        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        show(viewer);
         await screen.findByText('person 0.82');
         fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
         expect(within(screen.getByRole('dialog', { name: 'Dune phone' })).getByText('person 0.82')).toBeTruthy();
+    });
+});
+
+describe('AllCamerasScreen map cameras', () =>
+{
+    it('heads the page Cameras with the camera and device counts', async () =>
+    {
+        stubFetch([phone, board, linkedBoard]);
+        show(viewer);
+        expect(screen.getByRole('heading', { level: 1, name: 'Cameras' })).toBeTruthy();
+        expect(await screen.findByText('3 of 3 map cameras online · 2 devices sending')).toBeTruthy();
+    });
+
+    it('shows a linked online phone live on its map camera, not the clip', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([phone, linkedBoard]);
+        show(viewer);
+        const a1 = await waitFor(() => within(zone('A')).getByRole('article', { name: 'Camera A1' }));
+        expect(await within(a1).findByText('LIVE')).toBeTruthy();
+        expect(within(a1).getByRole('img', { name: 'Live picture from Dune phone' })).toBeTruthy();
+        expect(within(a1).queryByTestId('camera-video')).toBeNull();
+        expect(within(a1).queryByTestId('device-offline')).toBeNull();
+    });
+
+    it('says Board offline over the recorded clip when the linked board is offline', async () =>
+    {
+        stubFetch([phone, linkedBoard]);
+        show(viewer);
+        const b1 = card('B1');
+        const badge = await within(b1).findByTestId('device-offline');
+        expect(badge.textContent).toContain('Board offline');
+        expect(within(b1).getByTestId('camera-video')).toBeTruthy();
+        expect(within(b1).queryByText('LIVE')).toBeNull();
+    });
+
+    it('says Phone offline over the clip, or on the placeholder when there is no clip', async () =>
+    {
+        stubFetch([{ ...phone, online: false }]);
+        render(<AllCamerasScreen user={viewer} initialSnapshot={{ ...snapshot, cameras: [snapshot.cameras[0], { ...snapshot.cameras[1], video: null, liveDevice: { id: 'ck3', name: 'Gone phone' } }] }} connect={null} />);
+        expect((await within(card('A1')).findByTestId('device-offline')).textContent).toContain('Phone offline');
+        expect(within(card('A1')).getByTestId('camera-video')).toBeTruthy();
+        expect(within(card('A2')).getByTestId('device-offline').textContent).toContain('Phone offline');
+        expect(within(card('A2')).queryByTestId('camera-video')).toBeNull();
+    });
+
+    it('shows an unlinked camera\'s recorded clip with the Simulated badge', async () =>
+    {
+        stubFetch([phone]);
+        show(viewer);
+        await screen.findByRole('article', { name: 'Dune phone' });
+        const a2 = card('A2');
+        expect(within(a2).getByTestId('camera-video')).toBeTruthy();
+        expect(within(a2).getByText('Simulated')).toBeTruthy();
+        expect(within(a2).queryByTestId('device-offline')).toBeNull();
+    });
+
+    it('lists an unlinked online phone under Devices and not in a zone', async () =>
+    {
+        frame.url = 'blob:1';
+        stubFetch([phone, { ...phone, id: 'cx9', name: 'Spare phone', cameraCode: null, recording: false }]);
+        show(viewer);
+        expect(await within(devicesSection()).findByRole('article', { name: 'Spare phone' })).toBeTruthy();
+        expect(within(zone('A')).queryByRole('article', { name: 'Spare phone' })).toBeNull();
+        expect(within(zone('B')).queryByRole('article', { name: 'Spare phone' })).toBeNull();
+        expect(within(devicesSection()).queryByRole('article', { name: 'Dune phone' })).toBeNull();
+        expect(screen.queryByText('No unlinked phones or boards are sending.')).toBeNull();
+    });
+
+    it('shows no offline badge before the first devices response', () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => undefined)));
+        show(viewer);
+        expect(within(card('A1')).queryByTestId('device-offline')).toBeNull();
+        expect(within(card('B1')).queryByTestId('device-offline')).toBeNull();
+        expect(within(card('A1')).getByTestId('camera-video')).toBeTruthy();
+    });
+
+    it('shows the error line when the devices cannot be loaded', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('no', { status: 500 })));
+        show(viewer);
+        expect((await screen.findByRole('alert')).textContent).toBe('Could not load phones.');
+    });
+
+    it('has one Cameras item in the top bar: Map, Cameras, Analytics, and Settings for admins', async () =>
+    {
+        stubFetch([]);
+        const { unmount } = show(admin);
+        const links = () => within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link');
+        expect(links().map(link => link.textContent)).toEqual(['Map', 'Cameras', 'Analytics', 'Settings']);
+        expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Cameras' }).getAttribute('aria-current')).toBe('page');
+        await screen.findByRole('heading', { name: 'Recordings' });
+        unmount();
+        show(viewer);
+        expect(links().map(link => link.textContent)).toEqual(['Map', 'Cameras', 'Analytics']);
     });
 });
 

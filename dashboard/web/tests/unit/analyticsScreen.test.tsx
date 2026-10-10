@@ -167,13 +167,14 @@ describe('TopBar', () =>
         expect(screen.getByText('active site')).toBeTruthy();
     });
 
-    it('keeps Live cameras available to viewers alongside Cameras and Analytics', () =>
+    it('has one Cameras item for viewers alongside Map and Analytics', () =>
     {
-        render(<TopBar user={viewer} current="live" camerasOnline={1} camerasTotal={2} activeSites={0} />);
+        render(<TopBar user={viewer} current="cameras" camerasOnline={1} camerasTotal={2} activeSites={0} />);
         const nav = screen.getByRole('navigation', { name: 'Main' });
+        expect(within(nav).getAllByRole('link').map(link => link.textContent)).toEqual(['Map', 'Cameras', 'Analytics']);
         expect(within(nav).getByRole('link', { name: 'Cameras' }).getAttribute('href')).toBe('/cameras');
-        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('href')).toBe('/live');
-        expect(within(nav).getByRole('link', { name: 'Live cameras' }).getAttribute('aria-current')).toBe('page');
+        expect(within(nav).getByRole('link', { name: 'Cameras' }).getAttribute('aria-current')).toBe('page');
+        expect(within(nav).queryByRole('link', { name: /Live/ })).toBeNull();
     });
 
     it('keeps Cameras and Settings in the main navigation and Users inside Settings', () =>
