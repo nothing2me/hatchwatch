@@ -16,7 +16,7 @@ const DEFAULT_ALONG = 39;
 // Cameras look out to sea, turned this far toward their partner (spec §7: seaward ± 20°).
 const TOE_IN_DEG = 20;
 const EARTH_RADIUS_M = 6371008.8;
-const CAMERA_CODE = /^([A-Z])([0-9]{1,2})$/;
+const CAMERA_CODE = /^([A-Z])([1-9][0-9]?)$/;
 
 const norm = (degrees: number) => ((degrees % 360) + 360) % 360;
 const angleGap = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);

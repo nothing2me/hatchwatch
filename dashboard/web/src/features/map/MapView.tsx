@@ -36,7 +36,8 @@ interface MapViewProps
     // Admin edit mode: map clicks place a camera pair on the nearest zone; camera markers can be dragged.
     editing?: boolean;
     onMapClick?: (at: LngLat) => void;
-    onMoveCamera?: (code: string, to: LngLat) => void;
+    // Resolves false when the server refused the move; the marker then returns to its saved spot.
+    onMoveCamera?: (code: string, to: LngLat) => Promise<boolean>;
 }
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
@@ -224,7 +225,17 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                             {
                                 const to: LngLat = [event.lngLat.lng, event.lngLat.lat];
                                 setDropped(current => ({ ...current, at: { ...current.at, [camera.id]: to } }));
-                                onMoveCamera?.(camera.code, to);
+                                void onMoveCamera?.(camera.code, to).then(saved =>
+                                {
+                                    if (!saved)
+                                    {
+                                        setDropped(current =>
+                                        {
+                                            const { [camera.id]: _refused, ...rest } = current.at;
+                                            return { ...current, at: rest };
+                                        });
+                                    }
+                                });
                             }}
                         >
                             <button

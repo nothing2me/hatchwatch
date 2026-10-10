@@ -16,6 +16,8 @@ export interface ZoneOption
     code: string;
     name: string;
     suggested: LngLat | null;
+    // Only zones an admin added on the map can be merged away.
+    mergeable: boolean;
 }
 
 interface CamerasScreenProps
@@ -58,7 +60,7 @@ function draftErrors(draft: Draft): Partial<Record<NumberField | 'code', string>
     const errors: Partial<Record<NumberField | 'code', string>> = {};
     if (!CAMERA_CODE.test(draft.code.trim().toUpperCase()))
     {
-        errors.code = 'Codes are a zone letter and a number, like B3.';
+        errors.code = 'Codes are a zone letter and a number from 1 to 99, like B3.';
     }
     for (const { key } of NUMBER_FIELDS)
     {
@@ -253,7 +255,7 @@ export function CamerasScreen({ user, zones, cameras, bar }: CamerasScreenProps)
                                         <Compass aria-hidden className="h-3.5 w-3.5 text-amber" />Face ocean {pair.join('·')}
                                     </button>
                                 ))}
-                                {zones.length > 1 && (confirmMerge === zone.code
+                                {zone.mergeable && zones.length > 1 && (confirmMerge === zone.code
                                     ? (
                                         <span role="group" aria-label={`Merge Zone ${zone.code}`} className="flex items-center gap-2 rounded-lg border border-[#E2581F]/40 bg-[#E2581F]/10 px-2 py-1 text-xs text-ink">
                                             Move its cameras, footage and alerts to the nearest zone and remove Zone {zone.code}?

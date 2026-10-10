@@ -16,8 +16,8 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const admin = { id: 'a', email: 'admin@x.y', name: 'Admin', role: 'ADMIN' as const };
 const bar = { camerasOnline: 3, camerasTotal: 3, activeSites: 0 };
 const zones = [
-    { code: 'B', name: 'Zone B', suggested: [-97.0645, 27.8166] as [number, number] },
-    { code: 'D', name: 'Zone D', suggested: [-97.059, 27.8227] as [number, number] },
+    { code: 'B', name: 'Zone B', suggested: [-97.0645, 27.8166] as [number, number], mergeable: false },
+    { code: 'D', name: 'Zone D', suggested: [-97.059, 27.8227] as [number, number], mergeable: true },
 ];
 const row = { fovDeg: 44, rangeM: 350, status: 'ONLINE' as const, footage: 1, alerts: 0 };
 const cameras = [
@@ -100,6 +100,8 @@ describe('CamerasScreen', () =>
     {
         mergeZoneInto.mockResolvedValue({ ok: true, targetCode: 'B', moved: [{ from: 'D3', to: 'B3' }] });
         render(<CamerasScreen user={admin} zones={zones} cameras={cameras} bar={bar} />);
+        // Built-in zones offer no merge.
+        expect(within(screen.getByRole('region', { name: /Zone B/ })).queryByRole('button', { name: /Merge into nearest zone/ })).toBeNull();
         const zoneD = screen.getByRole('region', { name: /Zone D/ });
         fireEvent.click(within(zoneD).getByRole('button', { name: /Merge into nearest zone/ }));
         expect(mergeZoneInto).not.toHaveBeenCalled();

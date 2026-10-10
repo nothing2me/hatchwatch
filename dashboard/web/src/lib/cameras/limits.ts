@@ -1,5 +1,6 @@
 // Editable camera fields and their allowed ranges; shared by the server checks and the Setup form.
-export const CAMERA_CODE = /^[A-Z][0-9]{1,2}$/;
+// A zone letter and 1–99 without leading zeros: B3, D12 (not D05 or D0).
+export const CAMERA_CODE = /^[A-Z][1-9][0-9]?$/;
 export const CAMERA_LIMITS = {
     lat: [-90, 90],
     lng: [-180, 180],

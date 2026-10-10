@@ -6,6 +6,9 @@ import { distanceToZone, nearestZone, nextCameraCodes, partnerCode, planPairOnZo
 
 export class CameraEditError extends Error {}
 
+// Cameras stay within this distance of their zone's outline.
+const MAX_ZONE_DISTANCE_M = 2000;
+
 type Tx = Prisma.TransactionClient;
 
 const STATUSES: CameraStatus[] = ['ONLINE', 'OFFLINE'];
@@ -28,11 +31,14 @@ function ringOf(outline: unknown): LngLat[]
     return Array.isArray(coordinates?.[0]) ? coordinates[0] : [];
 }
 
-async function zoneViews(tx: Tx): Promise<(ZoneView & { id: string })[]>
+async function zoneViews(tx: Tx): Promise<(ZoneView & { id: string; addedByAdmin: boolean })[]>
 {
     const rows = await tx.zone.findMany({ orderBy: { code: 'asc' } });
-    return rows.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline) }));
+    return rows.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline), addedByAdmin: zone.createdById !== null }));
 }
+
+const zoneViewOf = (zone: { id: string; code: string; name: string; activityLevel: ZoneView['activityLevel']; outline: unknown }): ZoneView =>
+    ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline) });
 
 // The live importer feeds each zone's <zone>1 and <zone>2 cameras; those keep their codes and cannot be removed.
 const isLiveSlot = (code: string, zoneCode: string) => code === `${zoneCode}1` || code === `${zoneCode}2`;
@@ -70,7 +76,7 @@ async function uniqueCodes<T>(work: Promise<T>): Promise<T>
     }
 }
 
-async function addPair(prisma: PrismaClient, actorId: string, click: LngLat, pickZone: (zones: (ZoneView & { id: string })[]) => ZoneView & { id: string }): Promise<{ codes: [string, string]; zoneCode: string }>
+async function addPair(prisma: PrismaClient, actorId: string, click: LngLat, pickZone: (zones: ZoneView[]) => ZoneView): Promise<{ codes: [string, string]; zoneCode: string }>
 {
     const result = await uniqueCodes(prisma.$transaction(async tx =>
     {
@@ -92,7 +98,7 @@ async function addPair(prisma: PrismaClient, actorId: string, click: LngLat, pic
 // A camera pair on the existing zone nearest the click; no zone is created.
 export function addCameraPair(prisma: PrismaClient, actorId: string, click: LngLat)
 {
-    return addPair(prisma, actorId, click, zones => placement(() => nearestZone(click, zones)) as ZoneView & { id: string });
+    return addPair(prisma, actorId, click, zones => placement(() => nearestZone(click, zones)));
 }
 
 // A camera pair on a named zone, centred on the given point (Setup → Cameras).
@@ -105,7 +111,7 @@ export function addCameraPairToZone(prisma: PrismaClient, actorId: string, zoneC
         {
             throw new CameraEditError('That zone no longer exists.');
         }
-        if (distanceToZone(at, zone) > 2000)
+        if (distanceToZone(at, zone) > MAX_ZONE_DISTANCE_M)
         {
             throw new CameraEditError(`That point is more than 2 km from Zone ${zone.code}.`);
         }
@@ -137,15 +143,19 @@ export async function updateCamera(prisma: PrismaClient, actorId: string, code: 
     const newCode = patch.code?.trim().toUpperCase();
     if (newCode !== undefined && !CAMERA_CODE.test(newCode))
     {
-        throw new CameraEditError('Camera codes are a zone letter and a number, like B3.');
+        throw new CameraEditError('Camera codes are a zone letter and a number from 1 to 99, like B3.');
     }
 
     const result = await uniqueCodes(prisma.$transaction(async tx =>
     {
-        const camera = await tx.camera.findUnique({ where: { code }, include: { zone: { select: { code: true } } } });
+        const camera = await tx.camera.findUnique({ where: { code }, include: { zone: true } });
         if (!camera)
         {
             throw new CameraEditError(`Camera ${code} no longer exists.`);
+        }
+        if ((patch.lng !== undefined || patch.lat !== undefined) && distanceToZone([patch.lng ?? camera.lng, patch.lat ?? camera.lat], zoneViewOf(camera.zone)) > MAX_ZONE_DISTANCE_M)
+        {
+            throw new CameraEditError(`That spot is more than 2 km from Zone ${camera.zone.code}.`);
         }
         if (newCode !== undefined && newCode !== camera.code)
         {
@@ -217,8 +227,7 @@ export async function faceOcean(prisma: PrismaClient, actorId: string, code: str
         }
         const partnerName = partnerCode(camera.code);
         const partner = partnerName ? await tx.camera.findFirst({ where: { code: partnerName, zoneId: camera.zoneId } }) : null;
-        const zone: ZoneView = { id: camera.zone.id, code: camera.zone.code, name: camera.zone.name, activityLevel: camera.zone.activityLevel, ring: ringOf(camera.zone.outline) };
-        const { seaward } = zoneOrientation(zone);
+        const { seaward } = zoneOrientation(zoneViewOf(camera.zone));
         const cameras = partner ? [camera, partner].sort((a, b) => a.code.localeCompare(b.code)) : [camera];
         const changes = cameras.map(item =>
         {
@@ -248,6 +257,11 @@ export async function mergeZoneInto(prisma: PrismaClient, actorId: string, sourc
         {
             throw new CameraEditError('That zone no longer exists.');
         }
+        // Seeded zones carry the simulation import pairs and live slots; only map-added zones can be merged away.
+        if (!source.addedByAdmin)
+        {
+            throw new CameraEditError(`Zone ${source.code} is a built-in zone; only zones added on the map can be merged.`);
+        }
         const others = zones.filter(zone => zone.code !== sourceCode);
         if (others.length === 0)
         {
@@ -255,7 +269,19 @@ export async function mergeZoneInto(prisma: PrismaClient, actorId: string, sourc
         }
         const ring = source.ring.length > 1 ? source.ring.slice(0, -1) : source.ring;
         const centre: LngLat = ring.length > 0 ? [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length] : [0, 0];
-        const target = placement(() => nearestZone(centre, others)) as ZoneView & { id: string };
+        let target: ZoneView;
+        try
+        {
+            target = nearestZone(centre, others);
+        }
+        catch (error)
+        {
+            if (error instanceof PlacementError)
+            {
+                throw new CameraEditError(`No other zone lies within 2 km of Zone ${source.code}; nothing was merged.`);
+            }
+            throw error;
+        }
 
         const cameras = await tx.camera.findMany({ where: { zoneId: source.id }, orderBy: { code: 'asc' } });
         const allCodes = (await tx.camera.findMany({ select: { code: true } })).map(camera => camera.code);
@@ -295,16 +321,16 @@ export interface CameraRow
 }
 
 // Every camera with its footage and alert counts, for Setup → Cameras.
-export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code: string; name: string }[]; cameras: CameraRow[] }>
+export async function listCameras(prisma: PrismaClient): Promise<{ zones: { code: string; name: string; mergeable: boolean }[]; cameras: CameraRow[] }>
 {
     const [zones, cameras] = await Promise.all([
-        prisma.zone.findMany({ orderBy: { code: 'asc' }, select: { code: true, name: true } }),
+        prisma.zone.findMany({ orderBy: { code: 'asc' }, select: { code: true, name: true, createdById: true } }),
         prisma.camera.findMany({ include: { zone: { select: { code: true } }, _count: { select: { videos: true, alerts: true } } } }),
     ]);
     const order = (code: string) => { const m = /^([A-Z])([0-9]+)$/.exec(code); return m ? [m[1], Number(m[2])] as const : [code, 0] as const; };
     cameras.sort((a, b) => { const [x, y] = [order(a.code), order(b.code)]; return x[0].localeCompare(y[0]) || x[1] - y[1]; });
     return {
-        zones,
+        zones: zones.map(zone => ({ code: zone.code, name: zone.name, mergeable: zone.createdById !== null })),
         cameras: cameras.map(camera => ({
             code: camera.code, zoneCode: camera.zone.code, lng: camera.lng, lat: camera.lat, headingDeg: camera.headingDeg,
             fovDeg: camera.fovDeg, rangeM: camera.rangeM, status: camera.status, footage: camera._count.videos, alerts: camera._count.alerts,

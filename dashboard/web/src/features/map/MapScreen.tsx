@@ -119,10 +119,12 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         {
             const result = await work();
             setNotice(result.ok ? { kind: 'ok', text: done(result) } : { kind: 'error', text: result.error });
+            return result.ok;
         }
         catch
         {
             setNotice({ kind: 'error', text: 'That did not save. Check your connection and try again.' });
+            return false;
         }
         finally
         {
@@ -142,13 +144,14 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         void runEdit(() => addCameraPair(at), ({ codes, zoneCode }: { codes: [string, string]; zoneCode: string }) => `${codes.join(' · ')} added to Zone ${zoneCode}`).finally(() => { placing.current = false; });
     }, [editing, busy, runEdit]);
 
-    const moveCamera = useCallback((code: string, to: LngLat) =>
+    // Resolves false when the move was refused, so the map puts the marker back.
+    const moveCamera = useCallback(async (code: string, to: LngLat): Promise<boolean> =>
     {
         if (!editing)
         {
-            return;
+            return false;
         }
-        void runEdit(() => updateCamera(code, { lng: to[0], lat: to[1] }), ({ code: moved }: { code: string }) => `${moved} moved`);
+        return runEdit(() => updateCamera(code, { lng: to[0], lat: to[1] }), ({ code: moved }: { code: string }) => `${moved} moved`);
     }, [editing, runEdit]);
 
     const fitBeach = useCallback(() =>

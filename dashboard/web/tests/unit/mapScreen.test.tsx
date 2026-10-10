@@ -11,7 +11,7 @@ vi.mock('@/features/map/MapView', async () =>
     const { visibleAlerts } = await import('@/features/map/playback');
     return {
         initialBounds: () => [[0, 0], [1, 1]],
-        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onMoveCamera?: (code: string, to: [number, number]) => void }, ref)
+        MapView: React.forwardRef(function MapViewStub(props: { snapshot: MapSnapshot; onSelectCamera: (id: string) => void; playback: Playback | null; editing?: boolean; onMapClick?: (at: [number, number]) => void; onMoveCamera?: (code: string, to: [number, number]) => Promise<boolean> }, ref)
         {
             React.useImperativeHandle(ref, () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn(), flyTo: vi.fn() }));
             const visible = visibleAlerts(props.snapshot.alerts, props.playback).map(alert => alert.id).join(',');
@@ -22,7 +22,7 @@ vi.mock('@/features/map/MapView', async () =>
                     <span data-testid="editing">{String(Boolean(props.editing))}</span>
                     <button onClick={() => props.onMapClick?.([-97.05, 27.82])}>map click</button>
                     <button onClick={() => { props.onMapClick?.([-97.05, 27.82]); props.onMapClick?.([-97.05, 27.82]); }}>map double click</button>
-                    <button onClick={() => props.onMoveCamera?.('B1', [-97.06, 27.81])}>drag B1</button>
+                    <button onClick={() => { void props.onMoveCamera?.('B1', [-97.06, 27.81]).then(saved => { document.body.dataset.moveSaved = String(saved); }); }}>drag B1</button>
                 </div>
             );
         }),
@@ -286,6 +286,7 @@ describe('MapScreen', () =>
             fireEvent.click(screen.getByText('drag B1'));
             expect(updateCamera).toHaveBeenCalledWith('B1', { lng: -97.06, lat: 27.81 });
             expect(await screen.findByText('B1 moved')).toBeTruthy();
+            await waitFor(() => expect(document.body.dataset.moveSaved).toBe('true'));
         });
 
         it('shows why a move was refused', async () =>
@@ -295,6 +296,8 @@ describe('MapScreen', () =>
             fireEvent.click(screen.getByRole('button', { name: 'Edit cameras' }));
             fireEvent.click(screen.getByText('drag B1'));
             expect(await screen.findByText('Latitude must be between -90 and 90.')).toBeTruthy();
+            // MapView puts the marker back when the move resolves false.
+            await waitFor(() => expect(document.body.dataset.moveSaved).toBe('false'));
         });
     });
 

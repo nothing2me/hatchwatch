@@ -133,7 +133,11 @@ describe('updateCamera', () =>
         await rejects(updateCamera(prisma, adminId, 'D3', { fovDeg: 5 }), 'Field of view must be between 10 and 120.');
         await rejects(updateCamera(prisma, adminId, 'D3', { rangeM: 900 }), 'Range must be between 10 and 500.');
         await rejects(updateCamera(prisma, adminId, 'D3', { lat: Number.NaN }), 'Latitude must be between -90 and 90.');
-        await rejects(updateCamera(prisma, adminId, 'D3', { code: 'd-3' }), 'Camera codes are a zone letter and a number, like B3.');
+        await rejects(updateCamera(prisma, adminId, 'D3', { code: 'd-3' }), 'Camera codes are a zone letter and a number from 1 to 99, like B3.');
+        await rejects(updateCamera(prisma, adminId, 'D3', { code: 'D05' }), 'Camera codes are a zone letter and a number from 1 to 99, like B3.');
+        await rejects(updateCamera(prisma, adminId, 'D3', { code: 'D0' }), 'Camera codes are a zone letter and a number from 1 to 99, like B3.');
+        await rejects(updateCamera(prisma, adminId, 'D3', { lat: 27.9 }), 'That spot is more than 2 km from Zone D.');
+        await rejects(updateCamera(prisma, adminId, 'D3', { lng: -97.2, lat: 27.83 }), 'That spot is more than 2 km from Zone D.');
         await rejects(updateCamera(prisma, adminId, 'D3', { code: 'D4' }), 'Camera code D4 is already taken.');
         await rejects(updateCamera(prisma, adminId, 'D3', { code: 'B9' }), 'Codes in Zone D start with D.');
         await rejects(updateCamera(prisma, adminId, 'D1', { code: 'D9' }), 'Live footage for Zone D arrives on D1; keep its code.');
@@ -217,6 +221,24 @@ describe('mergeZoneInto', () =>
         expect(listed.zones.map(z => z.code)).toEqual(['A', 'B', 'C', 'D']);
         expect(listed.cameras.filter(camera => camera.zoneCode === 'D').map(camera => [camera.code, camera.footage, camera.alerts])).toEqual([['D1', 0, 0], ['D2', 0, 0], ['D3', 1, 0], ['D4', 0, 1]]);
         await rejects(mergeZoneInto(prisma, adminId, 'E'), 'That zone no longer exists.');
+    });
+
+    it('refuses to merge a built-in zone and changes nothing', async () =>
+    {
+        await makeZoneE();
+        await rejects(mergeZoneInto(prisma, adminId, 'D'), 'Zone D is a built-in zone; only zones added on the map can be merged.');
+        expect((await prisma.zone.findMany({ orderBy: { code: 'asc' } })).map(zone => zone.code)).toEqual(['A', 'B', 'C', 'D', 'E']);
+        expect((await prisma.camera.findMany({ where: { zone: { code: 'D' } }, orderBy: { code: 'asc' } })).map(camera => camera.code)).toEqual(['D1', 'D2']);
+        expect(await prisma.auditLog.count({ where: { action: 'zone.merge' } })).toBe(0);
+    });
+
+    it('refuses a merge with no other zone within 2 km', async () =>
+    {
+        const far: LngLat = destinationPoint(northOfD, 300, 6000);
+        const ring: LngLat[] = [far, destinationPoint(far, 219, 100), destinationPoint(destinationPoint(far, 219, 100), 129, 50), destinationPoint(far, 129, 50), far];
+        await prisma.zone.create({ data: { code: 'F', name: 'Zone F', activityLevel: 'LOW', createdById: adminId, outline: { type: 'Polygon', coordinates: [ring] } } });
+        await rejects(mergeZoneInto(prisma, adminId, 'F'), 'No other zone lies within 2 km of Zone F; nothing was merged.');
+        expect(await prisma.zone.count({ where: { code: 'F' } })).toBe(1);
     });
 
     it('rolls everything back when a step fails', async () =>
