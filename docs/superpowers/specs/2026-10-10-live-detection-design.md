@@ -1,7 +1,7 @@
 # NestTrace Dashboard: People and Possible-Turtle Detection on Live Cameras
 
 Date: 2026-10-10
-Status: Direction approved in chat ("yes go ahead": YOLOX-nano for people, rule-based possible turtle). Pending written-spec review.
+Status: Approved in chat ("yes go ahead, add the simple alert too").
 Builds on: Plan E (live phone cameras) and Plan F (ESP32 boards) on `feat/dashboard-fullstack`.
 
 ## 1. Intent
@@ -16,7 +16,7 @@ Builds on: Plan E (live phone cameras) and Plan F (ESP32 boards) on `feat/dashbo
 
 **Boundaries (from `agent.md`)**
 - The worker is dashboard code: no simulator, research pipeline, seeds or `private/` paths. It never imports `pipeline/`.
-- Detections are a viewing aid on live cameras. They raise **no alerts** in this version (see §6) and never change nest sites. The digging alert wording is untouched.
+- Detections are a viewing aid on live cameras. The only alert they raise is the camera-level danger in §6; they never change nest sites. The digging alert wording is untouched.
 - Frames and detections stay on the laptop; nothing goes to the internet except the one-time model download at image build.
 
 ## 2. Worker service
@@ -54,13 +54,26 @@ Builds on: Plan E (live phone cameras) and Plan F (ESP32 boards) on `feat/dashbo
 - `/api/live/devices` gains `detections` for each online device (any signed-in role).
 - Footer note on tiles with detections: "Detection is a viewing aid; it can miss people and mistake objects."
 
-## 6. Out of scope (this version)
+## 6. Simple danger alert (approved: "add the simple alert too")
 
-- **Alerts from detections.** A level-1 danger alert needs to know how close a person is to a nest site, which needs per-camera ground calibration for phones and boards. That is a later design. This version shows "People on camera" only.
+A distance-based alert needs per-camera ground calibration (later design). This version raises a simpler, camera-level alert:
+
+- **When:** `web` receives detections for a device that is **linked to a map camera**, containing a `person` track seen for at least 2 s with score ≥ 0.50, and that camera's zone has at least one **active, unprotected** nest site at that moment.
+- **What:** one `Alert` of kind `DANGER`, level 1, message exactly **"Danger · person seen on camera <code> near active nest sites — check now"**, `cameraId`/`zoneId` set to the linked camera, position = the camera's position, `siteId` null (it is not tied to one site), log entry `danger` with note "Person on camera <code> (track <id>), <n> active unprotected site(s) in zone <zone>".
+- **How often:** at most one open camera-level danger per camera; a new one only after the previous is resolved **and** 10 minutes have passed. Further sightings while one is open are appended to its log (at most one entry per minute).
+- **Where it shows:** the existing danger UI (red level-1 card first in Active, top-bar danger chip, pulsing marker at the camera), with the existing **Resolve danger** action (volunteer/admin).
+- **Not counted in outcomes:** it is not linked to a site, so it does not change any site's Saved/Not saved status.
+- The UI labels it "Camera alert · person detected (not measured distance)" so nobody reads it as a confirmed threat to a specific nest.
+- Phones and boards **not linked** to a map camera never raise alerts (no zone to check).
+
+## 7. Out of scope (this version)
+
+- Distance-based alerts per nest site (needs calibration).
 - Training a turtle model, night/IR detection, detection on recordings, GPU, more than ~6 devices.
 
-## 7. Testing
+## 8. Testing
 
 - Worker (pytest): YOLOX pre/post-processing on a fixture image with a person (the official demo output shape), NMS, dark-frame skip, possible-turtle rule on synthetic moving blobs (wide-slow passes; tall, fast, tiny, huge, overlapping a person all fail), tracker id stability and trail length cap, internal API client with a fake server.
 - Web (vitest): internal routes refuse without/with a wrong worker token and when unset (constant-time compare); Caddyfile blocks `/api/internal/*`; detections stored and expired with frames; devices API shape; tile overlay rendering and toggle.
+- Alert (integration): raised once for a linked camera with an active unprotected site; none when unlinked, no active unprotected sites, track < 2 s or score < 0.50; repeat sightings append to the open alert at most once a minute; a new alert only after resolve + 10 min; exact message; siteId null; outcomes unchanged.
 - End-to-end: the ESP32 board and a phone sending; a person in view shows a `person` box and trail on `/live`; the worker stopped → "Detection off"; Caddy returns 404 for `/api/internal/devices` from the LAN.
