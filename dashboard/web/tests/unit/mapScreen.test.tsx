@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { AlertView, MapSnapshot } from '@/lib/types';
 import type { Playback } from '@/features/map/playback';
@@ -24,6 +25,25 @@ vi.mock('@/features/map/MapView', async () =>
     };
 });
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
+vi.mock('@/features/sites/SiteCloseUp', () => ({ SiteCloseUp: () => <div data-testid="close-up" /> }));
+
+class FakeEventSource
+{
+    static instances: FakeEventSource[] = [];
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onopen: (() => void) | null = null;
+    constructor(public url: string) { FakeEventSource.instances.push(this); }
+    close() {}
+}
+let nextSnapshot: MapSnapshot | null = null;
+const fetchMock = vi.fn(async (url: string) =>
+{
+    if (url === '/api/snapshot')
+    {
+        return { ok: true, json: async () => nextSnapshot } as Response;
+    }
+    return { ok: true, json: async () => ({ site: {}, summary: null, events: [{ id: 'e1', type: 'detected', author: 'Camera', note: null, at: '2026-10-09T00:00:00.000Z' }] }) } as Response;
+});
 
 const { MapScreen } = await import('@/features/map/MapScreen');
 
@@ -35,7 +55,14 @@ const snapshot: MapSnapshot = {
 };
 const user = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
 
-afterEach(() => { cleanup(); localStorage.clear(); });
+beforeEach(() =>
+{
+    FakeEventSource.instances = [];
+    fetchMock.mockClear();
+    vi.stubGlobal('EventSource', FakeEventSource);
+    vi.stubGlobal('fetch', fetchMock);
+});
+afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 describe('MapScreen', () =>
 {
@@ -123,5 +150,27 @@ describe('MapScreen', () =>
         expect(screen.getByTestId('visible-pins').textContent).toBe('');
         fireEvent.click(screen.getByLabelText('Close camera panel'));
         expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
+    });
+
+    it('opens the site drawer from a card and still seeks the feed', async () =>
+    {
+        render(<MapScreen snapshot={twoRuns} user={user} />);
+        fireEvent.click(screen.getAllByText('Digging activity detected; nesting unresolved.')[0]);
+        expect(screen.getByRole('dialog', { name: /Site in zone B/ })).toBeTruthy();
+        expect(await screen.findByText('Arrived')).toBeTruthy();
+        expect(fetchMock).toHaveBeenCalledWith('/api/sites/a1', expect.anything());
+        expect(screen.getByTestId('camera-video').getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
+        fireEvent.click(screen.getByRole('button', { name: 'Close site' }));
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('re-fetches the snapshot when the stream reports a change', async () =>
+    {
+        render(<MapScreen snapshot={snapshot} user={user} />);
+        expect(screen.getByRole('radio', { name: 'Active (0)' })).toBeTruthy();
+        nextSnapshot = { ...twoRuns, activeAlertCount: 2 };
+        act(() => FakeEventSource.instances[0].onmessage?.(new MessageEvent('message', { data: '{"type":"snapshot"}' })));
+        await waitFor(() => expect(screen.getByRole('radio', { name: 'Active (2)' })).toBeTruthy(), { timeout: 2000 });
+        expect(fetchMock).toHaveBeenCalledWith('/api/snapshot', expect.anything());
     });
 });

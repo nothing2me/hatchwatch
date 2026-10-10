@@ -4,6 +4,7 @@ import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
+import { PROTECTION } from '@/features/sites/labels';
 import { useStoredBoolean } from './useStoredBoolean';
 
 const levels = [
@@ -12,14 +13,16 @@ const levels = [
     { label: 'Low', className: 'bg-level-low' },
 ];
 
-const symbol = 'grid h-4 w-5 shrink-0 place-items-center';
+const symbol = 'flex h-4 w-5 shrink-0 items-center justify-center';
 
-export function Legend({ className }: { className?: string })
+const protection = [PROTECTION.unprotected, PROTECTION.protected, PROTECTION.notNeeded];
+
+export function Legend({ className, fadeMinutes = 5 }: { className?: string; fadeMinutes?: number })
 {
     const [open, setOpen] = useStoredBoolean('nesttrace.legend.open', true);
 
     return (
-        <GlassPanel className={cn('w-56 text-xs', className)}>
+        <GlassPanel className={cn('w-60 text-xs', className)}>
             <Collapsible.Root open={open} onOpenChange={setOpen}>
                 <Collapsible.Trigger className="flex h-9 w-full items-center justify-between rounded-xl px-3 text-[10px] font-semibold tracking-[0.16em] text-ink-muted uppercase transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-amber">
                     Legend
@@ -45,8 +48,32 @@ export function Legend({ className }: { className?: string })
                         </span>
                         Camera and view cone
                     </p>
-                    <p className="flex items-center gap-2"><span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-[#4ADE80] bg-[#4ADE80]/25" /></span>Pin · both cameras</p>
-                    <p className="flex items-center gap-2"><span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-[#FFB547] bg-[#FFB547]/25" /></span>Pin · one camera</p>
+                    <div>
+                        <p className="mb-1.5 text-[10px] tracking-[0.12em] text-ink-muted uppercase">Nest sites</p>
+                        <div className="space-y-1.5">
+                            {protection.map(row => (
+                                <p key={row.label} className="flex items-center gap-2">
+                                    <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2" style={{ borderColor: row.color, backgroundColor: `${row.color}40` }} /></span>{row.label}
+                                </p>
+                            ))}
+                            <p className="flex items-center gap-2 text-ink-muted">
+                                <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-[2.5px] border-ink/80" /></span>Thick ring · both cameras
+                            </p>
+                            <p className="flex items-center gap-2 text-ink-muted">
+                                <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border border-ink/80" /></span>Thin ring · one camera
+                            </p>
+                            <p className="flex items-center gap-2 text-ink-muted">
+                                <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-2 border-[#E2581F] bg-[#E2581F]/25 opacity-40" /></span>
+                                Untouched over {fadeMinutes} min
+                            </p>
+                            <p className="flex items-center gap-2 text-ink-muted">
+                                <span className={cn(symbol, 'gap-0.5')}>
+                                    <span className="h-2 w-2 rounded-full bg-[#4ADE80]" /><span className="h-2 w-2 rounded-full bg-[#FFB547]" />
+                                </span>
+                                Feed playing: both / one camera
+                            </p>
+                        </div>
+                    </div>
                     <p className="flex items-center gap-2 text-ink-muted"><span className={symbol}><span className="h-0.5 w-4 rounded-full bg-amber" /></span>Turtle track (with footage)</p>
                 </Collapsible.Content>
             </Collapsible.Root>

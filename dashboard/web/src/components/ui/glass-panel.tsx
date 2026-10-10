@@ -1,8 +1,8 @@
-import type { HTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { cn } from '@/lib/cn';
 
 // Translucent floating panel used over the map.
-export function GlassPanel({ className, ...props }: HTMLAttributes<HTMLDivElement>)
+export function GlassPanel({ className, ...props }: ComponentProps<'div'>)
 {
     return (
         <div

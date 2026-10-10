@@ -11,7 +11,8 @@ import { boundsOf, viewCone } from '@/lib/geo';
 import type { MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
-import { type Playback, visibleAlerts } from './playback';
+import type { Playback } from './playback';
+import { pinFeatures } from './pins';
 import type { LayerKey } from './MapControls';
 
 export { initialBounds } from './bounds';
@@ -28,21 +29,31 @@ interface MapViewProps
     selectedCameraId: string | null;
     onSelectCamera: (cameraId: string) => void;
     playback: Playback | null;
+    now?: number;
+    selectedAlertId?: string | null;
+    onSelectAlert?: (alertId: string) => void;
 }
 
 const levelDot = { HIGH: 'bg-level-high', MEDIUM: 'bg-level-medium', LOW: 'bg-level-low' } as const;
 
 const levelColor = ['match', ['get', 'level'], 'HIGH', '#E2581F', 'MEDIUM', '#FFB547', '#4C8DD6'] as unknown as string;
 
-// Pins seen by both cameras of a pair are green; single-camera pins stay amber.
-const tierFill = ['match', ['get', 'tier'], 'TWO_CAMERA', 'rgba(74,222,128,0.25)', 'SINGLE_CAMERA', 'rgba(255,181,71,0.25)', 'rgba(255,181,71,0.2)'] as unknown as string;
-const tierStroke = ['match', ['get', 'tier'], 'TWO_CAMERA', '#4ADE80', '#FFB547'] as unknown as string;
+// Pin colour, ring weight and opacity are precomputed per feature (see pins.ts).
+const pinPaint = {
+    'circle-color': ['get', 'color'],
+    'circle-opacity': ['*', 0.25, ['get', 'opacity']],
+    'circle-stroke-color': ['get', 'color'],
+    'circle-stroke-width': ['get', 'strokeWidth'],
+    'circle-stroke-opacity': ['get', 'opacity'],
+} as unknown as Record<string, string>;
 // Pins a metre or two apart overlap at beach zoom; grow them only as the map zooms in.
 const alertRadius = ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10, 20, 16] as unknown as number;
+const selectedRadius = ['interpolate', ['linear'], ['zoom'], 14, 9, 18, 16, 20, 23] as unknown as number;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback }, ref)
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
+    const [pinHover, setPinHover] = useState(false);
     const style = useMemo(buildMapStyle, []);
 
     const zonesGeoJson = useMemo<FeatureCollection>(() => ({
@@ -63,20 +74,9 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
         })),
     }), [snapshot.cameras, selectedCameraId]);
 
-    // Rebuild (and so MapLibre setData) only when the visible set changes, not on every clock tick.
-    const visibleIds = visibleAlerts(snapshot.alerts, playback).map(alert => alert.id).join(',');
-    const alertsGeoJson = useMemo<FeatureCollection>(() =>
-    {
-        const ids = new Set(visibleIds.split(','));
-        return {
-            type: 'FeatureCollection',
-            features: snapshot.alerts.filter(alert => alert.position !== null && ids.has(alert.id)).map(alert => ({
-                type: 'Feature',
-                properties: { status: alert.status, tier: alert.evidenceTier ?? 'NONE' },
-                geometry: { type: 'Point', coordinates: alert.position! },
-            })),
-        };
-    }, [snapshot.alerts, visibleIds]);
+    // Rebuild (and so MapLibre setData) only when a pin's look changes, not on every clock tick.
+    const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
+    const alertsGeoJson = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(pinKey) }), [pinKey]);
 
     const [[west, south], [east, north]] = initialBounds(snapshot);
     const padding = typeof window === 'undefined' ? 80 : fitPadding(window.innerWidth, window.innerHeight);
@@ -92,6 +92,18 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 maxZoom={20}
                 dragRotate
                 attributionControl={{ compact: true }}
+                interactiveLayerIds={layers.alerts && onSelectAlert ? ['alert-ring'] : []}
+                cursor={pinHover ? 'pointer' : undefined}
+                onMouseEnter={() => setPinHover(true)}
+                onMouseLeave={() => setPinHover(false)}
+                onClick={event =>
+                {
+                    const id = event.features?.[0]?.properties?.id;
+                    if (typeof id === 'string')
+                    {
+                        onSelectAlert?.(id);
+                    }
+                }}
                 onError={event =>
                 {
                     // Only a failing satellite source means imagery is offline.
@@ -124,10 +136,11 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 )}
                 {layers.alerts && (
                     <Source id="alerts" type="geojson" data={alertsGeoJson}>
-                        <Layer id="alert-ring" type="circle" paint={{
-                            'circle-radius': alertRadius, 'circle-color': tierFill,
-                            'circle-stroke-color': tierStroke, 'circle-stroke-width': 2,
+                        <Layer id="alert-selected" type="circle" filter={['==', ['get', 'selected'], true]} paint={{
+                            'circle-radius': selectedRadius, 'circle-color': 'rgba(0,0,0,0)',
+                            'circle-stroke-color': '#FFB547', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.9,
                         }} />
+                        <Layer id="alert-ring" type="circle" paint={{ 'circle-radius': alertRadius, ...pinPaint }} />
                     </Source>
                 )}
 

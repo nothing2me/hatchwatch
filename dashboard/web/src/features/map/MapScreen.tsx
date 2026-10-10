@@ -8,15 +8,25 @@ import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
 import { CameraPanel } from '@/features/cameras/CameraPanel';
 import type { SeekRequest } from '@/features/cameras/CameraVideo';
+import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
+import { useNow } from '@/features/live/useNow';
+import { SiteDrawer } from '@/features/sites/SiteDrawer';
 import { Legend } from './Legend';
 import { MapControls, type LayerKey } from './MapControls';
 import { fitPadding } from './bounds';
 import { initialBounds, MapView } from './MapView';
 import { alertKey, type Playback, playbackKey } from './playback';
 
-export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: SessionUser })
+// `snapshot` is the server-rendered starting point; the live stream replaces it as things change.
+export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSnapshot; user: SessionUser })
 {
+    const snapshot = useLiveSnapshot(initialSnapshot);
+    const now = useNow(30_000);
     const mapRef = useRef<MapRef>(null);
+    const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
+    // A site that drops out of the snapshot closes its drawer.
+    const selectedAlert = snapshot.alerts.find(alert => alert.id === selectedAlertId) ?? null;
+    const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
     const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true });
 
@@ -81,9 +91,25 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
         }
     }, [snapshot.cameras]);
 
+    // Cards and pins both open the site drawer and keep Plan A's fly-and-seek.
+    const openSite = useCallback((alert: AlertView) =>
+    {
+        setSelectedAlertId(alert.id);
+        flyToAlert(alert);
+    }, [flyToAlert]);
+
+    const openSiteById = useCallback((alertId: string) =>
+    {
+        const alert = snapshot.alerts.find(candidate => candidate.id === alertId);
+        if (alert)
+        {
+            openSite(alert);
+        }
+    }, [snapshot.alerts, openSite]);
+
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
-            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} />
+            <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById} />
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
@@ -91,10 +117,10 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
 
                 <div className="flex min-h-0 flex-1 gap-3">
                     <div className="flex min-h-0 flex-col items-start max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:max-h-[45%] md:w-72">
-                        <AlertsFeed alerts={snapshot.alerts} onSelect={flyToAlert} playback={playback} />
+                        <AlertsFeed alerts={snapshot.alerts} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} />
                     </div>
 
-                    <div className="ml-auto flex items-start gap-3">
+                    <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
                         {selectedCamera && (
                             <div className="max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:z-10">
                                 <CameraPanel camera={selectedCamera} onClose={() => selectCamera(null)} onTime={handleTime} seekTo={seek} />
@@ -107,12 +133,15 @@ export function MapScreen({ snapshot, user }: { snapshot: MapSnapshot; user: Ses
                             layers={layers}
                             onToggleLayer={key => setLayers(current => ({ ...current, [key]: !current[key] }))}
                         />
+                        {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} />}
                     </div>
                 </div>
 
-                <div className="pointer-events-auto absolute right-3 bottom-9 max-md:hidden">
-                    <Legend />
-                </div>
+                {!selectedAlert && (
+                    <div className="pointer-events-auto absolute right-3 bottom-9 max-md:hidden">
+                        <Legend fadeMinutes={snapshot.fadeMinutes} />
+                    </div>
+                )}
             </div>
         </main>
     );
