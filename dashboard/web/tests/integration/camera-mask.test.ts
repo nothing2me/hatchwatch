@@ -22,7 +22,7 @@ vi.mock('@/lib/db', async () =>
 const { prisma } = await import('@/lib/db');
 const { seedDatabase } = await import('../../prisma/seed');
 const { GET, PUT } = await import('@/app/api/cameras/masks/route');
-const { updateCamera: updateCameraAction } = await import('@/app/(app)/camera-actions');
+const { deleteZone: deleteZoneAction, updateCamera: updateCameraAction } = await import('@/app/(app)/camera-actions');
 const { loadMapSnapshot } = await import('@/server/snapshot');
 const { listCameras } = await import('@/lib/cameras/manage');
 
@@ -85,6 +85,11 @@ describe('PUT /api/cameras/masks', () =>
         const many = await put({ code: 'A1', polygon: Array.from({ length: 65 }, (_, i) => [0.5 + 0.4 * Math.cos(i / 10), 0.5 + 0.4 * Math.sin(i / 10)]) });
         expect(many.status).toBe(400);
         expect(await many.text()).toBe('polygon must be 3–64 points inside 0–1 with a non-zero area, or null.');
+        // Valid as sent, but rounding to the stored 4 decimals leaves too small an area.
+        const sliver = await put({ code: 'A1', polygon: [[0.05, 0.5], [0.95, 0.5], [0.5, 0.500224]] });
+        expect(sliver.status).toBe(400);
+        expect(await sliver.text()).toBe('polygon must be 3–64 points inside 0–1 with a non-zero area, or null.');
+        expect((await prisma.camera.findUniqueOrThrow({ where: { code: 'A1' } })).maskPolygon).toBeNull();
         expect((await put({ code: 'Z9', polygon: rect })).status).toBe(404);
     });
 
@@ -133,5 +138,23 @@ describe('PUT /api/cameras/masks', () =>
         expect(Object.keys(researchFile().by_code)).toEqual(['A3']);
         expect(await updateCameraAction('A3', { code: 'A9' })).toEqual({ ok: true, code: 'A9' });
         expect(Object.keys(researchFile().by_code)).toEqual(['A9']);
+    });
+
+    it('drops a deleted zone\'s cameras from the research file', async () =>
+    {
+        // A map-made zone with nothing recorded can be deleted along with its cameras.
+        const a = await prisma.zone.findUniqueOrThrow({ where: { code: 'A' } });
+        const zone = await prisma.zone.create({ data: { code: 'F', name: 'Zone F', activityLevel: 'LOW', createdById: admin.id, outline: a.outline as object } });
+        const a1 = await prisma.camera.findUniqueOrThrow({ where: { code: 'A1' } });
+        await prisma.camera.create({ data: { code: 'F1', zoneId: zone.id, lng: a1.lng, lat: a1.lat, headingDeg: a1.headingDeg } });
+        await put({ code: 'A1', polygon: rect });
+        await put({ code: 'F1', polygon: [[0.2, 0.4], [0.8, 0.4], [0.5, 0.9]] });
+        expect(Object.keys(researchFile().by_code)).toEqual(['A1', 'F1']);
+        expect(researchFile().cameras[0].label).toMatch(/^From camera F1/);
+        expect(await deleteZoneAction('F')).toEqual({ ok: true, code: 'F' });
+        const file = researchFile();
+        expect(Object.keys(file.by_code)).toEqual(['A1']);
+        expect(file.cameras[0].label).toMatch(/^From camera A1/);
+        expect(file.cameras[0].polygon).toEqual(file.by_code.A1.polygon);
     });
 });

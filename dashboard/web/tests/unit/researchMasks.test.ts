@@ -105,7 +105,7 @@ describe('syncResearchMasks', () =>
         writeFileSync(join(operator, 'camera-masks.json'), legacy);
         await syncResearchMasks(fakePrisma(rowsOf(example)), live, operator);
         expect(readFileSync(join(operator, 'camera-masks.legacy.json'), 'utf8')).toBe(legacy);
-        // A later sync of a new-format file leaves the legacy copy alone.
+        // Once the legacy copy exists it is never overwritten, even if the live file lacks by_code again.
         writeFileSync(join(operator, 'camera-masks.json'), JSON.stringify({ cameras: [] }));
         await syncResearchMasks(fakePrisma([]), live, operator);
         expect(readFileSync(join(operator, 'camera-masks.legacy.json'), 'utf8')).toBe(legacy);

@@ -117,7 +117,13 @@ export async function deleteZone(code: string): Promise<ZoneActionResult>
     {
         return { ok: false, error: 'That zone no longer exists.' };
     }
-    return run(actorId => removeZone(prisma, actorId, parsed.data));
+    const result = await run(actorId => removeZone(prisma, actorId, parsed.data));
+    if (result.ok)
+    {
+        // The zone's cameras are gone; their masks must leave the research file too.
+        await syncResearchMasks(prisma, liveSettings().root);
+    }
+    return result;
 }
 
 export async function updateCamera(code: string, patch: { code?: string; lng?: number; lat?: number; headingDeg?: number; fovDeg?: number; rangeM?: number; status?: 'ONLINE' | 'OFFLINE' }): Promise<CameraActionResult>

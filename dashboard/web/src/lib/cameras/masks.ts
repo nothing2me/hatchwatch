@@ -69,7 +69,9 @@ export function polygonArea(points: readonly MaskPoint[]): number
     return Math.abs(twice) / 2;
 }
 
-/** A per-camera mask: 3-64 finite points inside 0-1 (closing repeat allowed) enclosing a non-zero area. */
+const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
+
+/** A per-camera mask: 3-64 finite points inside 0-1 (closing repeat allowed) enclosing a non-zero area, judged as stored (rounded). */
 export function validCameraMask(value: unknown): value is MaskPoint[]
 {
     if (!Array.isArray(value) || !value.every(point => Array.isArray(point)
@@ -79,16 +81,15 @@ export function validCameraMask(value: unknown): value is MaskPoint[]
     {
         return false;
     }
-    const ring = openRing(value as MaskPoint[]);
+    // Rounding can merge points or shrink the area, so check the polygon that would be saved.
+    const ring = openRing(openRing(value as MaskPoint[]).map(([x, y]) => [round4(x), round4(y)] as MaskPoint));
     return ring.length >= 3 && ring.length <= MAX_MASK_POINTS && polygonArea(ring) >= MIN_MASK_AREA;
 }
-
-const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
 
 /** The stored form: open ring, coordinates rounded to 4 decimals. */
 export function cleanCameraMask(points: readonly MaskPoint[]): MaskPoint[]
 {
-    return openRing(points).map(([x, y]) => [round4(x), round4(y)] as MaskPoint);
+    return openRing(openRing(points).map(([x, y]) => [round4(x), round4(y)] as MaskPoint));
 }
 
 /** A stored Camera.maskPolygon as a mask, or null (whole picture) when absent or invalid. */

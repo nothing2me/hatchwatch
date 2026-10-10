@@ -57,6 +57,15 @@ describe('per-camera masks (normalised 0-1)', () =>
         expect(validCameraMask([[0.1, 0.1, 0.2], [0.9, 0.1], [0.5, 0.9]])).toBe(false);
     });
 
+    it('judges the polygon as it will be stored, after rounding to 4 decimals', () =>
+    {
+        // 0.5 * 0.9 * 0.000224 is just above the area floor; rounded, the height is 0.0002 and the area falls below it.
+        const sliver: [number, number][] = [[0.05, 0.5], [0.95, 0.5], [0.5, 0.500224]];
+        expect(polygonArea(sliver)).toBeGreaterThanOrEqual(0.0001);
+        expect(validCameraMask(sliver)).toBe(false);
+        expect(validCameraMask(cleanCameraMask([[0.1, 0.1], [0.9, 0.1], [0.5, 0.9]]))).toBe(true);
+    });
+
     it('drops a repeated closing point and measures the area', () =>
     {
         expect(openRing([...triangle, triangle[0]])).toEqual(triangle);
