@@ -22,6 +22,20 @@ export const liveManifestSchema = z.object({
     cameras: z.tuple([camera, camera]),
     pins: z.literal('pins/predictions.json'),
     note: z.string(),
-}).strict();
+}).strict().superRefine((manifest, context) =>
+{
+    const [first, second] = manifest.cameras;
+    if (first.end === second.end || first.index === second.index)
+    {
+        context.addIssue({ code: 'custom', path: ['cameras'], message: 'cameras need distinct ends and indexes' });
+    }
+    manifest.cameras.forEach((camera, position) =>
+    {
+        if (camera.video !== `camera-${camera.index}.mp4` || camera.calibration !== `calibration-${camera.index}.json`)
+        {
+            context.addIssue({ code: 'custom', path: ['cameras', position], message: 'video and calibration names must match the camera index' });
+        }
+    });
+});
 
 export type LiveManifest = z.infer<typeof liveManifestSchema>;

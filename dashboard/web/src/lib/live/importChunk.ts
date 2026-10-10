@@ -1,4 +1,5 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
@@ -62,13 +63,14 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
     const startedAt = new Date(manifest.recording_started_at);
     const relative = (name: string) => `live/${manifest.chunk_id}/${name}`;
     const target = join(mediaRoot, 'live', manifest.chunk_id);
-    const alreadyThere = existsSync(target);
-    mkdirSync(target, { recursive: true });
+    // Stage next to the final folder and rename only after the commit, so a failed or racing import never touches committed media.
+    const staging = join(mediaRoot, 'live', `.${manifest.chunk_id}.tmp-${process.pid}-${randomBytes(4).toString('hex')}`);
+    mkdirSync(staging, { recursive: true });
     try
     {
         for (const camera of manifest.cameras)
         {
-            copyFileSync(join(dir, camera.video), join(target, camera.video));
+            copyFileSync(join(dir, camera.video), join(staging, camera.video));
         }
         const result = await prisma.$transaction(async tx =>
         {
@@ -91,10 +93,13 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
             for (const pin of pins)
             {
                 // One camera saw it: that camera owns it. Two cameras: the x_min (<zone>1) camera.
-                const index = pin.source_views.length === 1
+                const view = pin.source_views.length === 1
                     ? manifest.cameras.findIndex(camera => camera.index === pin.source_views[0])
                     : manifest.cameras.findIndex(camera => camera.end === 'x_min');
-                const view = Math.max(index, 0);
+                if (view < 0)
+                {
+                    throw new Error(`Pin ${pin.id} names a camera the manifest does not list`);
+                }
                 const [lng, lat] = simPointToLngLat(frame, pin.point);
                 const detectedAt = new Date(startedAt.getTime() + pin.interval[0] * 1000);
                 const alert = await tx.alert.create({
@@ -124,14 +129,17 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
             }
             return { chunkId: manifest.chunk_id, zoneCode: zone.code, sites: pins.length };
         });
+        renameSync(staging, target);
         publishChange('live-chunk');
         return result;
     }
     catch (error)
     {
-        if (!alreadyThere)
+        rmSync(staging, { recursive: true, force: true });
+        // Another watcher committed this chunk first: not an error, and its media stays untouched.
+        if ((error as { code?: string }).code === 'P2002' || await prisma.liveChunk.findUnique({ where: { id: manifest.chunk_id }, select: { id: true } }))
         {
-            rmSync(target, { recursive: true, force: true });
+            return null;
         }
         throw error;
     }

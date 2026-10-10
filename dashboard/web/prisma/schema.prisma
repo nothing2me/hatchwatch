@@ -250,7 +250,7 @@ model SiteEvent {
 
 model LiveChunk {
   id          String   @id
-  sequence    Int      @unique
+  sequence    Int
   zoneId      String
   zone        Zone     @relation(fields: [zoneId], references: [id])
   startedAt   DateTime

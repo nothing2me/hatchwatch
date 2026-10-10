@@ -1,11 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createPrismaClient } from '@/lib/db';
 import { importLiveChunk } from '@/lib/live/importChunk';
 import { ageSites, pruneMedia, scanOnce, type LiveSettings } from '@/lib/live/watcher';
 import { addSiteEvent } from '@/lib/sites/events';
+import { importSimRun } from '@/lib/sim/importRun';
 import { seedDatabase } from '../../prisma/seed';
 import { validManifest } from '../unit/live-manifest.test';
 
@@ -111,6 +112,51 @@ describe('importLiveChunk', () =>
     });
 });
 
+describe('concurrency and retries', () =>
+{
+    it('two simultaneous imports of one chunk yield one result and keep the media', async () =>
+    {
+        const dir = makeChunk(3);
+        const results = await Promise.all([
+            importLiveChunk(prisma, { chunkDir: dir, mediaRoot: settings.mediaRoot }),
+            importLiveChunk(prisma, { chunkDir: dir, mediaRoot: settings.mediaRoot }),
+        ]);
+        expect(results.filter(result => result !== null)).toHaveLength(1);
+        for (const camera of [0, 1])
+        {
+            expect(existsSync(join(settings.mediaRoot, `live/live-000003-abc3/camera-${camera}.mp4`))).toBe(true);
+        }
+        expect(readdirSync(join(settings.mediaRoot, 'live'))).toEqual(['live-000003-abc3']);
+        expect(await prisma.alert.count()).toBe(2);
+    });
+
+    it('imports a chunk whose sequence another chunk already used', async () =>
+    {
+        await importLiveChunk(prisma, { chunkDir: makeChunk(5), mediaRoot: settings.mediaRoot });
+        const dir = makeChunk(6);
+        const manifestPath = join(dir, 'live-chunk.json');
+        writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(readFileSync(manifestPath, 'utf8')), sequence: 5 }));
+        expect(await scanOnce(prisma, settings)).toBe(1);
+        expect(await prisma.liveChunk.count({ where: { sequence: 5 } })).toBe(2);
+    });
+
+    it('attempts a failing chunk once until its manifest changes', async () =>
+    {
+        const dir = makeChunk(8);
+        rmSync(join(dir, 'camera-1.mp4'));
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+        await scanOnce(prisma, settings);
+        await scanOnce(prisma, settings);
+        await scanOnce(prisma, settings);
+        expect(error).toHaveBeenCalledTimes(1);
+        writeFileSync(join(dir, 'camera-1.mp4'), 'video');
+        const later = new Date(Date.now() + 5000);
+        utimesSync(join(dir, 'live-chunk.json'), later, later);
+        expect(await scanOnce(prisma, settings)).toBe(1);
+        error.mockRestore();
+    });
+});
+
 describe('scanOnce', () =>
 {
     it('imports new chunks once, ignoring folders without a manifest', async () =>
@@ -148,6 +194,35 @@ describe('ageSites', () =>
         expect((await prisma.alert.findUniqueOrThrow({ where: { id: b.id } })).status).toBe('REVIEWED');
         const event = await prisma.siteEvent.findFirstOrThrow({ where: { alertId: a.id, type: 'archived' } });
         expect(event).toMatchObject({ author: 'Live feed', note: 'Older than 20 min; removed from the live map. The log is kept.' });
+    });
+});
+
+describe('ageSites guards', () =>
+{
+    it('never archives sim-import demo sites', async () =>
+    {
+        const dir = join(work, 'run/A-demo-1');
+        mkdirSync(join(dir, 'view-0'), { recursive: true });
+        mkdirSync(join(dir, 'view-1'), { recursive: true });
+        mkdirSync(join(dir, 'pins'), { recursive: true });
+        for (const file of ['camera-0.mp4', 'camera-1.mp4', 'view-0/pure-motion.mp4', 'view-1/pure-motion.mp4']) writeFileSync(join(dir, file), 'v');
+        for (const camera of [0, 1]) writeFileSync(join(dir, `calibration-${camera}.json`), JSON.stringify({ camera, width: 1280, height: 720, ground_bounds: [-12, 12, -8, 8] }));
+        writeFileSync(join(dir, 'timestamps.json'), JSON.stringify([0, 0.125, 0.25]));
+        writeFileSync(join(dir, 'analysis.json'), '{}');
+        writeFileSync(join(dir, 'pins/predictions.json'), JSON.stringify({ schema_version: 1, methods: { pins: [{ id: 'p', point: [1, 1], interval: [1, 2], score: 1, evidence_tier: 'two_camera', source_views: [0, 1] }] } }));
+        await importSimRun({ runDir: dir, pair: 'B', mediaRoot: settings.mediaRoot, prisma });
+        expect(await ageSites(prisma, settings, new Date(Date.now() + 3_600_000))).toBe(0);
+    });
+
+    it('skips a site a person touched after the candidate query (re-checked under the lock)', async () =>
+    {
+        await importLiveChunk(prisma, { chunkDir: makeChunk(0), mediaRoot: settings.mediaRoot });
+        const alert = await prisma.alert.findFirstOrThrow();
+        const admin = await prisma.user.findFirstOrThrow();
+        await addSiteEvent(prisma, { alertId: alert.id, type: 'note', note: 'seen', userId: admin.id, author: 'Admin' });
+        const result = await addSiteEvent(prisma, { alertId: alert.id, type: 'archived', userId: null, author: 'Live feed', system: true, onlyIfUntouched: true });
+        expect(result).toBeNull();
+        expect(await prisma.siteEvent.count({ where: { alertId: alert.id, type: 'archived' } })).toBe(0);
     });
 });
 

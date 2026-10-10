@@ -8,7 +8,11 @@ export class SiteEventError extends Error
     constructor(public code: 'NOT_FOUND' | 'NEEDS_CONFIRMED' | 'NOT_PERSON_EVENT', message: string) { super(message); }
 }
 
-export async function addSiteEvent(prisma: PrismaClient, input: { alertId: string; type: SiteEventType; note?: string; userId: string | null; author: string; at?: Date; system?: boolean }): Promise<SiteSummary>
+type EventInput = { alertId: string; type: SiteEventType; note?: string; userId: string | null; author: string; at?: Date; system?: boolean };
+
+export async function addSiteEvent(prisma: PrismaClient, input: EventInput & { onlyIfUntouched: true }): Promise<SiteSummary | null>;
+export async function addSiteEvent(prisma: PrismaClient, input: EventInput): Promise<SiteSummary>;
+export async function addSiteEvent(prisma: PrismaClient, input: EventInput & { onlyIfUntouched?: boolean }): Promise<SiteSummary | null>
 {
     if (!input.system && !PERSON_EVENTS.includes(input.type))
     {
@@ -23,6 +27,10 @@ export async function addSiteEvent(prisma: PrismaClient, input: { alertId: strin
         {
             throw new SiteEventError('NOT_FOUND', 'Site not found.');
         }
+        if (input.onlyIfUntouched && alert.events.some(event => PERSON_EVENTS.includes(event.type as SiteEventType)))
+        {
+            return null;
+        }
         const before = summarizeSite(alert.events as { type: SiteEventType; at: Date; createdAt: Date }[]);
         if (input.type === 'hatched' && before.nesting !== 'confirmed')
         {
@@ -34,6 +42,9 @@ export async function addSiteEvent(prisma: PrismaClient, input: { alertId: strin
         await tx.alert.update({ where: { id: alert.id }, data: { status: statusFor(after, events) } });
         return after;
     });
-    publishChange('site-event');
+    if (summary)
+    {
+        publishChange('site-event');
+    }
     return summary;
 }
