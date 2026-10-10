@@ -64,9 +64,12 @@ flowchart LR
     pub -->|sim-import · live watcher<br/>read-only| web
 
     phone["Phones<br/>/cam page"] -->|JPEG frames| caddy
-    board["ESP32-S3 board<br/>token + motion header"] -->|JPEG frames| caddy
-    people["Volunteers & admins<br/>browser"] -->|login| caddy
+    board["ESP32-S3 board<br/>token + X-HatchWatch-Motion"] -->|JPEG frames| caddy
+    people["Volunteers, admins, judges<br/>browser"] -->|login| caddy
+    tunnel["Optional public link<br/>Cloudflare tunnel (demo only)"] -.->|HTTPS| web
 ```
+
+The dashboard has four pages: **Map** (zones, cameras, nest sites, alerts), **Cameras** (every map camera: live picture when a phone or board is linked, otherwise its recorded clip marked *Simulated*; plus unlinked devices, recordings and detections), **Analytics** (saved vs not saved, notes when demo patrol data is included) and **Settings** (cameras and watch masks, users; admin only).
 
 ### A live frame, from camera to alert
 
@@ -82,8 +85,11 @@ sequenceDiagram
     K->>W: GET newest frame (internal API, worker token)
     K->>K: YOLOX-nano people, possible-turtle rule, tracks
     K->>W: POST detections (boxes, trails)
-    alt person on a linked camera for 2 s and the zone has unprotected nests
+    W->>W: check the feet point of each person against the camera watch mask
+    alt inside the mask, seen 2 s, zone has unprotected nests
         W->>W: open one camera danger alert (level 1)
+    else outside the mask
+        W->>W: no alert, drawn grey as outside watch area
     end
     U->>W: poll live devices and the map
     W-->>U: picture, boxes, trails, alerts
@@ -134,6 +140,21 @@ flowchart TB
     c -.->|/api/internal/* never proxied| x((blocked))
 ```
 
+### Watch masks
+
+Each map camera can have its own watch mask (Settings → Cameras → Mask), drawn over its live picture or latest clip. Only people whose feet are inside the mask can raise a camera danger alert; a camera without a mask watches the whole picture. The dashboard also keeps the research runner's `camera-masks.json` readable, so simulated chunks use the same areas.
+
+```mermaid
+flowchart LR
+    admin["Admin draws mask<br/>Settings → Cameras"] --> cam[("Camera.maskPolygon<br/>per camera, 0–1 coords")]
+    cam --> rule{"feet inside mask?"}
+    det["Worker detections<br/>person boxes"] --> rule
+    rule -->|yes| alert["Camera danger alert<br/>(if zone has unprotected nests)"]
+    rule -->|no| grey["Grey box, no alert"]
+    cam --> file[("artifacts/operator/camera-masks.json<br/>by_code + legacy slots")]
+    file --> runner["Research live runner<br/>(simulated chunks)"]
+```
+
 ## Quick start (dashboard)
 
 ```sh
@@ -144,7 +165,7 @@ docker compose up -d --build  # web, db, caddy, worker
 
 ESP32 camera board: `firmware/esp32s3-cam/tools/board.py` sets it up, flashes, restarts and shows its log (`board init`, `board flash`, `board dashboard`, `board restart`, `board status`). See [the firmware README](firmware/esp32s3-cam/README.md#quick-setup-with-the-board-helper).
 
-Open http://localhost:3000 on the laptop, or `https://<LAN_HOST>:3443` from a phone on the same Wi-Fi. Sign in with the seeded admin from `.env`. From **Cameras**, use **Connect phone** (QR code) or **Add board camera** (ESP32). The full guide is [`dashboard/README.md`](dashboard/README.md).
+Open http://localhost:3000 on the laptop, or `https://<LAN_HOST>:3443` from a phone on the same Wi-Fi. Sign in with the seeded admin from `.env`. From **Cameras**, use **Connect phone** (QR code) or **Add board camera** (ESP32). Settings live at `/settings` (old `/setup` and `/live` links redirect). The full guide is [`dashboard/README.md`](dashboard/README.md).
 
 
 ## Run locally
@@ -168,7 +189,7 @@ Open **http://127.0.0.1:5173**. Choose **Six turtles · large-beach stress**, **
 
 To inspect the bundled development recording immediately, run `python scripts/install-example.py` before opening the UI. The example includes both saved camera videos, Pure motion videos, projected motion maps, extracted signals, predictions, calibration, and separate evaluator truth. The detector still receives only staged signal inputs.
 
-`NESTTRACE_BROWSER` can specify a Chrome-compatible executable. On systems without Chrome/Edge, run `npx playwright install chromium`; the recording CLI then uses Playwright's browser. FFmpeg is provided by `imageio-ffmpeg`.
+`HATCHWATCH_BROWSER` (old name `NESTTRACE_BROWSER` still works) can specify a Chrome-compatible executable. On systems without Chrome/Edge, run `npx playwright install chromium`; the recording CLI then uses Playwright's browser. FFmpeg is provided by `imageio-ffmpeg`.
 
 ## Seaward layout, walkers, trails and people (opt-in)
 
