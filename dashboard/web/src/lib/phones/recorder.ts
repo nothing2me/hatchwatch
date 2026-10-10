@@ -57,11 +57,13 @@ export function canRun(command: string, args: string[]): Promise<boolean>
     });
 }
 
-async function findSidecars(root: string): Promise<string[]>
+async function findFiles(root: string, extensions: string[]): Promise<string[]>
 {
     const entries = await readdir(root, { withFileTypes: true, recursive: true }).catch(() => []);
-    return entries.filter(entry => entry.isFile() && entry.name.endsWith('.json')).map(entry => join(entry.parentPath, entry.name));
+    return entries.filter(entry => entry.isFile() && extensions.some(extension => entry.name.endsWith(extension))).map(entry => join(entry.parentPath, entry.name));
 }
+
+const findSidecars = (root: string) => findFiles(root, ['.json']);
 
 async function readSidecar(path: string): Promise<Sidecar | null>
 {
@@ -155,30 +157,53 @@ export class Recorder implements FrameRecorder
     {
         const sidecar = await readSidecar(path);
         const base = path.slice(0, -'.json'.length);
-        if (sidecar?.file.endsWith('.avi.part'))
+        if (!sidecar || this.expired(sidecar, Date.now()))
         {
-            const repaired = await repairAvi(`${base}.avi.part`, sidecar.fps).catch(() => null);
+            return;
+        }
+        if (sidecar.file.endsWith('.avi.part'))
+        {
+            // A close killed between its rename and the sidecar rewrite leaves only the .avi; finish from that.
+            const source = existsSync(`${base}.avi.part`) ? `${base}.avi.part` : `${base}.avi`;
+            const repaired = existsSync(source) ? await repairAvi(source, sidecar.fps).catch(() => null) : null;
             if (!repaired)
             {
+                console.error(`Could not repair recording ${source}; leaving it as it is.`);
                 return;
             }
-            await rename(`${base}.avi.part`, `${base}.avi`);
+            if (source !== `${base}.avi`)
+            {
+                await rename(source, `${base}.avi`);
+            }
             const start = Date.parse(sidecar.startedAt);
             const durationS = repaired.frameCount / sidecar.fps;
             await writeSidecar(base, { ...sidecar, frameCount: repaired.frameCount, durationS, endedAt: new Date(start + durationS * 1000).toISOString(), file: `${basename(base)}.avi` });
             this.queueConversion(base);
         }
-        else if (sidecar?.file.endsWith('.avi'))
+        else if (sidecar.file.endsWith('.avi'))
         {
             this.queueConversion(base);
         }
+        else if (sidecar.file.endsWith('.mp4'))
+        {
+            // Converted, but killed before the .avi was deleted.
+            await rm(`${base}.avi`, { force: true });
+        }
     }
 
-    // Deletes every recording that ended more than retentionHours before `now`. Returns how many.
+    private expired(sidecar: Sidecar, now: number): boolean
+    {
+        const end = sidecar.endedAt ? Date.parse(sidecar.endedAt) : Date.parse(sidecar.startedAt) + this.options.segmentMinutes * 60_000;
+        return end < now - this.options.retentionHours * 3_600_000;
+    }
+
+    // Deletes every recording that ended more than retentionHours before `now`, and any video file no valid
+    // sidecar names (orphan, corrupt sidecar) once its mtime is that old. Returns how many recordings and orphans.
     async sweep(now: number = Date.now()): Promise<number>
     {
         const cutoff = now - this.options.retentionHours * 3_600_000;
         let removed = 0;
+        const named = new Set<string>();
         for (const path of await findSidecars(this.options.root))
         {
             const sidecar = await readSidecar(path);
@@ -186,14 +211,27 @@ export class Recorder implements FrameRecorder
             {
                 continue;
             }
-            const end = sidecar.endedAt ? Date.parse(sidecar.endedAt) : Date.parse(sidecar.startedAt) + this.options.segmentMinutes * 60_000;
-            if (end >= cutoff)
+            const base = path.slice(0, -'.json'.length);
+            if (!this.expired(sidecar, now))
+            {
+                named.add(join(dirname(path), sidecar.file));
+                continue;
+            }
+            await Promise.all(['.avi.part', '.avi', '.mp4', '.json'].map(extension => rm(base + extension, { force: true })));
+            removed += 1;
+        }
+        for (const video of await findFiles(this.options.root, ['.mp4', '.avi', '.avi.part']))
+        {
+            if (named.has(video))
             {
                 continue;
             }
-            const base = path.slice(0, -'.json'.length);
-            await Promise.all(['.avi.part', '.avi', '.mp4', '.json'].map(extension => rm(base + extension, { force: true })));
-            removed += 1;
+            const info = await stat(video).catch(() => null);
+            if (info && info.mtimeMs < cutoff)
+            {
+                await rm(video, { force: true });
+                removed += 1;
+            }
         }
         return removed;
     }
@@ -291,7 +329,12 @@ export class Recorder implements FrameRecorder
                 return;
             }
             const sidecar = await readSidecar(`${base}.json`);
-            if (sidecar)
+            if (!sidecar)
+            {
+                // Swept while converting: nothing would ever list or expire this mp4.
+                await rm(`${base}.mp4`, { force: true });
+            }
+            else
             {
                 await writeSidecar(base, { ...sidecar, file: `${basename(base)}.mp4` });
             }
@@ -323,13 +366,14 @@ export async function startRecorder(options: RecorderOptions): Promise<Recorder>
     }
     await mkdir(options.root, { recursive: true });
     const recorder = new Recorder(options, await canRun(options.ffmpegPath, ['-version']));
+    const sweep = () => recorder.sweep().catch((error: unknown) => { console.error('Recording retention sweep failed:', (error as Error).message); });
+    // Sweep before recovering so an expired leftover is deleted rather than queued for conversion.
+    await sweep();
     await recorder.recover();
     // Registered only once start-up succeeded, so a failed start leaves recording off rather than half on.
     globalRecorder.__nesttraceRecorder = recorder;
-    const sweep = () => { recorder.sweep().catch((error: unknown) => { console.error('Recording retention sweep failed:', (error as Error).message); }); };
-    sweep();
     setInterval(() => recorder.closeIdle(), 5_000).unref();
-    setInterval(sweep, 3_600_000).unref();
+    setInterval(() => { void sweep(); }, 3_600_000).unref();
     // Best effort: finish open files on stop (5 s cap). Anything cut off is repaired by recover() next start.
     const stop = () => { void Promise.race([recorder.closeAll(), new Promise(resolve => setTimeout(resolve, 5_000))]).finally(() => process.exit(0)); };
     process.once('SIGTERM', stop);

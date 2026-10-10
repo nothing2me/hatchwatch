@@ -1,8 +1,8 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Recorder, recorderSettings, type RecorderOptions, type Sidecar } from '@/lib/phones/recorder';
+import { getRecorder, Recorder, recorderSettings, startRecorder, type RecorderOptions, type Sidecar } from '@/lib/phones/recorder';
 import { fakeJpeg, parseAvi } from './aviTestUtils';
 
 const T0 = Date.UTC(2026, 9, 10, 7, 5, 9);
@@ -18,7 +18,7 @@ function setup(ffmpeg: 'none' | 'ok' | 'fail' = 'none')
         : '#!/bin/sh\nif [ "$1" = "-version" ]; then exit 0; fi\nfor last; do :; done\nprintf mp4 > "$last"\n');
     chmodSync(ffmpegPath, 0o755);
     const options: RecorderOptions = { root, fps: 5, segmentMinutes: 10, retentionHours: 72, ffmpegPath };
-    return { root, options, make: () => new Recorder(options, ffmpeg !== 'none') };
+    return { root, options, make: (hasFfmpeg = ffmpeg !== 'none') => new Recorder(options, hasFfmpeg) };
 }
 
 // Only the variables under test; the rest of ProcessEnv (NODE_ENV) is irrelevant here.
@@ -115,6 +115,81 @@ describe('Recorder', () =>
         expect(existsSync(join(root, 'd1/2026-10-01/old.mp4'))).toBe(false);
         expect(existsSync(join(root, 'd1/2026-10-01/old.json'))).toBe(false);
         expect(existsSync(join(root, 'd1/2026-10-01/new.mp4'))).toBe(true);
+    });
+});
+
+describe('Recorder after an interrupted close or past retention', () =>
+{
+    it('recovers a segment whose close renamed the .avi but died before rewriting the sidecar', async () =>
+    {
+        const { root, make } = setup('ok');
+        const first = make(false);
+        for (let i = 0; i < 3; i++)
+        {
+            first.addFrame('d1', fakeJpeg(960, 540, i), T0 + i * 200, meta);
+        }
+        await first.closeAll();
+        // What a process killed between the rename and the sidecar rewrite leaves behind.
+        const opened = sidecar(join(root, `${base}.json`));
+        writeFileSync(join(root, `${base}.json`), JSON.stringify({ ...opened, file: '070509.avi.part', endedAt: null, frameCount: 0, durationS: 0 }));
+        expect(existsSync(join(root, `${base}.avi.part`))).toBe(false);
+
+        const next = make();
+        await next.recover();
+        await next.settled();
+        expect(sidecar(join(root, `${base}.json`))).toMatchObject({ file: '070509.mp4', frameCount: 3, endedAt: new Date(T0 + 600).toISOString() });
+        expect(existsSync(join(root, `${base}.avi`))).toBe(false);
+        expect((await next.list())[0]).toMatchObject({ path: `${base}.mp4`, playable: true, durationS: 0.6 });
+    });
+
+    it('deletes an expired leftover .avi at start-up instead of converting it', async () =>
+    {
+        const { root, options } = setup('ok');
+        const ended = Date.now() - 73 * 3_600_000;
+        mkdirSync(join(root, 'd1/2026-10-01'), { recursive: true });
+        writeFileSync(join(root, 'd1/2026-10-01/010203.avi'), 'avi');
+        writeFileSync(join(root, 'd1/2026-10-01/010203.json'), JSON.stringify({ schema: 'nesttrace.recording', version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(ended - 600_000).toISOString(), endedAt: new Date(ended).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: '010203.avi' }));
+        const before = { term: process.listeners('SIGTERM'), int: process.listeners('SIGINT') };
+        try
+        {
+            const recorder = await startRecorder(options);
+            await recorder.settled();
+            await new Promise(resolve => setTimeout(resolve, 50));
+            await recorder.settled();
+            for (const extension of ['avi', 'mp4', 'json'])
+            {
+                expect(existsSync(join(root, `d1/2026-10-01/010203.${extension}`))).toBe(false);
+            }
+        }
+        finally
+        {
+            delete (globalThis as { __nesttraceRecorder?: Recorder }).__nesttraceRecorder;
+            process.listeners('SIGTERM').filter(listener => !before.term.includes(listener)).forEach(listener => process.off('SIGTERM', listener));
+            process.listeners('SIGINT').filter(listener => !before.int.includes(listener)).forEach(listener => process.off('SIGINT', listener));
+        }
+        expect(getRecorder()).toBeNull();
+    });
+
+    it('sweeps video files with no valid sidecar once they are older than retention', async () =>
+    {
+        const { root, make } = setup('none');
+        const recorder = make();
+        mkdirSync(join(root, 'd1/2026-10-01'), { recursive: true });
+        const orphan = (name: string, age: number) =>
+        {
+            const path = join(root, `d1/2026-10-01/${name}`);
+            writeFileSync(path, 'x');
+            utimesSync(path, (T0 - age) / 1000, (T0 - age) / 1000);
+            return path;
+        };
+        const oldMp4 = orphan('old.mp4', 73 * 3_600_000);
+        const oldAvi = orphan('corrupt.avi', 73 * 3_600_000);
+        writeFileSync(join(root, 'd1/2026-10-01/corrupt.json'), '{not json');
+        const freshMp4 = orphan('fresh.mp4', 3_600_000);
+        expect(await recorder.sweep(T0)).toBe(2);
+        expect(existsSync(oldMp4)).toBe(false);
+        expect(existsSync(oldAvi)).toBe(false);
+        expect(existsSync(freshMp4)).toBe(true);
     });
 });
 
