@@ -116,7 +116,8 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
             include: {
                 zone: { select: { code: true } },
                 videos: {
-                    where: { OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] },
+                    // Live media that was pruned is skipped; chunks without a live record are unaffected.
+                    where: { AND: [{ OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] }, { OR: [{ liveChunkId: null }, { liveChunk: { mediaPruned: false } }] }] },
                     select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true },
                     orderBy: { createdAt: 'desc' },
                     take: 1,
