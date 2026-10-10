@@ -51,6 +51,12 @@ Media lands in `dashboard/media/` (git-ignored, bind-mounted into the container)
 
 The root simulator can run as a continuous beach feed. In one terminal at the repo root run `npm run dev` (Vite on 127.0.0.1:5173), and in another run `node scripts/live-runner.mjs` (add `--chunks 2` to stop after two chunks; on macOS set `NESTTRACE_BROWSER` if Playwright's browser is missing). The runner records six-turtle chunks, runs the blind pipeline on each and writes `artifacts/public/live-<n>-<id>/live-chunk.json` last, so a chunk is either complete or invisible.
 
+Add `--mix demo` to vary the feed: each chunk picks one scene from its sequence number (so a restart repeats the same mix), about 55% daylight digging, 20% daylight digging with two people walking past (danger alerts), 15% active near-IR night (development) and 10% crawl-only negatives that should raise no digging alert. `--mix cycle` rotates through the four in order, which is handy for checking each one. None of these scenes is a registered experiment.
+
+Each recording is placed at true scale on one of its zone's along-shore stations: as many non-overlapping footprint-wide stations as fit the zone (2–4 for the wide 78 m scene, more for the classic 24 m one). A zone's successive recordings visit them far apart first, with a small shift within each station, so recordings still on the map rarely overlap.
+
+With `DEMO_PATROL=1` in `.env`, a simulated patrol answers live digging sites: found and protected, found damaged then protected, no eggs found, nest confirmed but protection forgotten, or never visited. Each site's outcome is picked from its id, entries are signed "Demo patrol (simulated)", outcomes are random rather than taken from simulator truth, and the patrol stands down on any site a real person has logged. Leave it unset for real use.
+
 The dashboard never talks to the runner. Compose mounts `artifacts/public` read-only at `/sim-public`, and a watcher inside the web container polls for `live-*/live-chunk.json` every 3 seconds. It reads only public files named by the `live-chunk.v1` schema (`schemas/live-chunk.v1.json`) and copies the chunk's media to `MEDIA_ROOT/live/<chunk_id>/`. It never reads `private/`, seeds, scenario names or truth. New pins and alerts reach open browsers without a reload. Each chunk's cameras map onto the dashboard zones in rotation: a manifest camera at `x_min` becomes the zone's `1` camera (north end) and `x_max` the `2` camera.
 
 Timings (all server side):

@@ -12,6 +12,9 @@
 //
 // Usage (Vite must be serving the simulator on 127.0.0.1:5173):
 //   node scripts/live-runner.mjs [--scenario swarm-spread] [--model A] [--layout along|seaward] [--humans 0-4] [--keep 40] [--chunks 0]
+//   node scripts/live-runner.mjs --mix demo    (each chunk picks a scenario: mostly daylight digging, some with people
+//                                               walking past, some near-IR night, some crawl-only negatives)
+//   node scripts/live-runner.mjs --mix cycle   (rotates through those four in order; handy for checking each one)
 
 import {spawn} from 'node:child_process';
 import {mkdir, copyFile, readFile, readdir, rename, rm, writeFile} from 'node:fs/promises';
@@ -39,7 +42,58 @@ if (!['along', 'seaward'].includes(layout) || !Number.isInteger(humans) || human
     throw Error(`Unsupported live configuration: layout ${args.layout}, humans ${args.humans} (along|seaward, 0-4)`);
 }
 
-const supportedScenarios = {'swarm-spread': 'synthetic-daylight', swarm: 'synthetic-daylight', 'swarm-night': 'synthetic-very-dark', 'swarm-nir': 'synthetic-active-nir'};
+const supportedScenarios = {'swarm-spread': 'synthetic-daylight', swarm: 'synthetic-daylight', 'swarm-night': 'synthetic-very-dark', 'swarm-nir': 'synthetic-active-nir', travel: 'synthetic-daylight'};
+
+// Scenario mixes (--mix). Each chunk's profile is picked from its sequence number, so a restart repeats the same mix.
+// None of these are registered experiments; crawl-only chunks are negatives that should raise no digging alert.
+const mixProfiles =
+{
+    day: {scenario: 'swarm-spread', humans: 0, label: 'daylight digging'},
+    people: {scenario: 'swarm-spread', humans: 2, label: 'daylight digging, people walking past'},
+    night: {scenario: 'swarm-nir', humans: 0, label: 'active near-IR night (development)'},
+    crawl: {scenario: 'travel', humans: 0, label: 'crawl only, no digging (negative)'},
+};
+const demoMixWeights = [['day', 0.55], ['people', 0.2], ['night', 0.15], ['crawl', 0.1]];
+const mix = args.mix || null;
+if (mix && !['demo', 'cycle'].includes(mix))
+{
+    throw Error(`Unsupported --mix ${mix} (demo|cycle)`);
+}
+
+// Deterministic number in [0, 1) from a chunk sequence (FNV-1a).
+function unitFrom(sequence)
+{
+    let hash = 0x811c9dc5;
+    for (const character of `mix:${sequence}`)
+    {
+        hash ^= character.codePointAt(0);
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash / 0x1_0000_0000;
+}
+
+function profileFor(sequence)
+{
+    if (!mix)
+    {
+        return {scenario, humans, label: humans > 0 ? `${scenario}, ${humans} people` : scenario};
+    }
+    if (mix === 'cycle')
+    {
+        return mixProfiles[Object.keys(mixProfiles)[sequence % Object.keys(mixProfiles).length]];
+    }
+    const roll = unitFrom(sequence);
+    let total = 0;
+    for (const [name, weight] of demoMixWeights)
+    {
+        total += weight;
+        if (roll < total)
+        {
+            return mixProfiles[name];
+        }
+    }
+    return mixProfiles.day;
+}
 if (!supportedScenarios[scenario] || !['A', 'B'].includes(model))
 {
     throw Error(`Unsupported live configuration: scenario ${scenario}, model ${model}`);
@@ -51,7 +105,11 @@ const python = process.platform === 'win32' ? resolve('.venv/Scripts/python.exe'
 const chunkPattern = /^live-(\d{6})-([A-Za-z0-9]+)$/;
 const clipSeconds = 40;
 const fps = 8;
-const groundBounds = scenario === 'swarm-spread' ? [-39, 39, -13, 12] : [-12, 12, -8, 8];
+// The wide 18-turtle live scene has its own enlarged calibrated footprint; every other scene keeps the classic one.
+function groundBoundsFor(chunkScenario)
+{
+    return chunkScenario === 'swarm-spread' ? [-39, 39, -13, 12] : [-12, 12, -8, 8];
+}
 // Camera masks are operator config, shared with the dashboard through the PUBLIC
 // artifacts dir: the dashboard (admin) edits artifacts/public/camera-masks.json
 // and the runner seeds it from config/ and applies it at extraction.
@@ -158,18 +216,20 @@ async function applyRetention()
     }
 }
 
-async function recordChunk(sequence, seed)
+async function recordChunk(sequence, seed, profile)
 {
     const chunkId = `live-${String(sequence).padStart(6, '0')}-${Date.now().toString(36)}`;
     const recordingStartedAt = new Date().toISOString();
-    log(`Recording ${chunkId}`);
-    await run('node', ['scripts/record.mjs', '--seed', String(seed), '--scenario', scenario, '--model', model, '--layout', layout, '--humans', String(humans), '--id', chunkId]);
-    return {chunkId, sequence, recordingStartedAt};
+    log(`Recording ${chunkId}: ${profile.label}`);
+    await run('node', ['scripts/record.mjs', '--seed', String(seed), '--scenario', profile.scenario, '--model', model, '--layout', layout, '--humans', String(profile.humans), '--id', chunkId]);
+    return {chunkId, sequence, recordingStartedAt, profile};
 }
 
 async function analyzeAndPublish(chunk)
 {
     const publicRun = resolve(publicRoot, chunk.chunkId);
+    // Per chunk: with --mix, chunks differ in scene, detector settings and footprint.
+    const scenario = chunk.profile.scenario;
     log(`Analyzing ${chunk.chunkId}`);
     const detectorSettings = scenario === 'swarm-nir' ? 'config/settings-nir-dev.json' : scenario === 'swarm-spread' ? 'config/settings-live-dev.json' : 'config/settings-swarm.json';
     await run(python, ['scripts/analyze.py', chunk.chunkId, '--both', '--settings', detectorSettings, '--no-evaluate', ...(scenario === 'swarm-spread' ? ['--no-mask'] : [])]);
@@ -216,7 +276,7 @@ async function analyzeAndPublish(chunk)
         clip_seconds: clipSeconds,
         fps,
         rendering: supportedScenarios[scenario],
-        ground_bounds_m: groundBounds,
+        ground_bounds_m: groundBoundsFor(scenario),
         cameras:
         [
             {index: 0, end: 'x_min', video: 'camera-0.mp4', calibration: 'calibration-0.json', motion_map: 'view-0/motion-map.png', motion_metadata: 'view-0/metadata.json', motion_candidates: 'view-0/detection/predictions.json', pure_motion: 'view-0/pure-motion.mp4', ...(existsSync(masksFile) ? {mask: 'mask.json'} : {})},
@@ -230,7 +290,7 @@ async function analyzeAndPublish(chunk)
     await writeFile(temporary, JSON.stringify(manifest, null, 2));
     await rename(temporary, resolve(publicRun, 'live-chunk.json'));
     const pins = JSON.parse(await readFile(resolve(publicRun, 'pins/predictions.json'), 'utf8')).methods.pins.length;
-    log(`Published ${chunk.chunkId}: ${pins} pins`);
+    log(`Published ${chunk.chunkId} (${chunk.profile.label}): ${pins} pins`);
     await applyRetention();
 }
 
@@ -269,7 +329,7 @@ async function main()
         return seed++;
     }
 
-    log(`Starting at sequence ${sequence}: scenario ${scenario}, model ${model}, layout ${layout}, humans ${humans}, keeping ${keepChunks} chunks, skipping ${registeredSeeds.size} registered seeds`);
+    log(`Starting at sequence ${sequence}: ${mix ? `mix ${mix}` : `scenario ${scenario}, humans ${humans}`}, model ${model}, layout ${layout}, keeping ${keepChunks} chunks, skipping ${registeredSeeds.size} registered seeds`);
 
     let analysis = Promise.resolve();
     let produced = 0;
@@ -278,7 +338,7 @@ async function main()
     {
         try
         {
-            const recorded = await recordChunk(sequence, nextSeed());
+            const recorded = await recordChunk(sequence, nextSeed(), profileFor(sequence));
             sequence += 1;
             produced += 1;
             failures = 0;

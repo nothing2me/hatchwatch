@@ -70,4 +70,22 @@ describe('zone frame', () =>
             expect(Math.abs(offset) + 12).toBeLessThan(metres(ring[0], ring[1]) / 2);
         }
     });
+
+    it('keeps a zone\'s back-to-back wide recordings from overlapping, and inside the zone', () =>
+    {
+        const lengthM = metres(ring[0], ring[1]);
+        for (const widthM of [24, 78])
+        {
+            const stations = Math.max(1, Math.floor((lengthM - 12) / widthM));
+            const offsets = Array.from({ length: 12 }, (_, visit) => recordingOffsetM(ring, visit * 4 + 2, 4, widthM));
+            offsets.forEach((offset, visit) =>
+            {
+                expect(Math.abs(offset) + widthM / 2).toBeLessThanOrEqual(lengthM / 2 - 6 + 1e-6);
+                if (visit > 0 && stations > 1)
+                {
+                    expect(Math.abs(offset - offsets[visit - 1])).toBeGreaterThanOrEqual(widthM - 1e-6);
+                }
+            });
+        }
+    });
 });
