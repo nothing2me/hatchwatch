@@ -55,7 +55,7 @@ describe('Legend secured area', () =>
     it('explains the green secured circle', () =>
     {
         render(<Legend />);
-        expect(screen.getByText('Secured area (3 m)')).toBeTruthy();
+        expect(screen.getByText('Secured area (20 m)')).toBeTruthy();
         cleanup();
         localStorage.clear();
     });

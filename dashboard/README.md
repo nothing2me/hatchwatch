@@ -75,7 +75,7 @@ Every request checks the database-backed role, so a role change or a disabled ac
 
 Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site reaches the archive time with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
 
-A nest site is **secured** once someone logs protection on it or resolves a danger (on the site or any of its danger alerts); a newer danger clears that until it is resolved again. Active secured sites get a soft green 3 m circle on the map (with a Secured tag when zoomed in), and the site drawer names who secured it and when.
+A nest site is **secured** once someone logs protection on it or resolves a danger (on the site or any of its danger alerts); a newer danger clears that until it is resolved again. Active secured sites get a soft green 20 m circle on the map (with a Secured tag when zoomed in), and the site drawer names who secured it and when.
 
 Active sites are open ones still on the live map. Inactive sites have an outcome (hatched or lost), a no-nest finding, or were archived.
 

@@ -64,8 +64,8 @@ const haloRadius = ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 15, 20, 22] 
 const trailWidth = ['interpolate', ['linear'], ['zoom'], 14, 1.5, 18, 2.75, 20, 4] as unknown as number;
 const casingWidth = ['interpolate', ['linear'], ['zoom'], 14, 3, 18, 5, 20, 7] as unknown as number;
 const ALARM = '#FF4D5E';
-// "Secured" labels appear once a 3 m circle is big enough on screen to carry one.
-const SECURED_LABEL_ZOOM = 18.5;
+// "Secured" labels appear once a 20 m circle is big enough on screen to carry one.
+const SECURED_LABEL_ZOOM = 16.5;
 
 export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
 {
