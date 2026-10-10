@@ -1,0 +1,109 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { MapSnapshot } from '@/lib/types';
+import { siteAlert } from './siteFixtures';
+
+vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
+
+const { AnalyticsScreen } = await import('@/features/analytics/AnalyticsScreen');
+const { TopBar } = await import('@/features/shell/TopBar');
+
+afterEach(() => { cleanup(); localStorage.clear(); });
+
+const viewer = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
+const admin = { ...viewer, role: 'ADMIN' as const };
+
+const snapshot: MapSnapshot = {
+    zones: [
+        { id: 'za', code: 'A', name: 'Sand Point access', activityLevel: 'LOW', ring: [] },
+        { id: 'zb', code: 'B', name: 'Holiday Beach access', activityLevel: 'HIGH', ring: [] },
+    ],
+    cameras: [],
+    alerts: [
+        siteAlert('a1'),
+        siteAlert('a2', { protection: 'protected', nesting: 'confirmed', personActed: true, patrolVisited: true }, { zoneCode: 'A' }),
+        siteAlert('a3', { active: false, outcome: 'hatched', nesting: 'confirmed', protection: 'protected', personActed: true, patrolVisited: true }),
+        siteAlert('a4', { active: false, archivedAt: '2026-10-09T00:20:00.000Z' }),
+    ],
+    camerasOnline: 2, camerasTotal: 4, activeAlertCount: 1, inactiveCount: 2,
+    outcomes: { saved: 1, notSaved: 1, pending: 2 }, fadeMinutes: 5,
+};
+
+const tile = (label: string) => screen.getByRole('group', { name: label });
+
+describe('AnalyticsScreen', () =>
+{
+    it('shows the heading, tiles and outcomes for the live map by default', () =>
+    {
+        render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        expect(screen.getByRole('heading', { name: 'Tonight at a glance' })).toBeTruthy();
+        expect(screen.getByRole('radio', { name: 'On the map now' }).getAttribute('aria-checked')).toBe('true');
+        expect(within(tile('Sites')).getByTestId('value').textContent).toBe('2');
+        expect(within(tile('Unprotected')).getByTestId('value').textContent).toBe('1');
+        expect(tile('Unprotected').getAttribute('data-tone')).toBe('danger');
+        expect(within(tile('Patrol visited')).getByTestId('value').textContent).toBe('1');
+        expect(within(tile('Seen by both cameras')).getByTestId('value').textContent).toBe('100%');
+        expect(within(tile('Archived')).getByTestId('value').textContent).toBe('0');
+        const outcomes = screen.getByRole('region', { name: 'Outcomes' });
+        expect(within(outcomes).getByRole('img').getAttribute('aria-label')).toBe('Outcomes: 0 saved, 0 not saved, 2 pending');
+    });
+
+    it('switches every total to the whole log with the scope toggle', () =>
+    {
+        render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        fireEvent.click(screen.getByRole('radio', { name: 'Everything logged' }));
+        expect(within(tile('Sites')).getByTestId('value').textContent).toBe('4');
+        expect(within(tile('Unprotected')).getByTestId('value').textContent).toBe('2');
+        expect(within(tile('Archived')).getByTestId('value').textContent).toBe('1');
+        const outcomes = screen.getByRole('region', { name: 'Outcomes' });
+        expect(within(outcomes).getByRole('img').getAttribute('aria-label')).toBe('Outcomes: 1 saved, 1 not saved, 2 pending');
+        expect(outcomes.textContent).toContain('25%');
+        expect(outcomes.textContent).toContain('50%');
+    });
+
+    it('draws the three bar charts as labelled SVG images listing every zone', () =>
+    {
+        render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        expect(screen.getByRole('img', { name: 'Protection: Unprotected 1, Protected 1, Not needed 0' })).toBeTruthy();
+        expect(screen.getByRole('img', { name: 'Nesting: Unresolved 1, Nest confirmed 1, No nest found 0' })).toBeTruthy();
+        const zones = screen.getByRole('img', { name: 'Sites by zone: Zone A 1, Zone B 1' });
+        expect(zones.tagName.toLowerCase()).toBe('svg');
+        expect(zones.textContent).toContain('Zone A');
+        expect(zones.textContent).toContain('Sites');
+    });
+
+    it('can show a chart as a table', () =>
+    {
+        render(<AnalyticsScreen snapshot={snapshot} user={viewer} />);
+        fireEvent.click(screen.getAllByRole('button', { name: 'Show table' })[0]);
+        const table = screen.getByRole('table');
+        expect(within(table).getByText('Unprotected')).toBeTruthy();
+    });
+
+    it('shows an empty state when there are no sites', () =>
+    {
+        render(<AnalyticsScreen snapshot={{ ...snapshot, alerts: [], inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 } }} user={viewer} />);
+        expect(screen.getByText('No sites yet — waiting for the live feed')).toBeTruthy();
+    });
+});
+
+describe('TopBar', () =>
+{
+    it('counts active sites and highlights the current page', () =>
+    {
+        render(<TopBar user={viewer} current="analytics" camerasOnline={1} camerasTotal={2} activeSites={23} />);
+        expect(screen.getByText('23')).toBeTruthy();
+        expect(screen.getByText('active sites')).toBeTruthy();
+        expect(screen.getByRole('link', { name: 'Analytics' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBeNull();
+        expect(screen.queryByRole('link', { name: 'Setup' })).toBeNull();
+    });
+
+    it('shows Setup to admins and uses the singular for one site', () =>
+    {
+        render(<TopBar user={admin} current="map" camerasOnline={1} camerasTotal={2} activeSites={1} />);
+        expect(screen.getByRole('link', { name: 'Setup' }).getAttribute('href')).toBe('/setup');
+        expect(screen.getByRole('link', { name: 'Map' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByText('active site')).toBeTruthy();
+    });
+});

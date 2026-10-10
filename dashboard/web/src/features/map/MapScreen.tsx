@@ -22,6 +22,8 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 {
     const snapshot = useLiveSnapshot(initialSnapshot);
     const now = useNow(30_000);
+    // Same definition as the feed's Active tab, so the top bar and the tab always agree.
+    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
     const mapRef = useRef<MapRef>(null);
     const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
     // A site that drops out of the snapshot closes its drawer.
@@ -113,11 +115,11 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
-                <TopBar user={user} camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeAlertCount={snapshot.activeAlertCount} />
+                <TopBar user={user} current="map" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
 
                 <div className="flex min-h-0 flex-1 gap-3">
                     <div className="flex min-h-0 flex-col items-start max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:max-h-[45%] md:w-72">
-                        <AlertsFeed alerts={snapshot.alerts} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} />
+                        <AlertsFeed alerts={snapshot.alerts} inactiveCount={snapshot.inactiveCount} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} />
                     </div>
 
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">

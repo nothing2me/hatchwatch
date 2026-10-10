@@ -42,7 +42,8 @@ export function PatrolledMark()
 
 const outcomeNote = { saved: 'Saved', notSaved: 'Not saved', pending: '', none: '' } as const;
 
-export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = null }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null; selectedId?: string | null })
+// `inactiveCount` is the server's whole-log count; the snapshot lists only the newest inactive sites.
+export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = null, inactiveCount }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null; selectedId?: string | null; inactiveCount?: number })
 {
     const [open, setOpen] = useStoredBoolean('nesttrace.alerts.open', true);
     const [tab, setTab] = useState<Tab>('active');
@@ -51,7 +52,7 @@ export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = nul
     const active = alerts.filter(alert => alert.site.active);
     const inactive = alerts.filter(alert => !alert.site.active);
     const shown = tab === 'active' ? active : inactive;
-    const counts: Record<Tab, number> = { active: active.length, inactive: inactive.length };
+    const counts: Record<Tab, number> = { active: active.length, inactive: Math.max(inactive.length, inactiveCount ?? 0) };
 
     function onTabKey(event: KeyboardEvent<HTMLButtonElement>)
     {

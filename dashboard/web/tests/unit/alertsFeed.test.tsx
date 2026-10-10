@@ -22,6 +22,13 @@ describe('AlertsFeed', () =>
         expect(screen.getByRole('radio', { name: 'Inactive (3)' }).getAttribute('aria-checked')).toBe('false');
     });
 
+    it('uses the server inactive count when given (the snapshot carries only the newest inactive sites)', () =>
+    {
+        render(<AlertsFeed alerts={alerts} inactiveCount={41} onSelect={vi.fn()} />);
+        expect(screen.getByRole('radio', { name: 'Inactive (41)' })).toBeTruthy();
+        expect(screen.getByRole('radio', { name: 'Active (2)' })).toBeTruthy();
+    });
+
     it('shows only active sites with a protection pill and nesting text', () =>
     {
         render(<AlertsFeed alerts={alerts} onSelect={vi.fn()} />);
