@@ -1,10 +1,132 @@
 # NestTrace
 
+NestTrace helps sea turtle patrol volunteers find and protect nests sooner. Cameras on the beach (phones or a small ESP32 camera board) stream to a dashboard on one laptop. The dashboard shows where turtles were seen digging, keeps a shared log of every nest site, detects people and possible turtles on the live cameras, and raises a danger alert when a person is on camera near unprotected nests. **Only a volunteer can confirm a nest; the software never does.**
+
+The repository holds three parts that never import each other:
+
+| Part | Folder | What it is |
+| --- | --- | --- |
+| Research simulator and detector | `web/`, `pipeline/`, `scripts/`, `config/` | A 3D particle-sand beach that renders camera videos of turtles digging, plus the OpenCV detector measured on them. |
+| Dashboard | [`dashboard/`](dashboard/README.md) | Docker Compose app: Next.js + Postgres, Caddy HTTPS for phones, a Python detection worker. |
+| Camera board firmware | [`firmware/esp32s3-cam/`](firmware/esp32s3-cam/README.md) | ESP32-S3 camera that streams to the dashboard over verified HTTPS and measures motion on the chip. |
+
+They exchange data only through small versioned contracts in [`schemas/`](schemas/). [`agent.md`](agent.md) is the boundary document.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    subgraph research["Research (repo root)"]
+        sim["Beach simulator<br/>web/ · Three.js"]
+        pipe["Detector<br/>pipeline/ · OpenCV"]
+        post["Blind post-steps<br/>tracks · people"]
+        sim -->|camera videos| pipe --> post
+    end
+
+    pub[("artifacts/public<br/>videos · pins · tracks")]
+    post --> pub
+    pipe --> pub
+
+    subgraph laptop["Dashboard laptop (Docker Compose)"]
+        caddy["Caddy<br/>HTTPS :3443"]
+        web["Next.js web<br/>127.0.0.1:3000"]
+        db[("Postgres<br/>127.0.0.1:5433")]
+        worker["Detection worker<br/>Python · OpenCV · YOLOX-nano"]
+        rec[("recordings/<br/>mp4, 72 h")]
+        caddy --> web
+        web <--> db
+        web --> rec
+        worker <-->|internal network only| web
+    end
+
+    pub -->|sim-import · live watcher<br/>read-only| web
+
+    phone["Phones<br/>/cam page"] -->|JPEG frames| caddy
+    board["ESP32-S3 board<br/>token + motion header"] -->|JPEG frames| caddy
+    people["Volunteers & admins<br/>browser"] -->|login| caddy
+```
+
+### A live frame, from camera to alert
+
+```mermaid
+sequenceDiagram
+    participant B as ESP32 board / phone
+    participant W as Dashboard web
+    participant K as Detection worker
+    participant U as Volunteer's browser
+
+    B->>W: POST frame (HTTPS, token or login)
+    W->>W: keep newest frame in memory, record to mp4
+    K->>W: GET newest frame (internal API, worker token)
+    K->>K: YOLOX-nano people, possible-turtle rule, tracks
+    K->>W: POST detections (boxes, trails)
+    alt person on a linked camera for 2 s and the zone has unprotected nests
+        W->>W: open one camera danger alert (level 1)
+    end
+    U->>W: poll live devices and the map
+    W-->>U: picture, boxes, trails, alerts
+    U->>W: Resolve danger / log patrol action
+```
+
+### Life of a nest site
+
+A digging alert becomes a nest site with an append-only log, and its state is always derived from that log. Only a volunteer moves it past "Unprotected". Analytics counts a site as **Saved** when it hatched after protection was installed, and **Not saved** when it was lost, archived while unprotected, or had a danger event not followed by protection within 30 minutes.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unprotected: detected (digging alert)
+    Unprotected --> Protected: protectionInstalled
+    Unprotected --> NoNest: noNestFound
+    Unprotected --> Archived: not touched for 20 min (live feed only)
+    Protected --> Confirmed: nestConfirmed
+    Unprotected --> Confirmed: nestConfirmed
+    Confirmed --> Hatched: hatched
+    Confirmed --> Lost: lost
+    Protected --> Lost: lost
+    Hatched --> [*]: Saved (if protection was installed)
+    Lost --> [*]: Not saved
+    Archived --> [*]: Not saved (still unprotected)
+    NoNest --> [*]
+
+    state "Danger (person near site)" as Danger
+    Unprotected --> Danger: danger
+    Danger --> Unprotected: dangerResolved
+```
+
+### Who can reach what
+
+```mermaid
+flowchart TB
+    lan["Devices on the Wi-Fi<br/>phones · ESP32 · laptops"]
+    subgraph host["Dashboard laptop"]
+        c["Caddy 0.0.0.0:3443<br/>(only open port)"]
+        w["web 127.0.0.1:3000"]
+        d["db 127.0.0.1:5433"]
+        subgraph internal["internal network (no internet)"]
+            k["detection worker"]
+        end
+    end
+    lan -->|HTTPS + login / device token| c --> w
+    w --> d
+    k -->|worker token| w
+    c -.->|/api/internal/* never proxied| x((blocked))
+```
+
+## Quick start (dashboard)
+
+```sh
+cd dashboard
+cp .env.example .env          # set secrets, LAN_HOST = this laptop's Wi-Fi address, WORKER_TOKEN
+docker compose up -d --build  # web, db, caddy, worker
+```
+
+Open http://localhost:3000 on the laptop, or `https://<LAN_HOST>:3443` from a phone on the same Wi-Fi. Sign in with the seeded admin from `.env`. From **Live cameras**, use **Connect phone** (QR code) or **Add board camera** (ESP32). The full guide is [`dashboard/README.md`](dashboard/README.md).
+
+## Research simulator
+
 A local synthetic experiment for locating observable digging activity from saved beach videos. **It cannot confirm buried eggs.** TypeScript/Vite/Three.js generate two synchronized 1280 × 720 camera recordings; Python/OpenCV extracts differences and runs a separate blind detector. The 84 × 32 m beach is a two-layer bed of **134,400 physical grains**. Local forces wake grains; gravity, contacts, and friction govern their motion at 32 steps/s. The `swarm` and `swarm-night` scenarios send six turtles to separate sites at staggered times.
 
-The team’s **real dashboard** lives in [`dashboard/`](dashboard/README.md): a Docker Compose app (Next.js on port 3000, Postgres) with logins, a satellite map, and camera feeds. It imports reviewed simulation outputs through a separate adapter and never reads simulator state or private truth. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
-
-Standalone ESP32-S3 camera firmware (not connected to the dashboard) lives in [`firmware/esp32s3-cam/`](firmware/esp32s3-cam/README.md).
+The dashboard imports reviewed simulation outputs through a separate adapter and never reads simulator state or private truth. This research simulator and its local API do not own real camera data or production operations.
 
 ## Run locally
 
