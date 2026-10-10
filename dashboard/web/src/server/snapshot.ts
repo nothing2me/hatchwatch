@@ -25,7 +25,7 @@ export interface AlertRow
     id: string; kind: AlertKind; message: string; status: AlertStatus;
     zone: { code: string }; camera: { code: string };
     lng: number | null; lat: number | null; radiusM: number; score: number | null; createdAt: Date;
-    videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
+    videoId: string | null; video: { simRunId: string | null } | null; startT: number; endT: number;
     evidenceTier: EvidenceTier | null; simulated: boolean;
     level?: number; siteId?: string | null;
     events: { type: string; at: Date; createdAt?: Date; author?: string }[];
@@ -201,7 +201,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         score: alert.score,
         createdAt: alert.createdAt.toISOString(),
         videoId: alert.videoId,
-        simRunId: alert.video.simRunId,
+        simRunId: alert.video?.simRunId ?? null,
         startT: alert.startT,
         endT: alert.endT,
         evidenceTier: alert.evidenceTier,

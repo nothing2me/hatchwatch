@@ -124,3 +124,63 @@ describe('AlertsFeed dangers', () =>
         expect(screen.getByRole('button', { name: 'Resolve all' })).toBeTruthy();
     });
 });
+
+describe('AlertsFeed camera-level danger', () =>
+{
+    const CAMERA_MESSAGE = 'Danger · person seen on camera A1 near active nest sites — check now';
+    const LABEL = 'Camera alert · person detected (not measured distance)';
+    const camera = (site: Partial<AlertView['site']> = { danger: 'active' }, extra: Partial<AlertView> = {}) =>
+        siteAlert('cd1', site, { kind: 'DANGER', level: 1, siteId: null, videoId: null, cameraCode: 'A1', zoneCode: 'A', message: CAMERA_MESSAGE, ...extra });
+
+    it('gets its own card first in Active, never a site group', () =>
+    {
+        render(<AlertsFeed alerts={[...alerts, camera()]} onSelect={vi.fn()} canResolve />);
+        const list = screen.getByRole('list', { name: 'Active sites' });
+        const items = within(list).getAllByRole('listitem');
+        expect(items[0].textContent).toContain(LABEL);
+        expect(items[0].textContent).toContain('Camera A1 · Zone A');
+        expect(items[0].textContent).toContain(CAMERA_MESSAGE);
+        expect(items[1].textContent).toContain('Person on the beach near 3 sites');
+        // Only the three site dangers are grouped.
+        expect(screen.queryByRole('button', { name: /Person on the beach near 4 sites/ })).toBeNull();
+    });
+
+    it('stands alone without site dangers', () =>
+    {
+        const onSelect = vi.fn();
+        render(<AlertsFeed alerts={[camera()]} onSelect={onSelect} />);
+        expect(screen.queryByRole('button', { name: /Person on the beach near/ })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^Level 1 danger\. Camera alert on camera A1, zone A/ }));
+        expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'cd1' }));
+    });
+
+    it('resolves for volunteers and admins only', async () =>
+    {
+        const fetchMock = vi.fn(async () => json({ summary: {} }));
+        vi.stubGlobal('fetch', fetchMock);
+        const { unmount } = render(<AlertsFeed alerts={[camera()]} onSelect={vi.fn()} />);
+        expect(screen.queryByRole('button', { name: 'Resolve camera alert on camera A1' })).toBeNull();
+        unmount();
+        render(<AlertsFeed alerts={[camera()]} onSelect={vi.fn()} canResolve />);
+        fireEvent.click(screen.getByRole('button', { name: 'Resolve camera alert on camera A1' }));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+        expect(fetchMock).toHaveBeenCalledWith('/api/sites/cd1/events', expect.objectContaining({ method: 'POST', body: JSON.stringify({ type: 'dangerResolved' }) }));
+        expect(await screen.findByText('Resolved')).toBeTruthy();
+    });
+
+    it('shows the server message when a resolve fails', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json({ error: 'Volunteers and admins only' }, 403)));
+        render(<AlertsFeed alerts={[camera()]} onSelect={vi.fn()} canResolve />);
+        fireEvent.click(screen.getByRole('button', { name: 'Resolve camera alert on camera A1' }));
+        expect((await screen.findByRole('alert')).textContent).toContain('Volunteers and admins only');
+    });
+
+    it('lists a resolved one in Inactive by camera', () =>
+    {
+        render(<AlertsFeed alerts={[camera({ danger: 'resolved', active: false }, { resolvedBy: 'Vera Volunteer', status: 'REVIEWED' })]} onSelect={vi.fn()} />);
+        fireEvent.click(screen.getByRole('radio', { name: /Inactive/ }));
+        const card = screen.getByRole('button', { name: /Danger resolved by Vera Volunteer/ });
+        expect(card.textContent).toContain('Camera A1 · Zone A');
+    });
+});

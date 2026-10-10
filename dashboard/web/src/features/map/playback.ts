@@ -13,9 +13,10 @@ export function playbackKey(video: { id: string; simRunId: string | null }): str
     return video.simRunId ?? video.id;
 }
 
-export function alertKey(alert: { videoId: string; simRunId: string | null }): string
+export function alertKey(alert: { id: string; videoId: string | null; simRunId: string | null }): string
 {
-    return alert.simRunId ?? alert.videoId;
+    // A camera-level danger has no clip: its own key never matches a playing feed.
+    return alert.simRunId ?? alert.videoId ?? `alert:${alert.id}`;
 }
 
 export function isActive(alert: AlertView, playback: Playback | null): boolean

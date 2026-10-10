@@ -5,6 +5,7 @@ import { ChevronRight, Eye, MapPinOff, ShieldCheck, Siren, X } from 'lucide-reac
 import { GlassPanel } from '@/components/ui/glass-panel';
 import type { SessionUser } from '@/lib/auth/session';
 import { cn } from '@/lib/cn';
+import { CAMERA_DANGER_LABEL, isCameraDanger } from '@/lib/danger';
 import { PERSON_EVENTS } from '@/lib/sites/summary';
 import type { AlertView, SiteEventType, SiteSummary } from '@/lib/types';
 import { PatrolledMark, StatusPill } from '@/features/alerts/AlertsFeed';
@@ -161,6 +162,7 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
     const canLog = user.role === 'VOLUNTEER' || user.role === 'ADMIN';
     const detectedAt = site.detectedAt ?? alert.createdAt;
     const isDanger = alert.kind === 'DANGER';
+    const cameraAlert = isCameraDanger(alert);
     const dangerOpen = isDanger && site.active;
     const pinColor = isDanger ? ALARM : alert.colorIndex !== null ? trailColor(alert.colorIndex) : PROTECTION[site.protection].color;
     const openDangers = dangers.filter(danger => danger.site.active);
@@ -218,7 +220,13 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                             </span>
                         )}
                     </div>
-                    {isDanger && (
+                    {cameraAlert && (
+                        <div className="mt-3 rounded-lg bg-alarm/[0.08] p-2.5 ring-1 ring-alarm/30 ring-inset">
+                            <p className="text-[10px] tracking-[0.12em] text-[#FFB3BA] uppercase">{CAMERA_DANGER_LABEL}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-ink/90">Camera {alert.cameraCode} · Zone {alert.zoneCode}. A person was seen on this camera while the zone had active unprotected nest sites. No distance to a nest was measured.</p>
+                        </div>
+                    )}
+                    {isDanger && !cameraAlert && (
                         <div className="mt-3 rounded-lg bg-alarm/[0.08] p-2.5 ring-1 ring-alarm/30 ring-inset">
                             <p className="text-[10px] tracking-[0.12em] text-[#FFB3BA] uppercase">Nest site at risk</p>
                             {linkedSite
@@ -244,7 +252,12 @@ export function SiteDrawer({ alert, user, onClose, fadeMinutes = 5, linkedSite =
                         </button>
                     )}
                     <dl className="mt-3 grid grid-cols-3 gap-x-2 gap-y-2.5 text-xs">
-                        {isDanger
+                        {cameraAlert
+                            ? (<>
+                                <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Camera</dt><dd className="mt-0.5 font-mono">{alert.cameraCode}</dd></div>
+                                <div className="col-span-2"><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Raised</dt><dd className="mt-0.5"><span className="font-medium">{relativeTime(alert.createdAt, now)}</span> <span className="font-mono text-ink-muted">· {absolute.format(new Date(alert.createdAt))}</span></dd></div>
+                            </>)
+                            : isDanger
                             ? (<>
                                 <div className="col-span-2"><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Person approach</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.startT.toFixed(1)}–{alert.endT.toFixed(1)} s</dd></div>
                                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Within</dt><dd className="mt-0.5 font-mono tabular-nums">{alert.radiusM} m</dd></div>

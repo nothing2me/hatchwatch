@@ -118,3 +118,17 @@ describe('secured sites', () =>
         expect(snapshot.alerts[0].site.secured).toEqual({ by: 'Rae', at: '2026-10-09T18:06:00.000Z' });
     });
 });
+
+describe('camera-level danger', () =>
+{
+    it('maps a danger without a clip or site and leaves outcomes alone', () =>
+    {
+        const camera = { ...rows.alerts[0], id: 'cd1', kind: 'DANGER' as const, message: 'Danger · person seen on camera B1 near active nest sites — check now', level: 1, siteId: null, videoId: null, video: null, score: null, radiusM: 0, startT: 0, endT: 0, simulated: false, evidenceTier: null, events: [
+            { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+        ] };
+        const now = new Date('2026-10-09T19:00:00Z');
+        const snapshot = toMapSnapshot({ ...rows, alerts: [...rows.alerts, camera], now });
+        expect(snapshot.alerts[2]).toMatchObject({ id: 'cd1', videoId: null, simRunId: null, siteId: null, level: 1 });
+        expect(snapshot.outcomes).toEqual(toMapSnapshot({ ...rows, now }).outcomes);
+    });
+});

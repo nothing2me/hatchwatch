@@ -191,8 +191,9 @@ model Track {
 
 model Alert {
   id                    String              @id @default(cuid())
-  videoId               String
-  video                 Video               @relation(fields: [videoId], references: [id])
+  /// Null only for camera-level DANGER alerts from live detection (no clip, no site).
+  videoId               String?
+  video                 Video?              @relation(fields: [videoId], references: [id], onDelete: Restrict)
   cameraId              String
   camera                Camera              @relation(fields: [cameraId], references: [id])
   zoneId                String

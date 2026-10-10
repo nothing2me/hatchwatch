@@ -130,7 +130,7 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
                         { alertId: alert.id, type: 'departed', author: 'Camera', userId: null, at: new Date(startedAt.getTime() + pin.interval[1] * 1000) },
                     ],
                 });
-                sites.push({ pinId: pin.id, alertId: alert.id, videoId: alert.videoId, cameraId: alert.cameraId, position: [lng, lat], startT: pin.interval[0] });
+                sites.push({ pinId: pin.id, alertId: alert.id, videoId: videos[view].id, cameraId: alert.cameraId, position: [lng, lat], startT: pin.interval[0] });
             }
             const xMin = manifest.cameras.findIndex(camera => camera.end === 'x_min');
             const stored = await storeRunPaths(tx, {

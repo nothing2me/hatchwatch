@@ -91,7 +91,8 @@ export interface AlertView
     radiusM: number;
     score: number | null;
     createdAt: string;       // ISO
-    videoId: string;
+    /** Null for camera-level dangers (no clip). */
+    videoId: string | null;
     simRunId: string | null;
     startT: number;
     endT: number;

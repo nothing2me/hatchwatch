@@ -20,6 +20,11 @@ describe('playback gating', () =>
         expect(alertKey(alerts[0])).toBe('R1');
     });
 
+    it('keys a camera-level danger by its own id so it never matches a playing clip', () =>
+    {
+        expect(alertKey({ id: 'd1', videoId: null, simRunId: null })).toBe('alert:d1');
+    });
+
     it('activates inside the window with half a second of slack', () =>
     {
         expect(isActive(alerts[0], { key: 'R1', t: 9.6 })).toBe(true);

@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import { readCapped } from '@/lib/phones/body';
 import type { FrameStore } from '@/lib/phones/frameStore';
+import { raiseCameraDanger, type CameraDangerResult, type CameraDangerThrottle } from './cameraDanger';
 import { MAX_DETECTION_BYTES, parseDetections } from './schema';
 import { workerAuthorized } from './workerToken';
 
@@ -11,6 +12,8 @@ export interface InternalDeps
     /** Defaults to process.env.WORKER_TOKEN; tests pass it explicitly. */
     token?: string;
     now?: () => number;
+    /** Defaults to the process-wide per-camera throttle; tests pass their own. */
+    dangerThrottle?: CameraDangerThrottle;
 }
 
 export const WORKER_REFUSED = 'Worker token not accepted.';
@@ -77,5 +80,15 @@ export async function postInternalDetections(deps: InternalDeps, deviceId: strin
     {
         return json({ error: 'A newer result is already stored.' }, 409);
     }
-    return json({ stored: true, danger: 'none' });
+    let danger: CameraDangerResult = 'none';
+    try
+    {
+        danger = await raiseCameraDanger(deps.prisma, deviceId, detections, new Date(now), deps.dangerThrottle);
+    }
+    catch (error)
+    {
+        // The result is stored either way; never log detections or the token.
+        console.error('Camera danger check failed:', error instanceof Error ? error.message : 'unknown error');
+    }
+    return json({ stored: true, danger });
 }
