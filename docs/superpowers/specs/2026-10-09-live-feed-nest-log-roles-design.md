@@ -1,13 +1,13 @@
 # NestTrace Dashboard: Live Feed, Nest Log, Analytics, Roles and Camera Editing
 
 Date: 2026-10-09
-Status: Defaults proposed in chat and accepted ("skip phones part"; everything else as proposed). Pending written-spec review.
+Status: Approved in chat ("skip phones part"; from main take only the 24 h sim and the analytics menu; "go ahead").
 Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). Phones (Plan B) are dropped; its one built task was reverted.
 
 ## 1. Intent
 
 **Stated by the user**
-- Bring William's work from `origin/main` into our Next.js dashboard: the **24-hour live simulation feed** and the **analytics**.
+- From `origin/main` take **only** the 24-hour live simulation and the analytics menu — no merge, nothing else from main.
 - Trails from the ocean to each laying place, one colour per turtle. *(Simulator-side; Plan D.)*
 - Admin **edit mode to add cameras**: one click adds both cameras of a pair, always facing the ocean.
 - Admins add **volunteers**, who cannot add cameras.
@@ -18,7 +18,7 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 - Fix camera views so north- and south-facing views don't show the ocean on the same side. *(Plan D: seaward camera layout.)*
 
 **Decisions taken from the proposed defaults**
-1. Keep the Next.js app; port William's live feed, nest log and analytics into it; push and tell the team.
+1. Keep the Next.js app. Copy only William's three simulator-side files; rebuild the dashboard side of the live feed and an Analytics menu in our app. William's nest-log screens, demo patrol, backend and toasts are not taken.
 2. Phones: dropped.
 3. Live feed: a dashboard service watches `live-chunk.json` manifests and updates every open dashboard.
 4. Saved = protected and later hatched; Not saved = lost, disturbed, or never protected.
@@ -33,10 +33,11 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 - The dashboard reads simulator output only through versioned public contracts: `sim-import-v1` (demo runs) and William's `schemas/live-chunk.v1.json` (live chunks). Never `private/`, seeds, scenario names or truth.
 - Detector alerts say exactly `Digging activity detected; nesting unresolved.` Only a person (patrol/volunteer) can confirm a nest; the demo patrol never does.
 
-## 2. Merge
+## 2. Files taken from `origin/main` (no merge)
 
-- Merge `origin/main` (`fc649c3`) into the branch. Keep the Next.js `dashboard/`; drop William's Vite files (`dashboard/src`, `dashboard/server`, `dashboard/test`, Vite config, package files) — they remain in history and are the reference for the port. Take `scripts/live-runner.mjs`, `schemas/live-chunk.v1.json`, `web/simulation.ts` changes and root docs, re-applying our dashboard wording in `README.md`/`agent.md`.
-- Root `npm test` and dashboard tests must pass after the merge.
+- Copy exactly three files from `origin/main` (`fc649c3`) with `git checkout origin/main -- <path>`: `scripts/live-runner.mjs`, `schemas/live-chunk.v1.json`, `web/simulation.ts` (its 7-line `swarm-spread` lane shuffle). Commit message credits William's commit `2b25bc5`.
+- Nothing else from `main`: not its dashboard, docs, tests or nest log. William's `dashboard/server/liveChunkAdapter.js` and `dashboard/src/components/NestCharts.jsx` are read as references only.
+- Root `npm test` must pass after the copy.
 
 ## 3. Live feed (port of William's backend)
 
@@ -57,12 +58,8 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 - A site **fades** on the map 5 min after detection (`LIVE_FADE_MINUTES`, reduced opacity) and is **archived** after 20 min (`LIVE_ARCHIVE_MINUTES`) unless a person has acted on it: archiving appends an `archived` log entry ("Older than 20 min; removed from the live map. The log is kept.") and the site moves to Inactive. Sites with any patrol entry are never auto-archived.
 
 ### 3.4 Realtime
-- `GET /api/stream` (SSE, session required): emits `{type:'snapshot'}` when anything changes (new chunk, log entry, archive, camera/user change) and `{type:'alert', siteId, zoneCode, message}` for each new site. Keepalive every 15 s.
-- The map client re-fetches `GET /api/snapshot` (same `MapSnapshot` as the server render) on `snapshot`, and shows a toast for each `alert`.
-- A feed-status banner shows "Live feed · last chunk N s ago" or "Live feed paused" when no chunk arrived for 5 min.
-
-### 3.5 Demo patrol (optional)
-- `LIVE_DEMO_PATROL=1`: for each new site, after 40–120 s logs `patrolVisit`, then after 30–75 s `protectionInstalled`, signed "Demo patrol (simulated)", skipping steps a person already did. It never logs `nestConfirmed`, `noNestFound`, `hatched` or `lost`.
+- `GET /api/stream` (SSE, session required): emits `{type:'snapshot'}` when anything changes (new chunk, log entry, archive, camera/zone/user change). Keepalive every 15 s.
+- The map and Analytics clients re-fetch `GET /api/snapshot` (same `MapSnapshot` as the server render) on `snapshot`. No toasts, no demo patrol (not taken from main).
 
 ## 4. Nest sites and the log
 
@@ -82,9 +79,9 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 - **Site drawer** (click a card or a pin): map close-up, evidence (camera, tier, score, times), the full log (newest first, author + time), and the **Patrol update** form (volunteer/admin): action select (`patrolVisit`, `nestConfirmed`, `noNestFound`, `protectionInstalled`, `hatched` — enabled only after confirmed, `lost`, `note`) + optional note.
 - Toasts for new live sites; inactive sites are not drawn on the map.
 
-## 5. Analytics and statistics
+## 5. Analytics menu and statistics
 
-- **Tonight at a glance** panel (collapsible, on the map screen) with scope toggle *On the map now* / *Everything logged*:
+- **Analytics** item in the top bar → `/analytics` page (all roles), live-updating via `/api/stream`. Scope toggle *On the map now* / *Everything logged*:
   - Tiles: sites, unprotected (with % and red tone when > 0), patrol visited, seen by both cameras (%), archived.
   - Bar charts: protection status, nesting status, sites by zone.
 - **Outcomes** (whole log): **Saved** = sites whose outcome is `hatched` after `protectionInstalled`; **Not saved** = `lost`, or a `danger` event never followed by `protectionInstalled` within 30 min *(danger arrives in Plan D)*, or archived while still `unprotected`. **Pending** = everything else. Shown as a stacked bar + numbers, overall and per zone.
@@ -115,13 +112,13 @@ Builds on: Plan 1 + Plan A (branch `feat/dashboard-fullstack`, head `ce1a6fe`). 
 ## 9. Testing
 
 - Merge: both suites pass; boundary test still passes (now also forbidding reads outside `LIVE_ROOT`'s chunk folders).
-- Live: manifest/pins validation (good/bad fixtures copied from William's `dashboard/test/fixtures`), zone rotation, camera end mapping, idempotent chunk import, media retention, ageing (fade/archive with fake clock, no auto-archive after patrol entry), SSE emits on change, demo patrol never confirms/rules out and stands down after a person acts.
+- Live: manifest/pins validation (good/bad fixtures built in the test from the schema), zone rotation, camera end mapping, idempotent chunk import, media retention, ageing (fade/archive with fake clock, no auto-archive after a person's entry), SSE emits on change.
 - Log: `summarizeSite` table-driven tests incl. later-entry-wins, hatched requires confirmed, active/inactive rules; API rejects VIEWER patrol updates (403) and accepts VOLUNTEER.
 - Stats: saved/not saved/pending classification tests.
 - Users: admin-only routes, temp password shown once, disabled user rejected, cannot self-demote.
 - Camera editing: geometry test (cameras on land edge, headings seaward, zone code sequence), transaction rollback on failure, delete refusal with data.
 - UI: Active/Inactive tabs, drawer form permissions, expand overlay keeps clock, panel resize bounds.
-- End-to-end (Playwright, scratchpad): run `live-runner` for 2 chunks with `LIVE_FEED=1 LIVE_DEMO_PATROL=1`; see toasts, pins, patrol entries, analytics updating; volunteer logs `nestConfirmed` → `hatched` → site moves to Inactive and Saved count increments; admin adds a camera pair and a volunteer.
+- End-to-end (Playwright, scratchpad): run `live-runner` for 2 chunks with `LIVE_FEED=1`; see new pins and alerts arrive without reload, Analytics updating; volunteer logs `nestConfirmed` → `hatched` → site moves to Inactive and Saved count increments; admin adds a camera pair and a volunteer.
 
 ## 10. Out of scope (this spec)
 
