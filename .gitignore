@@ -9,3 +9,6 @@ artifacts/
 
 # Local Claude Code session data
 .claude/
+
+# Locally licensed turtle model; do not redistribute source asset
+web/local-models/

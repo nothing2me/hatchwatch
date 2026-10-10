@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {ParticleSand,sandFloor,BEACH_LENGTH,BEACH_WIDTH,type SandForcing} from './sand';
+import {BeachEnvironment} from './environment';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 export type Scenario='clean'|'multi'|'swarm'|'swarm-night'|'swarm-spread'|'travel'|'rest'|'abandoned'|'unrelated'|'no-eggs'|'weak'|'obstructed'|'low-light';
 export type SimConfig={seed:number;scenario:Scenario;model:'A'|'B';eggs?:boolean};
 export const WIDTH=1280,HEIGHT=720,DURATION=40,FPS=8;
@@ -7,10 +9,10 @@ function rng(seed:number){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
 const markers=[[-10,-6],[0,-6],[10,-6],[-10,6],[0,6],[10,6]];
 const surface=(z:number)=>sandFloor(z)+.44;
-type TurtleActor={id:number;group:THREE.Group;flippers:THREE.Mesh[];target:THREE.Vector2;startX:number;startAt:number;size:number;speed:number;digStart:number;digEnd:number;coverEnd:number;strength:number};
+type TurtleActor={id:number;group:THREE.Group;flippers:THREE.Mesh[];model?:THREE.Mesh;modelBase?:Float32Array;lastModelTime?:number;target:THREE.Vector2;startX:number;startAt:number;size:number;speed:number;digStart:number;digEnd:number;coverEnd:number;strength:number};
 export class Simulation{
- renderer:THREE.WebGLRenderer;scene=new THREE.Scene();cameras:THREE.PerspectiveCamera[]=[];overhead:THREE.OrthographicCamera;
- actors:TurtleActor[]=[];sand:ParticleSand;config:SimConfig;random:()=>number;light:THREE.DirectionalLight;night:boolean;nightCanvas?:HTMLCanvasElement;nightContext?:CanvasRenderingContext2D;noiseCanvas?:HTMLCanvasElement;noiseContext?:CanvasRenderingContext2D;
+ renderer:THREE.WebGLRenderer;scene=new THREE.Scene();cameras:THREE.PerspectiveCamera[]=[];overhead:THREE.OrthographicCamera;detailCamera:THREE.PerspectiveCamera;
+ actors:TurtleActor[]=[];sand:ParticleSand;environment:BeachEnvironment;ready:Promise<void>;config:SimConfig;random:()=>number;light:THREE.DirectionalLight;ambient:THREE.HemisphereLight;night:boolean;lastTracksTime=-1;nightCanvas?:HTMLCanvasElement;nightContext?:CanvasRenderingContext2D;noiseCanvas?:HTMLCanvasElement;noiseContext?:CanvasRenderingContext2D;
  constructor(canvas:HTMLCanvasElement,config:SimConfig){
  this.config=config;this.random=rng(config.seed);this.night=config.scenario==='swarm-night'||config.scenario==='low-light';
  const spread=config.scenario==='swarm-spread',swarm=config.scenario==='swarm'||config.scenario==='swarm-night'||spread,multi=config.scenario==='multi'||swarm;
@@ -28,33 +30,72 @@ export class Simulation{
  const coverEnd=digEnd+(swarm?2.5+this.random()*.5:multi?2.6+this.random()*.5:3.5+this.random());
  return {id,target,startX,startAt,size,speed,digStart,digEnd:config.scenario==='abandoned'?digStart+4:digEnd,coverEnd:config.scenario==='abandoned'?digStart+4:coverEnd,strength:.85+.3*this.random()};
  });
- this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});this.renderer.setSize(WIDTH,HEIGHT,false);this.renderer.setPixelRatio(1);this.renderer.setClearColor(0xc2dbe2);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.scene.fog=new THREE.Fog(0xc2dbe2,50,160);
+ this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});this.renderer.setSize(WIDTH,HEIGHT,false);this.renderer.setPixelRatio(1);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.AgXToneMapping;this.renderer.toneMappingExposure=1.15;this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFShadowMap;this.scene.fog=new THREE.FogExp2(0xc4d6d5,.0038);
  if(this.night){this.nightCanvas=document.createElement('canvas');this.nightCanvas.width=WIDTH;this.nightCanvas.height=HEIGHT;this.nightContext=this.nightCanvas.getContext('2d')!;this.noiseCanvas=document.createElement('canvas');this.noiseCanvas.width=320;this.noiseCanvas.height=180;this.noiseContext=this.noiseCanvas.getContext('2d')!}
- this.scene.add(new THREE.HemisphereLight(0xe5f3ff,0xa18b5d,1.7));this.light=new THREE.DirectionalLight(0xfff0d6,2);this.light.position.set(-12,20,-8);this.scene.add(this.light);
+ this.ambient=new THREE.HemisphereLight(0xe5f3ff,0x897c66,1.2);this.scene.add(this.ambient);this.light=new THREE.DirectionalLight(0xffefd2,2.7);this.light.position.set(-25,35,-24);this.light.castShadow=true;this.light.shadow.mapSize.set(2048,2048);this.light.shadow.camera.left=-48;this.light.shadow.camera.right=48;this.light.shadow.camera.top=28;this.light.shadow.camera.bottom=-28;this.light.shadow.camera.near=1;this.light.shadow.camera.far=120;this.light.shadow.bias=-.00008;this.scene.add(this.light);
+ this.environment=new BeachEnvironment(this.scene,this.renderer);this.environment.setNight(this.night);
+ this.ready=Promise.all([this.environment.ready,this.loadTurtleModel()]).then(()=>{});
  this.sand=new ParticleSand(this.random);this.scene.add(this.sand.mesh);
- const water=new THREE.Mesh(new THREE.PlaneGeometry(350,200),new THREE.MeshStandardMaterial({color:0x438d99,roughness:.38}));water.rotation.x=-Math.PI/2;water.position.set(0,.1,-116);this.scene.add(water);
- for(let i=0;i<6;i++){const foam=new THREE.Mesh(new THREE.PlaneGeometry(160,.035+i*.012),new THREE.MeshBasicMaterial({color:this.night?0x18232b:0xe0eeeb,transparent:true,opacity:this.night ? .14 : .50-i*.065}));foam.rotation.x=-Math.PI/2;foam.position.set(0,.105,-16.3-i*.75);this.scene.add(foam)}
- for(const [x,z] of markers){const marker=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.16),new THREE.MeshStandardMaterial({color:0x354d4c}));marker.position.set(x,surface(z),z);this.scene.add(marker)}
+ for(const [x,z] of markers){const marker=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.16),new THREE.MeshStandardMaterial({color:0x354d4c}));marker.position.set(x,surface(z),z);marker.userData.calibrationMarker=true;this.scene.add(marker)}
  for(const spec of specs){const group=new THREE.Group(),flippers:THREE.Mesh[]=[];
  const mat=new THREE.MeshStandardMaterial({color:0x586b45,roughness:.9});const shell=new THREE.Mesh(new THREE.SphereGeometry(1,32,16),mat);shell.scale.set(.43,.25,.62);shell.position.y=.25;group.add(shell);
  for(const x of [-.21,0,.21])for(const z of [-.3,0,.3]){const scute=new THREE.Mesh(new THREE.SphereGeometry(1,5,3),new THREE.MeshStandardMaterial({color:x===0?0x758358:0x65794f}));scute.scale.set(.13,.035,.16);scute.position.set(x,.48-Math.abs(x)*.28-Math.abs(z)*.16,z);group.add(scute)}
  const head=new THREE.Mesh(new THREE.SphereGeometry(.17,16,10),new THREE.MeshStandardMaterial({color:0x8a956c}));head.position.set(0,.18,.68);head.scale.z=1.25;group.add(head);
  for(const side of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.024,8,6),new THREE.MeshStandardMaterial({color:0x17211b}));eye.position.set(side*.14,.23,.75);group.add(eye)}
- for(const x of [-1,1])for(const z of [-1,1]){const f=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),new THREE.MeshStandardMaterial({color:0x78845c}));f.scale.set(z>0?.36:.26,.045,z>0?.13:.16);f.position.set(x*.46,.1,z*.36);f.rotation.y=x*z*.4;group.add(f);flippers.push(f)}group.scale.setScalar(spec.size);this.scene.add(group);this.actors.push({...spec,group,flippers});}
+ for(const x of [-1,1])for(const z of [-1,1]){const f=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),new THREE.MeshStandardMaterial({color:0x78845c}));f.scale.set(z>0?.36:.26,.045,z>0?.13:.16);f.position.set(x*.46,.1,z*.36);f.rotation.y=x*z*.4;group.add(f);flippers.push(f)}group.traverse(obj=>{if(obj instanceof THREE.Mesh)obj.castShadow=true});group.scale.setScalar(spec.size);this.scene.add(group);this.actors.push({...spec,group,flippers});}
  // Shoreline runs along X. Cameras face along its length, perpendicular to inland travel.
  for(const x of [-28,28]){const c=new THREE.PerspectiveCamera(48,WIDTH/HEIGHT,.1,250);c.position.set(x,5.6,0);c.lookAt(-Math.sign(x)*20,2.3,0);c.updateMatrixWorld();this.cameras.push(c)}
  this.overhead=new THREE.OrthographicCamera(-BEACH_LENGTH/2,BEACH_LENGTH/2,BEACH_WIDTH/2,-BEACH_WIDTH/2,.1,150);this.overhead.position.set(0,60,0);this.overhead.up.set(0,0,1);this.overhead.lookAt(0,0,0);
+ this.detailCamera=new THREE.PerspectiveCamera(42,WIDTH/HEIGHT,.1,250);
  if(config.scenario==='obstructed'){const screen=new THREE.Mesh(new THREE.BoxGeometry(.35,2.3,3.1),new THREE.MeshStandardMaterial({color:0x64715a}));screen.position.set(-8,1.4,.3);this.scene.add(screen)}
- if(this.night){this.light.intensity=.045;(this.scene.children[0] as THREE.HemisphereLight).intensity=.055;this.renderer.setClearColor(0x030509);this.scene.fog=new THREE.Fog(0x030509,38,120)}this.render(0,0);
+ if(this.night){this.light.color.set(0xb4cef5);this.light.position.set(94,23,-18);this.light.intensity=.38;this.ambient.color.set(0x647fa9);this.ambient.groundColor.set(0x293344);this.ambient.intensity=.29;this.scene.fog=new THREE.FogExp2(0x091323,.006)}this.render(0,0);
+ }
+ async loadTurtleModel(){
+  if(import.meta.env.PROD)return;
+  try{
+   const gltf=await new GLTFLoader().loadAsync('/models/turtle.gltf');
+   for(const actor of this.actors){
+    const model=gltf.scene.clone(true);
+    model.traverse(obj=>{if(obj instanceof THREE.Mesh){obj.geometry=obj.geometry.clone();obj.castShadow=true;obj.receiveShadow=true;actor.model=obj;actor.modelBase=new Float32Array((obj.geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array)}});
+    if(!actor.model)continue;
+    const bounds=new THREE.Box3().setFromObject(model);
+    model.position.y=-bounds.min.y+0.02;
+    actor.group.add(model);
+    actor.group.children.forEach(child=>{if(child!==model)child.visible=false});
+   }
+  }catch(error){console.warn('Local turtle model unavailable; using procedural turtle.',error)}
+ }
+ animateModel(actor:TurtleActor,t:number,mode:SandForcing['mode']){
+  if(!actor.model||!actor.modelBase||actor.lastModelTime===t)return;
+  const position=actor.model.geometry.getAttribute('position') as THREE.BufferAttribute;
+  const base=actor.modelBase,active=mode!=='none',dig=mode==='dig'||mode==='cover';
+  const phase=(t-actor.startAt)*(dig?10:6)+actor.id*0.7;
+  for(let i=0;i<position.count;i++){
+   const k=i*3,x=base[k],y=base[k+1],z=base[k+2];
+   const front=Math.max(0,Math.min(1,(Math.abs(x)-0.29)/0.42))*Math.max(0,Math.min(1,(z+0.12)/0.35));
+   const rear=Math.max(0,Math.min(1,(Math.abs(x)-0.25)/0.35))*Math.max(0,Math.min(1,(-z-0.1)/0.3));
+   const wave=Math.sin(phase+Math.sign(x)*0.75),amount=active?(dig?0.11:0.075):0;
+   position.setXYZ(i,x+Math.sign(x)*front*wave*amount*0.4,y+front*Math.max(0,wave)*amount*0.55+rear*Math.max(0,-wave)*amount*0.25,z+front*wave*amount+rear*wave*amount*0.35);
+  }
+  position.needsUpdate=true;actor.model.geometry.computeVertexNormals();actor.lastModelTime=t;
  }
  hasDig(){return !['travel','rest'].includes(this.config.scenario)}
  pauseEnd(actor:TurtleActor){return this.config.scenario==='travel'?actor.digStart:actor.coverEnd}
  position(actor:TurtleActor,t:number){const shore=-BEACH_WIDTH/2+.2,a=smooth((t-actor.startAt)/(actor.digStart-actor.startAt));let x=actor.startX+(actor.target.x-actor.startX)*a,z=shore+(actor.target.y-shore)*a;if(t>this.pauseEnd(actor)){const b=smooth((t-this.pauseEnd(actor))/8);x=actor.target.x+(actor.startX+1-actor.target.x)*b;z=actor.target.y+(-BEACH_WIDTH/2-.5-actor.target.y)*b}return {x,z}}
  forcing(t:number):SandForcing[]{return this.actors.map(actor=>{const {x,z}=this.position(actor,t);let mode:SandForcing['mode']='none';if(t>=actor.startAt&&t<this.pauseEnd(actor)+8){if(this.hasDig()&&t>=actor.digStart&&t<actor.digEnd)mode='dig';else if(this.hasDig()&&t>=actor.digEnd&&t<actor.coverEnd)mode='cover';else if((t<actor.digStart||t>this.pauseEnd(actor))&&this.config.scenario!=='unrelated')mode='travel'}return {x,z,heading:t>this.pauseEnd(actor)?Math.PI:Math.atan2(actor.target.x-actor.startX,actor.target.y+BEACH_WIDTH/2-.2),mode,model:this.config.model,strength:actor.strength*(this.config.scenario==='weak'?.15:1),time:t-actor.startAt}})}
  render(t:number,view:number,capture=true){
- this.sand.advance(t,tt=>this.forcing(tt));const forces=this.forcing(t);for(let j=0;j<this.actors.length;j++){const actor=this.actors[j],f=forces[j];actor.group.visible=this.config.scenario!=='unrelated'&&t>=actor.startAt&&t<this.pauseEnd(actor)+8;actor.group.position.set(f.x,surface(f.z)-.04,f.z);actor.group.rotation.y=f.heading;
- actor.flippers.forEach((flipper,i)=>{flipper.rotation.y=(i<2?-1:1)*.4+Math.sin((t-actor.startAt)*(f.mode==='dig'||f.mode==='cover'?11:7)+i*2)*(f.mode!=='none'?.65:0)});}
- this.renderer.render(this.scene,view===2?this.overhead:this.cameras[view]);return capture?(this.night?this.captureNight(t,view):this.renderer.domElement.toDataURL('image/png').split(',')[1]):'';
+ this.sand.advance(t,tt=>this.forcing(tt));const forces=this.forcing(t);
+ const tracks=(time:number,items:SandForcing[])=>items.map((force,j)=>({x:force.x,z:force.z,heading:force.heading,digging:force.mode==='dig'||force.mode==='cover',active:time>=this.actors[j].startAt&&this.config.scenario!=='unrelated'})).filter(item=>item.active);
+ if(t<this.lastTracksTime)this.lastTracksTime=-1;
+ for(let tt=this.lastTracksTime<0?0:Math.floor(this.lastTracksTime*4)/4+.25;tt<t-.001;tt+=.25)this.environment.update(tt,tracks(tt,this.forcing(tt)));
+ this.environment.update(t,tracks(t,forces));this.lastTracksTime=t;
+ for(let j=0;j<this.actors.length;j++){const actor=this.actors[j],f=forces[j];actor.group.visible=this.config.scenario!=='unrelated'&&t>=actor.startAt&&t<this.pauseEnd(actor)+8;actor.group.position.set(f.x,surface(f.z)-.04,f.z);actor.group.rotation.y=f.heading;
+ actor.flippers.forEach((flipper,i)=>{flipper.rotation.y=(i<2?-1:1)*.4+Math.sin((t-actor.startAt)*(f.mode==='dig'||f.mode==='cover'?11:7)+i*2)*(f.mode!=='none'?.65:0)});this.animateModel(actor,t,f.mode);}
+ if(view===3){const first=this.actors[0],f=forces[0];this.detailCamera.position.set(f.x+2.8,1.55,f.z-3.25);this.detailCamera.lookAt(f.x,0.6,f.z+0.15)}
+ if(view===3)this.scene.traverse(obj=>{if(obj.userData.calibrationMarker)obj.visible=false});
+ this.renderer.render(this.scene,view===2?this.overhead:view===3?this.detailCamera:this.cameras[view]);
+ if(view===3)this.scene.traverse(obj=>{if(obj.userData.calibrationMarker)obj.visible=true});
+ return capture?(this.night?this.captureNight(t,view):this.renderer.domElement.toDataURL('image/png').split(',')[1]):'';
  }
  captureNight(t:number,view:number){const ctx=this.nightContext!,noise=this.noiseContext!,image=noise.createImageData(320,180);let state=(this.config.seed^Math.imul(Math.round(t*FPS)+1,2654435761)^Math.imul(view+1,2246822519))>>>0;
  for(let i=0;i<image.data.length;i+=4){state=(Math.imul(state,1664525)+1013904223)>>>0;const value=state>>>24;image.data[i]=value;image.data[i+1]=value;image.data[i+2]=value;image.data[i+3]=255}

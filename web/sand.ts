@@ -18,11 +18,15 @@ export class ParticleSand {
  const x=-BEACH_LENGTH/2+(ix+.5)*SPACING+layer*SPACING*.5+(random()-.5)*.055,z=-BEACH_WIDTH/2+(iz+.5)*SPACING+layer*SPACING*.5+(random()-.5)*.055;
  const r=.087+random()*.008,y=sandFloor(z)+.09+layer*.255;
  this.positions.set([x,y,z],i*3);this.radii[i]=r;const tone=.72+random()*.20;color.setRGB(tone,tone*.84,tone*.57);this.mesh.setColorAt(i,color);this.updateMatrix(i);this.insert(i);
- }this.initial=this.positions.slice();this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.mesh.instanceMatrix.needsUpdate=true;
+ }this.initial=this.positions.slice();this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+ // The physical particles are much larger than real grains. Hide untouched
+ // cells beneath the continuous sand surface; show only displaced grains.
+ for(let grain=0;grain<this.count;grain++)this.updateMatrix(grain);
+ this.mesh.instanceMatrix.needsUpdate=true;
  }
  key(x:number,z:number){return `${Math.floor(x/CELL)},${Math.floor(z/CELL)}`}
  insert(i:number){const k=this.key(this.positions[i*3],this.positions[i*3+2]);this.keys[i]=k;let bucket=this.hash.get(k);if(!bucket){bucket=new Set();this.hash.set(k,bucket)}bucket.add(i)}
- updateMatrix(i:number){const o=i*3,r=this.radii[i];this.matrix.makeScale(r,r*.88,r);this.matrix.setPosition(this.positions[o],this.positions[o+1],this.positions[o+2]);this.mesh.setMatrixAt(i,this.matrix)}
+ updateMatrix(i:number){const o=i*3,r=this.radii[i];const moved=this.initial&&Math.hypot(this.positions[o]-this.initial[o],this.positions[o+1]-this.initial[o+1],this.positions[o+2]-this.initial[o+2])>.035;const visible=moved&&this.positions[o+1]+r*.45>sandFloor(this.positions[o+2])+.43;const size=visible?r*.46:0;this.matrix.makeScale(size,size*.88,size);this.matrix.setPosition(this.positions[o],this.positions[o+1],this.positions[o+2]);this.mesh.setMatrixAt(i,this.matrix)}
  neighbors(x:number,z:number,r:number){const result:number[]=[];for(let gx=Math.floor((x-r)/CELL);gx<=Math.floor((x+r)/CELL);gx++)for(let gz=Math.floor((z-r)/CELL);gz<=Math.floor((z+r)/CELL);gz++){const bucket=this.hash.get(`${gx},${gz}`);if(bucket)for(const i of bucket)result.push(i)}return result}
  reset(){this.positions.set(this.initial);this.velocities.fill(0);this.active.clear();this.hash.clear();this.quiet.fill(0);this.step=0;for(let i=0;i<this.count;i++){this.insert(i);this.updateMatrix(i)}this.mesh.instanceMatrix.needsUpdate=true}
  wake(i:number){this.active.add(i);this.quiet[i]=0}
