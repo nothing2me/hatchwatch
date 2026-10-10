@@ -13,4 +13,5 @@ artifacts/
 # Locally licensed turtle model; do not redistribute source asset
 web/local-models/
 
-# opencode continuation state.omo/
+# opencode continuation state
+.omo/
