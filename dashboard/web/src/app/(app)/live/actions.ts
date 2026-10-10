@@ -82,7 +82,11 @@ export async function rotateDeviceToken(deviceId: string): Promise<IssuedTokenRe
     }
     try
     {
-        return issued(await rotateBoardToken(prisma, actor.id, parsed.data));
+        const board = await rotateBoardToken(prisma, actor.id, parsed.data);
+        // A frame sent with the old token must not linger in the in-memory store.
+        frameStore.forget(parsed.data);
+        revalidatePath('/live');
+        return issued(board);
     }
     catch (error)
     {

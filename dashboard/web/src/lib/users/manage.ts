@@ -102,10 +102,11 @@ export async function setDisabled(prisma: PrismaClient, actorId: string, userId:
         }
         const updated = await tx.user.update({ where: { id: userId }, data: { disabledAt: disabled ? new Date() : null }, select });
         // A disabled person's phones stop feeding the map; their cameras return to the simulation loop.
-        const cameras = disabled ? await tx.camera.findMany({ where: { liveDevice: { ownerId: userId } }, select: { code: true } }) : [];
+        // Boards belong to the deployment, not to the admin who added them, so they stay linked.
+        const cameras = disabled ? await tx.camera.findMany({ where: { liveDevice: { ownerId: userId, kind: 'PHONE' } }, select: { code: true } }) : [];
         if (cameras.length > 0)
         {
-            await tx.camera.updateMany({ where: { liveDevice: { ownerId: userId } }, data: { liveDeviceId: null } });
+            await tx.camera.updateMany({ where: { liveDevice: { ownerId: userId, kind: 'PHONE' } }, data: { liveDeviceId: null } });
         }
         await tx.auditLog.create({ data: { userId: actorId, action: disabled ? 'user.disable' : 'user.enable', targetType: 'User', targetId: userId, details: disabled ? { unlinkedCameras: cameras.map(c => c.code) } : undefined } });
         return { user: updated, unlinked: cameras.length };

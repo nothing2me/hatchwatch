@@ -18,7 +18,9 @@ const { prisma } = await import('@/lib/db') as { prisma: PrismaClient };
 const { addBoardCamera, rotateDeviceToken, removePhone } = await import('@/app/(app)/live/actions');
 const { registerDevice } = await import('@/lib/phones/devices');
 const { hashDeviceToken } = await import('@/lib/phones/deviceToken');
-const { FrameStore } = await import('@/lib/phones/frameStore');
+const { FrameStore, frameStore } = await import('@/lib/phones/frameStore');
+const { setCameraSource } = await import('@/lib/cameras/manage');
+const { setDisabled } = await import('@/lib/users/manage');
 const { postFrame } = await import('@/lib/phones/http');
 const { seedDatabase } = await import('../../prisma/seed');
 
@@ -112,6 +114,20 @@ describe('rotateDeviceToken', () =>
         }
     });
 
+    it('forgets the board\'s last frame so an old-token frame does not linger', async () =>
+    {
+        const added = await addBoardCamera('Dune board');
+        if (!added.ok) throw new Error(added.error);
+        const forget = vi.spyOn(frameStore, 'forget');
+        const rotated = await rotateDeviceToken(added.deviceId);
+        expect(rotated.ok).toBe(true);
+        expect(forget).toHaveBeenCalledWith(added.deviceId);
+        forget.mockClear();
+        await rotateDeviceToken('no-such-device');
+        expect(forget).not.toHaveBeenCalled();
+        forget.mockRestore();
+    });
+
     it('is admin only and refuses phones, removed boards and unknown ids', async () =>
     {
         const added = await addBoardCamera('Dune board');
@@ -125,5 +141,24 @@ describe('rotateDeviceToken', () =>
         sessionId = volunteerId;
         await expect(rotateDeviceToken(added.deviceId)).rejects.toThrow('FORBIDDEN');
         expect(await prisma.auditLog.count({ where: { action: 'device.rotate' } })).toBe(0);
+    });
+});
+
+describe('disabling the admin who added a board', () =>
+{
+    it('keeps the board linked and sending, but still unlinks that user\'s phones', async () =>
+    {
+        const added = await addBoardCamera('Dune board');
+        if (!added.ok) throw new Error(added.error);
+        const phone = await registerDevice(prisma, adminId, 'Admin phone');
+        await setCameraSource(prisma, adminId, 'B1', added.deviceId);
+        await setCameraSource(prisma, adminId, 'C1', phone.id);
+        const otherAdmin = await prisma.user.create({ data: { email: 'admin2@test.local', name: 'Admin Two', role: 'ADMIN', passwordHash: 'unused' } });
+        await setDisabled(prisma, otherAdmin.id, adminId, true);
+        const linked = async (code: string) => (await prisma.camera.findUniqueOrThrow({ where: { code } })).liveDeviceId;
+        expect(await linked('B1')).toBe(added.deviceId);
+        expect(await linked('C1')).toBeNull();
+        expect((await send(added.deviceId, added.token)).status).toBe(200);
+        expect((await prisma.auditLog.findFirstOrThrow({ where: { action: 'user.disable' } })).details).toEqual({ unlinkedCameras: ['C1'] });
     });
 });
