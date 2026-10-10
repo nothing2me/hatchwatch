@@ -80,7 +80,8 @@ export async function storeRunPaths(tx: Prisma.TransactionClient, { paths, pins,
     {
         const site = siteById.get(danger.alertId)!;
         const at = clock(danger.at);
-        const note = `${danger.personId} within ${DANGER_RADIUS_M} m at ${danger.at.toFixed(1)} s of the clip.`;
+        const mmss = `${String(Math.floor(danger.closestT / 60)).padStart(2, '0')}:${String(Math.floor(danger.closestT % 60)).padStart(2, '0')}`;
+        const note = `Person within ${DANGER_RADIUS_M} m of the site at ${mmss} (${danger.personId}).`;
         const alert = await tx.alert.create({
             data: {
                 videoId: site.videoId,

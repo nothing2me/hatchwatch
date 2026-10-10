@@ -91,3 +91,9 @@ def test_unmatched_surf_dropped_inland_kept_matched_kept():
     doc = _build(m, ts, [_pin('p', 8, -4, 7, 9)])
     by_x = {round(t['points'][0][1]): t['pin_id'] for t in doc['tracks']}
     assert by_x == {0: None, 8: 'p'}
+
+
+def test_refuses_private_run_dir(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        track_paths.run(tmp_path / 'artifacts' / 'private' / 'run-1')

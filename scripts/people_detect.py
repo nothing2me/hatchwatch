@@ -376,7 +376,13 @@ def _video_frames(path):
         cap.release()
 
 
+def _refuse_private(run_dir):
+    if 'private' in Path(run_dir).resolve().parts or 'private' in Path(run_dir).parts:
+        raise SystemExit(f'refusing private run directory: {run_dir}')
+
+
 def detect_people(run_dir):
+    _refuse_private(run_dir)
     run_dir = Path(run_dir)
     views = []
     for v in range(2):

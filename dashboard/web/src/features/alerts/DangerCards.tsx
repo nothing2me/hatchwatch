@@ -61,17 +61,24 @@ export function DangerGroupCard({ group, sites, canResolve, onSelect, selectedId
     {
         setError(null);
         setBusy(current => new Set([...current, ...ids]));
+        // Every site is attempted; a failure leaves that row actionable and is reported at the end.
+        const failures: string[] = [];
         for (const id of ids)
         {
             const result = await resolveDanger(id);
             setBusy(current => { const next = new Set(current); next.delete(id); return next; });
-            if (!result.ok)
+            if (result.ok)
             {
-                setError(result.error);
-                setBusy(new Set());
-                return;
+                setDone(current => new Set([...current, id]));
+                continue;
             }
-            setDone(current => new Set([...current, id]));
+            const danger = group.dangers.find(item => item.id === id);
+            const site = danger?.siteId ? sites.get(danger.siteId) : undefined;
+            failures.push(`${site ? siteLabel(site) : `Zone ${danger?.zoneCode ?? '?'} · site not listed`} — ${result.error}`);
+        }
+        if (failures.length > 0)
+        {
+            setError(ids.length > 1 ? `${ids.length - failures.length} of ${ids.length} resolved; failed: ${failures.join('; ')}` : failures[0]);
         }
     }
 
@@ -123,6 +130,7 @@ export function DangerGroupCard({ group, sites, canResolve, onSelect, selectedId
                                         <button
                                             type="button"
                                             onClick={() => void resolve([danger.id])}
+                                            aria-label={`Resolve danger at ${label}`}
                                             disabled={busy.size > 0}
                                             className="mt-0.5 inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[11px] font-semibold text-[#FFB3BA] ring-1 ring-alarm/50 transition-colors hover:bg-alarm hover:text-white focus-visible:outline-2 focus-visible:outline-alarm disabled:opacity-50"
                                         >

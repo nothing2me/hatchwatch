@@ -139,7 +139,7 @@ describe('importing trails and people', () =>
         expect(dangers[0].events.map(event => event.type)).toEqual(['danger']);
         const siteEvents = await prisma.siteEvent.findMany({ where: { alertId: site.id }, orderBy: { createdAt: 'asc' } });
         expect(siteEvents.map(event => event.type).sort()).toEqual(['danger', 'detected']);
-        expect(siteEvents.find(event => event.type === 'danger')?.note).toMatch(/person-1/);
+        expect(siteEvents.find(event => event.type === 'danger')?.note).toMatch(/^Person within 3 m of the site at \d\d:\d\d \(person-1\)\.$/);
         expect(await prisma.alert.findUniqueOrThrow({ where: { id: site.id } })).toMatchObject({ kind: 'DIGGING', status: 'NEW', level: 0, message: 'Digging activity detected; nesting unresolved.' });
     });
 
@@ -207,6 +207,17 @@ describe('danger lifecycle', () =>
         expect(siteEvents.at(-1)).toMatchObject({ type: 'dangerResolved', author: 'Vera', note: 'walker left' });
         // The site keeps its own lifecycle: still open, now touched by a person.
         expect((await prisma.alert.findUniqueOrThrow({ where: { id: site.id } })).status).toBe('REVIEWED');
+    });
+
+    it('resolving an already resolved danger appends nothing', async () =>
+    {
+        const { danger } = await imported();
+        await addSiteEvent(prisma, { alertId: danger.id, type: 'dangerResolved', ...volunteer });
+        const count = () => prisma.siteEvent.count({ where: { type: 'dangerResolved' } });
+        const before = await count();
+        const summary = await addSiteEvent(prisma, { alertId: danger.id, type: 'dangerResolved', ...volunteer });
+        expect(summary).toMatchObject({ danger: 'resolved' });
+        expect(await count()).toBe(before);
     });
 
     it('only resolves danger alerts; other entries go on the nest site', async () =>

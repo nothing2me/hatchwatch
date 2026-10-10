@@ -94,6 +94,11 @@ export async function addSiteEvent(prisma: PrismaClient, input: EventInput & { o
         {
             throw new SiteEventError('NEEDS_CONFIRMED', 'Confirm the nest before marking it hatched.');
         }
+        if (isDanger && input.type === 'dangerResolved' && summarizeSite(alert.events as Ev[], alert.kind).danger === 'resolved')
+        {
+            // Idempotent: a repeated resolve (double click, two volunteers) appends nothing.
+            return summarizeSite(alert.events as Ev[], alert.kind);
+        }
         const at = input.at ?? new Date();
         const { before, after } = await append(tx, alert, { type: input.type, author: input.author, userId: input.userId, note: input.note, at });
 

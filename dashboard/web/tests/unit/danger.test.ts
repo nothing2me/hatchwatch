@@ -64,7 +64,9 @@ describe('findDangers', () =>
         expect(dangers[0].at).toBeLessThan(20);
         expect(dangers[0].startT).toBe(dangers[0].at);
         expect(dangers[0].endT).toBeGreaterThan(20);
-        expect(distanceBetween(dangers[0].position, site)).toBeLessThanOrEqual(3.05);
+        // The alert sits at the closest approach (2 m abeam, at t = 20), not where the person entered the radius.
+        expect(dangers[0].closestT).toBeCloseTo(20, 1);
+        expect(distanceBetween(dangers[0].position, site)).toBeCloseTo(2, 1);
     });
 
     it('raises nothing for a pass at 5 m', () =>
@@ -97,7 +99,7 @@ describe('findDangers', () =>
 
 describe('limitDangersPerSite', () =>
 {
-    const danger = (personId: string, at: number, alertId = 's1'): Danger => ({ alertId, personId, at, position: [0, 0], startT: at, endT: at + 1 });
+    const danger = (personId: string, at: number, alertId = 's1'): Danger => ({ alertId, personId, at, position: [0, 0], startT: at, endT: at + 1, closestT: at });
 
     it('keeps one danger per site per minute whatever the person id', () =>
     {

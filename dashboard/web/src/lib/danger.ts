@@ -11,7 +11,7 @@ const STEP_M = 0.25;
 
 export interface DangerSite { alertId: string; position: LngLat; startT: number }
 export interface DangerPerson { id: string; points: { t: number; position: LngLat }[] }
-export interface Danger { alertId: string; personId: string; at: number; position: LngLat; startT: number; endT: number }
+export interface Danger { alertId: string; personId: string; at: number; position: LngLat; startT: number; endT: number; closestT: number }
 
 const EARTH_M = 6_371_008.8;
 const RAD = Math.PI / 180;
@@ -52,7 +52,7 @@ function samples(origin: LngLat, points: DangerPerson['points']): { t: number; x
 
 /**
  * Person tracks that come within DANGER_RADIUS_M of a site at or after `startT − 2 s`.
- * One danger per (person, site): the first approach; `startT`/`endT` bound that approach.
+ * One danger per (person, site): the first approach; `startT`/`endT` bound that approach and `position`/`closestT` are its closest sample.
  */
 export function findDangers(sites: DangerSite[], people: DangerPerson[]): Danger[]
 {
@@ -72,14 +72,24 @@ export function findDangers(sites: DangerSite[], people: DangerPerson[]): Danger
             {
                 last += 1;
             }
+            // Closest approach inside the window: the alert sits where the person came nearest the site.
+            let closest = first;
+            for (let index = first; index <= last; index += 1)
+            {
+                if (Math.hypot(...path[index].xy) < Math.hypot(...path[closest].xy))
+                {
+                    closest = index;
+                }
+            }
             const round = (value: number) => Math.round(value * 1000) / 1000;
             dangers.push({
                 alertId: site.alertId,
                 personId: person.id,
                 at: round(path[first].t),
-                position: toLngLat(site.position, path[first].xy),
+                position: toLngLat(site.position, path[closest].xy),
                 startT: round(path[first].t),
                 endT: round(path[last].t),
+                closestT: round(path[closest].t),
             });
         }
     }

@@ -138,7 +138,13 @@ def build_tracks(signals, calibration, pins, timestamps, motion_threshold):
     return {'schema': 'nesttrace.tracks', 'version': 1, 'tracks': tracks, 'note': NOTE}
 
 
+def _refuse_private(run_dir):
+    if 'private' in Path(run_dir).resolve().parts or 'private' in Path(run_dir).parts:
+        raise SystemExit(f'refusing private run directory: {run_dir}')
+
+
 def run(run_dir, threshold=None):
+    _refuse_private(run_dir)
     run_dir = Path(run_dir)
     if threshold is None:
         threshold = json.loads((ROOT / 'config' / 'settings-swarm.json').read_text())['motion_threshold']

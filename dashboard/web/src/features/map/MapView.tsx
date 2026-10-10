@@ -165,12 +165,11 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                         }} />
                     </Source>
                 )}
-                {layers.zones && (
-                    <Source id="zones" type="geojson" data={zonesGeoJson}>
-                        <Layer id="zone-fill" type="fill" paint={{ 'fill-color': levelColor, 'fill-opacity': 0.22 }} />
-                        <Layer id="zone-line" type="line" paint={{ 'line-color': levelColor, 'line-width': 2 }} />
-                    </Source>
-                )}
+                {/* Always mounted and hidden by layout: a layer re-added on toggle would land above the trails and pins. */}
+                <Source id="zones" type="geojson" data={zonesGeoJson}>
+                    <Layer id="zone-fill" type="fill" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'fill-color': levelColor, 'fill-opacity': 0.22 }} />
+                    <Layer id="zone-line" type="line" layout={{ visibility: layers.zones ? 'visible' : 'none' }} paint={{ 'line-color': levelColor, 'line-width': 2 }} />
+                </Source>
                 {/* Trails sit under the pins; hidden by layout so toggling keeps them below. */}
                 <Source id="trails" type="geojson" data={trailLines}>
                     <Layer id="trail-casing" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round', visibility: trailVisibility }} paint={{ 'line-color': '#04080C', 'line-width': casingWidth, 'line-opacity': ['*', 0.55, ['get', 'opacity']] as unknown as number }} />

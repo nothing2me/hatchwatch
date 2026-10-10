@@ -273,3 +273,10 @@ def test_two_walkers_six_metres_apart_are_two_people():
     paths = [lambda f: (-8 + 0.17 * f, -3.0), lambda f: (5 - 0.17 * f, 3.0)]
     tracks = people_detect._people_tracks(_views(paths), T80)
     assert len(tracks) == 2
+
+
+def test_refuses_private_run_dir(tmp_path):
+    import pytest
+    from scripts import people_detect
+    with pytest.raises(SystemExit):
+        people_detect.run(tmp_path / 'artifacts' / 'private' / 'run-1')

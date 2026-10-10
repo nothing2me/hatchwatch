@@ -38,8 +38,8 @@ describe('AlertsFeed dangers', () =>
         fireEvent.click(screen.getByRole('button', { name: /Person on the beach near 3 sites/ }));
         const rows = screen.getAllByRole('group', { name: /^Danger at / });
         expect(rows).toHaveLength(3);
-        expect(within(rows[0]).getByRole('button', { name: /Zone B · blue trail · dug at 8.0 s/ })).toBeTruthy();
-        expect(within(rows[0]).getByRole('button', { name: 'Resolve' })).toBeTruthy();
+        expect(within(rows[0]).getByRole('button', { name: /^Zone B · blue trail · dug at 8.0 s$/ })).toBeTruthy();
+        expect(within(rows[0]).getByRole('button', { name: /^Resolve danger at / })).toBeTruthy();
         expect(within(rows[2]).getByText('Site closed · danger still open')).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Resolve all' })).toBeTruthy();
     });
@@ -49,7 +49,7 @@ describe('AlertsFeed dangers', () =>
         const onSelect = vi.fn();
         render(<AlertsFeed alerts={alerts} onSelect={onSelect} canResolve />);
         fireEvent.click(screen.getByRole('button', { name: /Person on the beach near 3 sites/ }));
-        fireEvent.click(screen.getByRole('button', { name: /Zone B · violet trail · dug at 20.0 s/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^Zone B · violet trail · dug at 20.0 s$/ }));
         expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'd2' }));
     });
 
@@ -59,7 +59,7 @@ describe('AlertsFeed dangers', () =>
         vi.stubGlobal('fetch', fetchMock);
         render(<AlertsFeed alerts={alerts} onSelect={vi.fn()} canResolve />);
         fireEvent.click(screen.getByRole('button', { name: /Person on the beach near 3 sites/ }));
-        fireEvent.click(within(screen.getAllByRole('group', { name: /^Danger at / })[1]).getByRole('button', { name: 'Resolve' }));
+        fireEvent.click(within(screen.getAllByRole('group', { name: /^Danger at / })[1]).getByRole('button', { name: /^Resolve danger at / }));
         await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
         expect(fetchMock).toHaveBeenCalledWith('/api/sites/d2/events', expect.objectContaining({ method: 'POST', body: JSON.stringify({ type: 'dangerResolved' }) }));
         fireEvent.click(screen.getByRole('button', { name: 'Resolve all' }));
@@ -77,12 +77,26 @@ describe('AlertsFeed dangers', () =>
         expect((await screen.findByRole('alert')).textContent).toContain('Volunteers and admins only');
     });
 
+    it('keeps going after a failure and reports per-site results', async () =>
+    {
+        const fetchMock = vi.fn(async (url: RequestInfo | URL) => String(url).includes('/d2/') ? json({ error: 'Server busy' }, 500) : json({ summary: {} }));
+        vi.stubGlobal('fetch', fetchMock);
+        render(<AlertsFeed alerts={alerts} onSelect={vi.fn()} canResolve />);
+        fireEvent.click(screen.getByRole('button', { name: /Person on the beach near 3 sites/ }));
+        fireEvent.click(screen.getByRole('button', { name: 'Resolve all' }));
+        const message = (await screen.findByRole('alert')).textContent ?? '';
+        expect(message).toMatch(/^2 of 3 resolved; failed: .+ — Server busy$/);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        // The failed row stays actionable.
+        expect(screen.getAllByRole('button', { name: /^Resolve danger at / })).toHaveLength(1);
+    });
+
     it('is read-only for viewers', () =>
     {
         render(<AlertsFeed alerts={alerts} onSelect={vi.fn()} />);
         fireEvent.click(screen.getByRole('button', { name: /Person on the beach near 3 sites/ }));
         expect(screen.getAllByRole('group', { name: /^Danger at / })).toHaveLength(3);
-        expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^Resolve danger at / })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Resolve all' })).toBeNull();
     });
 
