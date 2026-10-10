@@ -9,3 +9,6 @@ artifacts/
 
 # Local Claude Code session data
 .claude/
+
+# ESP32 firmware local Wi-Fi settings
+firmware/**/secrets.h
