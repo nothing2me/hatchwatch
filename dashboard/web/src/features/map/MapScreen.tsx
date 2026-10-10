@@ -39,7 +39,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const selectedAlert = liveSelected ?? (heldAlert?.id === selectedAlertId ? heldAlert : null);
     const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
-    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true });
+    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, motion: true });
 
     const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
     const [playback, setPlayback] = useState<Playback | null>(null);
@@ -65,6 +65,12 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         }
         const camera = snapshot.cameras.find(candidate => candidate.id === cameraId);
         const video = camera?.status === 'ONLINE' ? camera.video : null;
+        if (video?.motionMap)
+        {
+            const lngs = video.motionMap.corners.map(point => point[0]);
+            const lats = video.motionMap.corners.map(point => point[1]);
+            mapRef.current?.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 180, maxZoom: 20, duration: 700 });
+        }
         setSelectedCameraId(cameraId);
         setSeek(null);
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);

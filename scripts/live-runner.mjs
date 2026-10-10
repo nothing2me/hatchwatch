@@ -181,8 +181,8 @@ async function analyzeAndPublish(chunk)
         ground_bounds_m: groundBounds,
         cameras:
         [
-            {index: 0, end: 'x_min', video: 'camera-0.mp4', calibration: 'calibration-0.json'},
-            {index: 1, end: 'x_max', video: 'camera-1.mp4', calibration: 'calibration-1.json'},
+            {index: 0, end: 'x_min', video: 'camera-0.mp4', calibration: 'calibration-0.json', motion_map: 'view-0/motion-map.png', motion_metadata: 'view-0/metadata.json', motion_candidates: 'view-0/detection/predictions.json', pure_motion: 'view-0/pure-motion.mp4'},
+            {index: 1, end: 'x_max', video: 'camera-1.mp4', calibration: 'calibration-1.json', motion_map: 'view-1/motion-map.png', motion_metadata: 'view-1/metadata.json', motion_candidates: 'view-1/detection/predictions.json', pure_motion: 'view-1/pure-motion.mp4'},
         ],
         pins: 'pins/predictions.json',
         note: 'Synthetic simulation output. Pins mark digging activity; nesting unresolved.',

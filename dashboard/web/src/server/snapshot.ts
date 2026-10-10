@@ -3,7 +3,8 @@ import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
 import { outcomeCounts } from '@/lib/sites/outcomes';
 import { PERSON_EVENTS, summarizeSite } from '@/lib/sites/summary';
-import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, SiteEventType, VideoSource } from '@/lib/types';
+import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, MotionCandidateView, SiteEventType, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
 {
@@ -16,7 +17,7 @@ export interface CameraRow
 {
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
-    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null }[];
+    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; liveChunk?: { groundBounds: unknown } | null }[];
 }
 
 export interface AlertRow
@@ -70,7 +71,11 @@ function ringOf(outline: unknown): LngLat[]
 
 export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
 {
-    const cameras = rows.cameras.map(camera => ({
+    const zoneFrames = new Map(rows.zones.map(zone => [zone.code, zoneFrame(ringOf(zone.outline))]));
+    const cameras = rows.cameras.map(camera =>
+    {
+        const motionMap = camera.videos[0] ? motionMapFor(camera.videos[0], zoneFrames.get(camera.zone.code)) : undefined;
+        return {
         id: camera.id,
         code: camera.code,
         zoneCode: camera.zone.code,
@@ -87,9 +92,11 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
                 durationS: camera.videos[0].durationS,
                 hasMotion: camera.videos[0].pureMotionPath !== null,
                 simRunId: camera.videos[0].simRunId,
+                ...(motionMap ? { motionMap } : {}),
             }
             : null,
-    }));
+        };
+    });
 
     const alerts = rows.alerts.map(alert => ({
         id: alert.id,
@@ -111,15 +118,48 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         site: summarizeSite(toEvents(alert.events)),
     }));
 
+    const motionCandidates: MotionCandidateView[] = rows.cameras.flatMap(camera =>
+    {
+        const video = camera.videos[0];
+        const frame = zoneFrames.get(camera.zone.code);
+        if (!video?.simRunId || !frame || !Array.isArray(video.motionCandidates)) return [];
+        return video.motionCandidates.flatMap((item: unknown) =>
+        {
+            const candidate = item as { id?: unknown; point?: unknown; interval?: unknown; radiusM?: unknown; score?: unknown };
+            if (typeof candidate?.id !== 'string' || !Array.isArray(candidate.point) || candidate.point.length !== 2 || !candidate.point.every(value => typeof value === 'number' && Number.isFinite(value)) || !Array.isArray(candidate.interval) || candidate.interval.length !== 2 || !candidate.interval.every(value => typeof value === 'number' && Number.isFinite(value)) || typeof candidate.radiusM !== 'number' || typeof candidate.score !== 'number') return [];
+            return [{ id: `${video.id}:${candidate.id}`, cameraCode: camera.code, zoneCode: camera.zone.code, position: simPointToLngLat(frame, candidate.point as [number, number]), radiusM: candidate.radiusM, score: candidate.score, startT: candidate.interval[0], endT: candidate.interval[1], simRunId: video.simRunId! }];
+        });
+    });
+
     return {
         zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline), custom: (zone.createdById ?? null) !== null })),
         cameras,
         alerts,
+        motionCandidates,
         camerasOnline: cameras.filter(camera => camera.status === 'ONLINE').length,
         camerasTotal: cameras.length,
         inactiveCount: rows.inactiveCount ?? alerts.filter(alert => ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'].includes(alert.status)).length,
         outcomes: rows.outcomes ?? outcomeCounts(alerts.map(alert => alert.site)),
         fadeMinutes: fadeMinutes(),
+    };
+}
+
+function motionMapFor(video: CameraRow['videos'][number], frame: ReturnType<typeof zoneFrame> | undefined): NonNullable<MapSnapshot['cameras'][number]['video']>['motionMap']
+{
+    const bounds = video.liveChunk?.groundBounds;
+    if (!frame || !video.motionMapPath || !Array.isArray(bounds) || bounds.length !== 4 || !bounds.every(value => typeof value === 'number' && Number.isFinite(value)))
+    {
+        return undefined;
+    }
+    const [x0, x1, z0, z1] = bounds as [number, number, number, number];
+    if (x0 >= x1 || z0 >= z1)
+    {
+        return undefined;
+    }
+    return {
+        url: `/api/media/motion-map/${encodeURIComponent(video.id)}`,
+        corners: [simPointToLngLat(frame, [x0, z1]), simPointToLngLat(frame, [x1, z1]), simPointToLngLat(frame, [x1, z0]), simPointToLngLat(frame, [x0, z0])],
+        fitRmseM: video.motionFitRmseM ?? null,
     };
 }
 
@@ -136,7 +176,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
                 videos: {
                     // Live media that was pruned is skipped; chunks without a live record are unaffected.
                     where: { AND: [{ OR: [{ source: 'SIMULATION' }, { jobs: { some: { status: 'DONE' } } }] }, { OR: [{ liveChunkId: null }, { liveChunk: { mediaPruned: false } }] }] },
-                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true },
+                    select: { id: true, source: true, durationS: true, pureMotionPath: true, simRunId: true, motionMapPath: true, motionFitRmseM: true, motionCandidates: true, liveChunk: { select: { groundBounds: true } } },
                     orderBy: { createdAt: 'desc' },
                     take: 1,
                 },

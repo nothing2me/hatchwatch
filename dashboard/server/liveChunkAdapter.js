@@ -3,7 +3,7 @@
 // It reads ONLY reviewed public outputs, through the versioned contract in
 // schemas/live-chunk.v1.json: a chunk's live-chunk.json manifest and its
 // pins/predictions.json. File names are fixed by the contract, so nothing a
-// manifest says can point the dashboard at artifacts/private, simulator
+// manifest says can point the dashboard at private artifact folders, simulator
 // state, seeds, or evaluator truth (agent.md, "Integration boundary").
 //
 // It turns each two-camera pin into a dashboard nest site: map position,

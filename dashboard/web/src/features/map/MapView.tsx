@@ -7,7 +7,7 @@ import { forwardRef, useMemo, useState } from 'react';
 import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import { cn } from '@/lib/cn';
-import { boundsOf, viewCone } from '@/lib/geo';
+import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
 import type { LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
@@ -81,6 +81,26 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
     // Rebuild (and so MapLibre setData) only when a pin's look changes, not on every clock tick.
     const pinKey = JSON.stringify(pinFeatures(snapshot.alerts, playback, now, snapshot.fadeMinutes, selectedAlertId));
     const alertsGeoJson = useMemo<FeatureCollection>(() => ({ type: 'FeatureCollection', features: JSON.parse(pinKey) }), [pinKey]);
+    const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: alertsGeoJson.features.flatMap(feature =>
+        {
+            if (feature.geometry.type !== 'Point') return [];
+            const alert = snapshot.alerts.find(candidate => candidate.id === feature.properties?.id);
+            if (!alert?.position || !(alert.radiusM > 0)) return [];
+            const ring = Array.from({ length: 33 }, (_, index) => destinationPoint(alert.position!, index * 360 / 32, alert.radiusM));
+            return [{ type: 'Feature' as const, properties: feature.properties, geometry: { type: 'Polygon' as const, coordinates: [ring] } }];
+        }),
+    }), [alertsGeoJson, snapshot.alerts]);
+    const visibleCandidates = (snapshot.motionCandidates ?? []).filter(candidate => !playback || (candidate.simRunId === playback.key && playback.t >= candidate.startT - 0.5 && playback.t <= candidate.endT + 0.5));
+    const candidatesGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: visibleCandidates.map(candidate => ({ type: 'Feature', properties: { id: candidate.id, cameraCode: candidate.cameraCode, color: candidate.cameraCode.endsWith('1') ? '#1b9767' : '#e68f32' }, geometry: { type: 'Point', coordinates: candidate.position } })),
+    }), [JSON.stringify(visibleCandidates)]);
+    const candidateFootprintsGeoJson = useMemo<FeatureCollection>(() => ({
+        type: 'FeatureCollection',
+        features: visibleCandidates.map(candidate => ({ type: 'Feature', properties: { id: candidate.id, color: candidate.cameraCode.endsWith('1') ? '#1b9767' : '#e68f32' }, geometry: { type: 'Polygon', coordinates: [Array.from({ length: 33 }, (_, index) => destinationPoint(candidate.position, index * 360 / 32, candidate.radiusM))] } })),
+    }), [JSON.stringify(visibleCandidates)]);
 
     const [[west, south], [east, north]] = initialBounds(snapshot);
     const padding = typeof window === 'undefined' ? 80 : fitPadding(window.innerWidth, window.innerHeight);
@@ -129,6 +149,11 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                 }}
                 style={{ position: 'absolute', inset: 0 }}
             >
+                {layers.motion && snapshot.cameras.filter(camera => camera.video?.motionMap).map(camera => (
+                    <Source key={`motion-${camera.video!.id}`} id={`motion-${camera.video!.id}`} type="image" url={camera.video!.motionMap!.url} coordinates={camera.video!.motionMap!.corners}>
+                        <Layer id={`motion-raster-${camera.video!.id}`} type="raster" paint={{ 'raster-opacity': 0.85, 'raster-resampling': 'linear' }} />
+                    </Source>
+                ))}
                 {layers.cameras && (
                     <Source id="cones" type="geojson" data={conesGeoJson}>
                         <Layer id="cone-fill" type="fill" paint={{
@@ -147,6 +172,23 @@ export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snaps
                     <Source id="zones" type="geojson" data={zonesGeoJson}>
                         <Layer id="zone-fill" type="fill" paint={{ 'fill-color': levelColor, 'fill-opacity': 0.22 }} />
                         <Layer id="zone-line" type="line" paint={{ 'line-color': levelColor, 'line-width': 2 }} />
+                    </Source>
+                )}
+                {layers.alerts && (
+                    <Source id="alert-footprints" type="geojson" data={footprintsGeoJson}>
+                        <Layer id="alert-footprint-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 }} />
+                        <Layer id="alert-footprint-line" type="line" paint={{ 'line-color': ['get', 'color'], 'line-opacity': ['get', 'opacity'], 'line-width': 1 }} />
+                    </Source>
+                )}
+                {layers.motion && (
+                    <Source id="motion-candidate-footprints" type="geojson" data={candidateFootprintsGeoJson}>
+                        <Layer id="motion-candidate-fill" type="fill" paint={{ 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 }} />
+                        <Layer id="motion-candidate-line" type="line" paint={{ 'line-color': ['get', 'color'], 'line-width': 1, 'line-dasharray': [2, 2] }} />
+                    </Source>
+                )}
+                {layers.motion && (
+                    <Source id="motion-candidates" type="geojson" data={candidatesGeoJson}>
+                        <Layer id="motion-candidate-pins" type="circle" paint={{ 'circle-radius': 5, 'circle-color': '#07151a', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': 2 }} />
                     </Source>
                 )}
                 {layers.alerts && (

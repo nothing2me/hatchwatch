@@ -47,6 +47,7 @@ export interface FeedVideo
     durationS: number | null;
     hasMotion: boolean;
     simRunId: string | null;
+    motionMap?: { url: string; corners: [LngLat, LngLat, LngLat, LngLat]; fitRmseM: number | null };
 }
 
 export interface CameraView
@@ -84,11 +85,25 @@ export interface AlertView
     site: SiteSummary;
 }
 
+export interface MotionCandidateView
+{
+    id: string;
+    cameraCode: string;
+    zoneCode: string;
+    position: LngLat;
+    radiusM: number;
+    score: number;
+    startT: number;
+    endT: number;
+    simRunId: string;
+}
+
 export interface MapSnapshot
 {
     zones: ZoneView[];
     cameras: CameraView[];
     alerts: AlertView[];
+    motionCandidates?: MotionCandidateView[];
     camerasOnline: number;
     camerasTotal: number;
     inactiveCount: number;    // dismissed, hatched, lost or archived

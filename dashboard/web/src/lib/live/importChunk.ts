@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
+import { z } from 'zod';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
@@ -11,6 +12,15 @@ import { liveManifestSchema } from './manifest';
 export const LIVE_MANIFEST_FILE = 'live-chunk.json';
 
 const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'));
+const motionMetadataSchema = z.object({ calibration_fit_rmse_m: z.number().finite().nonnegative() });
+const candidateSchema = z.object({
+    id: z.string().max(80),
+    point: z.tuple([z.number().finite(), z.number().finite()]),
+    interval: z.tuple([z.number().finite().nonnegative(), z.number().finite().nonnegative()]),
+    radius_m: z.number().positive().max(20),
+    score: z.number().finite(),
+});
+const candidatesFileSchema = z.object({ methods: z.object({ frozen: z.array(candidateSchema).max(25) }) });
 
 // Imports one live-chunk.v1 folder. Returns null when the chunk is already imported.
 export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoot }: { chunkDir: string; mediaRoot: string }): Promise<{ chunkId: string; zoneCode: string; sites: number } | null>
@@ -30,13 +40,24 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         return null;
     }
 
-    const files = [...manifest.cameras.flatMap(camera => [camera.video, camera.calibration]), manifest.pins];
+    const files = [...manifest.cameras.flatMap(camera => [camera.video, camera.calibration, ...(camera.motion_map ? [camera.motion_map] : []), ...(camera.motion_metadata ? [camera.motion_metadata] : []), ...(camera.motion_candidates ? [camera.motion_candidates] : []), ...(camera.pure_motion ? [camera.pure_motion] : [])]), manifest.pins];
     const missing = files.filter(file => !existsSync(join(dir, file)));
     if (missing.length)
     {
         throw new Error(`Chunk ${manifest.chunk_id} is missing: ${missing.join(', ')}`);
     }
     const calibrations = manifest.cameras.map(camera => calibrationSchema.parse(readJson(join(dir, camera.calibration))));
+    if (calibrations.some(calibration => calibration.ground_bounds.some((value, index) => value !== manifest.ground_bounds_m[index])))
+    {
+        throw new Error(`Chunk ${manifest.chunk_id} calibration bounds differ from manifest`);
+    }
+    const motionMetadata = manifest.cameras.map(camera => camera.motion_metadata ? motionMetadataSchema.parse(readJson(join(dir, camera.motion_metadata))) : null);
+    const motionCandidates = manifest.cameras.map(camera => camera.motion_candidates ? candidatesFileSchema.parse(readJson(join(dir, camera.motion_candidates))).methods.frozen.map(candidate => ({ id: candidate.id, point: candidate.point, interval: candidate.interval, radiusM: candidate.radius_m, score: candidate.score })) : []);
+    const [xMin, xMax, zMin, zMax] = manifest.ground_bounds_m;
+    if (motionCandidates.some(candidates => candidates.some(candidate => candidate.point[0] < xMin || candidate.point[0] > xMax || candidate.point[1] < zMin || candidate.point[1] > zMax || candidate.interval[1] < candidate.interval[0] || candidate.interval[1] > manifest.clip_seconds)))
+    {
+        throw new Error(`Chunk ${manifest.chunk_id} has out-of-bounds motion candidates`);
+    }
     const pins: SimPin[] = pinsFileSchema.parse(readJson(join(dir, manifest.pins))).methods.pins;
 
     const zones = await prisma.zone.findMany({ orderBy: { code: 'asc' } });
@@ -71,16 +92,29 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         for (const camera of manifest.cameras)
         {
             copyFileSync(join(dir, camera.video), join(staging, camera.video));
+            if (camera.motion_map)
+            {
+                mkdirSync(join(staging, `view-${camera.index}`), { recursive: true });
+                copyFileSync(join(dir, camera.motion_map), join(staging, camera.motion_map));
+            }
+            if (camera.pure_motion)
+            {
+                mkdirSync(join(staging, `view-${camera.index}`), { recursive: true });
+                copyFileSync(join(dir, camera.pure_motion), join(staging, camera.pure_motion));
+            }
         }
         const result = await prisma.$transaction(async tx =>
         {
-            await tx.liveChunk.create({ data: { id: manifest.chunk_id, sequence: manifest.sequence, zoneId: zone.id, startedAt } });
+            await tx.liveChunk.create({ data: { id: manifest.chunk_id, sequence: manifest.sequence, zoneId: zone.id, startedAt, groundBounds: manifest.ground_bounds_m } });
             const videos = await Promise.all(manifest.cameras.map((camera, index) => tx.video.create({
                 data: {
                     cameraId: cameraByIndex[index].id,
                     source: 'SIMULATION',
                     path: relative(camera.video),
-                    pureMotionPath: null,
+                    pureMotionPath: camera.pure_motion ? relative(camera.pure_motion) : null,
+                    motionMapPath: camera.motion_map ? relative(camera.motion_map) : null,
+                    motionFitRmseM: motionMetadata[index]?.calibration_fit_rmse_m ?? null,
+                    motionCandidates: motionCandidates[index],
                     simRunId: manifest.chunk_id,
                     originalName: `${manifest.chunk_id}/${camera.video}`,
                     durationS: manifest.clip_seconds,

@@ -121,6 +121,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera
                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Field</dt><dd className="mt-0.5 font-mono tabular-nums">{Math.round(camera.fovDeg)}°</dd></div>
                 <div><dt className="text-[10px] tracking-[0.12em] text-ink-muted uppercase">Range</dt><dd className="mt-0.5 font-mono tabular-nums">{Math.round(camera.rangeM)} m</dd></div>
             </dl>
+            {playable?.motionMap && <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">Projected motion covers the calibrated ground area. Marker fit RMSE: {playable.motionMap.fitRmseM?.toPrecision(2) ?? 'unavailable'} m. Independent pin location accuracy has not been measured.</p>}
             {(simulated || !camera.calibrated) && (
                 <p className="mt-3 flex gap-2 border-t border-white/8 pt-2.5 text-xs leading-relaxed text-ink-muted">
                     <Info aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />

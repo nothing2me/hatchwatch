@@ -1,6 +1,12 @@
 import 'dotenv/config';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+
+// Run the project's own Prisma CLI with the current Node binary.
+// Calling `npx` directly fails on Windows (spawnSync npx ENOENT) because only
+// npx.cmd exists there; going through process.execPath is cross-platform.
+const prismaCli = fileURLToPath(new URL('../../node_modules/prisma/build/index.js', import.meta.url));
 
 // Creates the integration-test database if missing and applies migrations to it.
 // Usage: `npm run db:test:prepare` (needs `docker compose up -d db`).
@@ -29,7 +35,7 @@ if (exists.rowCount === 0)
 }
 await client.end();
 
-execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
+execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
     stdio: 'inherit',
     env: { ...process.env, DATABASE_URL: testUrl },
 });

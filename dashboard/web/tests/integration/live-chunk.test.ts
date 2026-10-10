@@ -8,6 +8,7 @@ import { ageSites, pruneMedia, scanOnce, type LiveSettings } from '@/lib/live/wa
 import { addSiteEvent } from '@/lib/sites/events';
 import { importSimRun } from '@/lib/sim/importRun';
 import { seedDatabase } from '../../prisma/seed';
+import { loadMapSnapshot } from '@/server/snapshot';
 import { validManifest } from '../unit/live-manifest.test';
 
 const prisma = createPrismaClient(process.env.TEST_DATABASE_URL);
@@ -16,7 +17,7 @@ let settings: LiveSettings;
 
 const START = '2026-10-10T00:00:00.000Z';
 
-function makeChunk(sequence: number, { pins = true, started = START, tag = `abc${sequence}` }: { pins?: boolean; started?: string; tag?: string } = {}): string
+function makeChunk(sequence: number, { pins = true, motion = false, started = START, tag = `abc${sequence}` }: { pins?: boolean; motion?: boolean; started?: string; tag?: string } = {}): string
 {
     const id = `live-${String(sequence).padStart(6, '0')}-${tag}`;
     const dir = join(settings.root, id);
@@ -25,13 +26,23 @@ function makeChunk(sequence: number, { pins = true, started = START, tag = `abc$
     {
         writeFileSync(join(dir, `camera-${camera}.mp4`), `video:${id}:${camera}`);
         writeFileSync(join(dir, `calibration-${camera}.json`), JSON.stringify({ camera, width: 1280, height: 720, ground_bounds: [-12, 12, -8, 8] }));
+        if (motion)
+        {
+            mkdirSync(join(dir, `view-${camera}/detection`), { recursive: true });
+            writeFileSync(join(dir, `view-${camera}/motion-map.png`), 'png');
+            writeFileSync(join(dir, `view-${camera}/pure-motion.mp4`), 'motion-video');
+            writeFileSync(join(dir, `view-${camera}/metadata.json`), JSON.stringify({ calibration_fit_rmse_m: 0.12 }));
+            writeFileSync(join(dir, `view-${camera}/detection/predictions.json`), JSON.stringify({ methods: { frozen: [{ id: 'frozen-1', point: [camera ? 3 : -3, 2], interval: [5, 10], radius_m: 0.9, score: 0.8 }] } }));
+        }
     }
     const list = pins ? [
         { id: 'pin-1', point: [2, 3], interval: [4, 9], score: 1.2, evidence_tier: 'two_camera', source_views: [0, 1] },
         { id: 'pin-2', point: [-3, 1], interval: [10, 20], score: 0.8, evidence_tier: 'single_camera', source_views: [1] },
     ] : [];
     writeFileSync(join(dir, 'pins/predictions.json'), JSON.stringify({ schema_version: 1, methods: { pins: list } }));
-    writeFileSync(join(dir, 'live-chunk.json'), JSON.stringify({ ...validManifest(), chunk_id: id, sequence, recording_started_at: started }));
+    const manifest = validManifest();
+    if (motion) manifest.cameras.forEach((camera, index) => Object.assign(camera, { motion_map: `view-${index}/motion-map.png`, motion_metadata: `view-${index}/metadata.json`, motion_candidates: `view-${index}/detection/predictions.json`, pure_motion: `view-${index}/pure-motion.mp4` }));
+    writeFileSync(join(dir, 'live-chunk.json'), JSON.stringify({ ...manifest, chunk_id: id, sequence, recording_started_at: started }));
     return dir;
 }
 
@@ -58,6 +69,23 @@ afterAll(async () =>
 
 describe('importLiveChunk', () =>
 {
+    it('imports measured motion maps and unclassified pins at true ground scale', async () =>
+    {
+        const dir = makeChunk(0, { pins: false, motion: true });
+        await importLiveChunk(prisma, { chunkDir: dir, mediaRoot: settings.mediaRoot });
+        const videos = await prisma.video.findMany({ orderBy: { path: 'asc' } });
+        expect(videos.map(video => [video.motionMapPath, video.motionFitRmseM])).toEqual([
+            ['live/live-000000-abc0/view-0/motion-map.png', 0.12],
+            ['live/live-000000-abc0/view-1/motion-map.png', 0.12],
+        ]);
+        expect(existsSync(join(settings.mediaRoot, videos[0].motionMapPath!))).toBe(true);
+        expect(existsSync(join(settings.mediaRoot, videos[0].pureMotionPath!))).toBe(true);
+        const snapshot = await loadMapSnapshot(prisma);
+        expect(snapshot.alerts).toHaveLength(0);
+        expect(snapshot.motionCandidates).toHaveLength(2);
+        expect(snapshot.cameras.filter(camera => camera.video?.motionMap)).toHaveLength(2);
+        expect(snapshot.cameras.filter(camera => camera.video?.hasMotion)).toHaveLength(2);
+    });
     it('places the chunk on zone sequence % count and maps cameras by end', async () =>
     {
         const dir = makeChunk(7);

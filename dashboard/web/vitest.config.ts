@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 const plugins = [react()];
 const resolve = {
     tsconfigPaths: true,
-    alias: { 'server-only': new URL('./tests/stubs/server-only.ts', import.meta.url).pathname },
+    alias: { 'server-only': fileURLToPath(new URL('./tests/stubs/server-only.ts', import.meta.url)) },
 };
 const shared = { setupFiles: ['dotenv/config'], fileParallelism: false };
 

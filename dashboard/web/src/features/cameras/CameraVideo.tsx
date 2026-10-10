@@ -112,7 +112,7 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false, varia
                             className={cn('rounded px-2 py-0.5 font-medium capitalize transition-colors focus-visible:outline-2 focus-visible:outline-amber',
                                 variant === option ? 'bg-white/12 text-ink' : 'text-ink-muted hover:text-ink')}
                         >
-                            {option === 'raw' ? 'Raw' : 'Motion'}
+                            {option === 'raw' ? 'Camera' : 'Motion diff'}
                         </button>
                     ))}
                 </div>

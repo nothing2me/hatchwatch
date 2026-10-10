@@ -113,6 +113,12 @@ model Video {
   path           String
   /// Pure-motion variant, relative to MEDIA_ROOT (simulation imports).
   pureMotionPath String?
+  /// Transparent top-down motion projection, relative to MEDIA_ROOT.
+  motionMapPath  String?
+  /// Fit residual from planar marker registration; not independent positional accuracy.
+  motionFitRmseM Float?
+  /// Sanitized public localized-activity candidates (unclassified, never alerts).
+  motionCandidates Json?
   /// Research run id for simulation imports.
   simRunId       String?
   originalName   String
@@ -254,6 +260,8 @@ model LiveChunk {
   zoneId      String
   zone        Zone     @relation(fields: [zoneId], references: [id])
   startedAt   DateTime
+  /// [x_min, x_max, z_min, z_max] metres of the public motion projection.
+  groundBounds Json?
   importedAt  DateTime @default(now())
   mediaPruned Boolean  @default(false)
   videos      Video[]

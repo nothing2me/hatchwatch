@@ -30,6 +30,13 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                 </Collapsible.Trigger>
                 <Collapsible.Content className="space-y-2.5 border-t border-white/6 px-3 pt-2.5 pb-3">
                     <div>
+                        <p className="mb-1 text-[10px] tracking-[0.12em] text-ink-muted uppercase">Projected motion</p>
+                        <p><span className="text-[#1b9767]">●</span> Camera 1 <span className="ml-2 text-[#e68f32]">●</span> Camera 2</p>
+                        <p className="mt-1 text-ink-muted">Each heatmap spans the calibrated 24 × 16 m ground area. Planar projection of raised turtles is approximate.</p>
+                        <p className="mt-1 text-ink-muted">Hollow pins: unclassified activity candidates, not digging alerts. Dashed footprints show their 0.9 m inspection areas.</p>
+                        <p className="mt-1 text-ink-muted">Independent pin location accuracy has not been measured.</p>
+                    </div>
+                    <div>
                         <p className="mb-1.5 text-[10px] tracking-[0.12em] text-ink-muted uppercase">Zone activity</p>
                         <div className="flex items-center gap-3">
                             {levels.map(level => (
@@ -59,6 +66,7 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                             <p className="flex items-center gap-2 text-ink-muted">
                                 <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border-[2.5px] border-ink/80" /></span>Thick ring · both cameras
                             </p>
+                            <p className="text-ink-muted">Pin footprint: 0.9 m inspection radius at map scale; this is not measured location accuracy.</p>
                             <p className="flex items-center gap-2 text-ink-muted">
                                 <span className={symbol}><span className="h-3.5 w-3.5 rounded-full border border-ink/80" /></span>Thin ring · one camera
                             </p>
