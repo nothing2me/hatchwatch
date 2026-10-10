@@ -4,13 +4,14 @@
 #include "camera.h"
 #include "console.h"
 #include "esp_http_server.h"
+#include "motion.h"
 #include "web_page.h"
 
 namespace
 {
     constexpr char STREAM_BOUNDARY[] = "frame";
-    constexpr uint32_t STREAM_FRAME_GAP_MS = 30;  // leaves Wi-Fi and the encoder breathing room
-    constexpr int STREAM_RETRIES = 5;            // missed frames tolerated before a stream gives up
+    constexpr uint32_t STREAM_WAIT_MS = 2000;  // longest wait for the capture task's next frame
+    constexpr int STREAM_RETRIES = 3;          // missed frames tolerated before a stream gives up
 
     httpd_handle_t pageServer = nullptr;
     httpd_handle_t streamServer = nullptr;
@@ -48,16 +49,57 @@ namespace
     {
         const CameraInfo &camera = cameraInfo();
         const bool streaming = millis() - lastStreamFrameMs < 2000;
-        char body[320];
+        const motion::Snapshot moving = motion::snapshot();
+        const long sinceMotion = moving.lastMotionMs ? static_cast<long>((millis() - moving.lastMotionMs) / 1000) : -1;
+        char body[512];
         snprintf(body, sizeof(body),
                  "{\"sensor\":\"%s\",\"pid\":%u,\"mode\":\"%s\",\"width\":%u,\"height\":%u,"
-                 "\"psramBuffer\":%s,\"fps\":%.1f,\"rssi\":%d,\"uptime\":%lu,\"freeHeap\":%u}",
+                 "\"psramBuffer\":%s,\"fps\":%.1f,\"rssi\":%d,\"uptime\":%lu,\"freeHeap\":%u,"
+                 "\"motion\":{\"percent\":%.1f,\"active\":%s,\"box\":[%u,%u,%u,%u],"
+                 "\"secondsSince\":%ld,\"threshold\":%u}}",
                  camera.sensorName, camera.sensorPid, captureModeName(camera.mode), camera.width, camera.height,
                  camera.frameBufferInPsram ? "true" : "false", streaming ? streamFps : 0.0f, WiFi.RSSI(),
-                 static_cast<unsigned long>(millis() / 1000), static_cast<unsigned>(ESP.getFreeHeap()));
+                 static_cast<unsigned long>(millis() / 1000), static_cast<unsigned>(ESP.getFreeHeap()),
+                 moving.percent, moving.active ? "true" : "false", moving.x, moving.y, moving.w, moving.h,
+                 sinceMotion, moving.threshold);
         httpd_resp_set_type(req, "application/json");
         httpd_resp_set_hdr(req, "Cache-Control", "no-store");
         return httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
+    }
+
+    esp_err_t sendMotionMask(httpd_req_t *req)
+    {
+        uint8_t *jpeg = nullptr;
+        size_t length = 0;
+        if (!motion::maskJpeg(&jpeg, &length))
+        {
+            return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Motion not available");
+        }
+        httpd_resp_set_type(req, "image/jpeg");
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        const esp_err_t result = httpd_resp_send(req, reinterpret_cast<const char *>(jpeg), length);
+        free(jpeg);
+        return result;
+    }
+
+    // POST /motion/settings?threshold=NN or ?reset=1
+    esp_err_t updateMotion(httpd_req_t *req)
+    {
+        char query[48] = {};
+        char value[8] = {};
+        if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
+        {
+            if (httpd_query_key_value(query, "threshold", value, sizeof(value)) == ESP_OK)
+            {
+                motion::setThreshold(static_cast<uint8_t>(atoi(value)));
+            }
+            if (httpd_query_key_value(query, "reset", value, sizeof(value)) == ESP_OK)
+            {
+                motion::resetBackground();
+            }
+        }
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        return httpd_resp_send(req, nullptr, 0);
     }
 
     esp_err_t sendStreamPart(httpd_req_t *req, const JpegFrame &frame)
@@ -86,11 +128,12 @@ namespace
 
         int misses = 0;
         uint32_t previous = millis();
+        uint32_t sequence = 0;
         while (true)
         {
             esp_err_t result = ESP_OK;
             {
-                JpegFrame frame;  // released at the end of this block, before the pause below
+                JpegFrame frame(sequence, STREAM_WAIT_MS);  // waits for a frame newer than the last one sent
                 if (!frame.ok())
                 {
                     if (++misses > STREAM_RETRIES)
@@ -98,10 +141,10 @@ namespace
                         CONSOLE("Stream: camera stopped delivering frames\n");
                         return ESP_FAIL;
                     }
-                    delay(50);
                     continue;
                 }
                 misses = 0;
+                sequence = frame.sequence();
                 result = sendStreamPart(req, frame);
             }
             if (result != ESP_OK)
@@ -114,15 +157,15 @@ namespace
             streamFps = streamFps <= 0 ? instant : streamFps * 0.9f + instant * 0.1f;
             lastStreamFrameMs = now;
             previous = now;
-            delay(STREAM_FRAME_GAP_MS);
         }
     }
 
-    bool registerRoute(httpd_handle_t server, const char *uri, esp_err_t (*handler)(httpd_req_t *))
+    bool registerRoute(httpd_handle_t server, const char *uri, esp_err_t (*handler)(httpd_req_t *),
+                       httpd_method_t method = HTTP_GET)
     {
         httpd_uri_t route = {};
         route.uri = uri;
-        route.method = HTTP_GET;
+        route.method = method;
         route.handler = handler;
         return httpd_register_uri_handler(server, &route) == ESP_OK;
     }
@@ -136,7 +179,9 @@ bool webServerBegin()
     if (httpd_start(&pageServer, &config) != ESP_OK
         || !registerRoute(pageServer, "/", sendPage)
         || !registerRoute(pageServer, "/capture", sendCapture)
-        || !registerRoute(pageServer, "/status", sendStatus))
+        || !registerRoute(pageServer, "/status", sendStatus)
+        || !registerRoute(pageServer, "/motion", sendMotionMask)
+        || !registerRoute(pageServer, "/motion/settings", updateMotion, HTTP_POST))
     {
         CONSOLE("Page server failed to start\n");
         return false;

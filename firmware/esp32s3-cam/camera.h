@@ -26,11 +26,15 @@ bool cameraBegin();
 const CameraInfo &cameraInfo();
 const char *captureModeName(CaptureMode mode);
 
-// One JPEG frame. Releases the camera buffer (and the encoded copy) when it goes out of scope.
+// Starts the task that owns the camera: it captures continuously, runs motion on raw frames and keeps
+// the newest JPEG for any number of viewers. Call once after cameraBegin().
+bool cameraStartCapture();
+
+// A copy of the newest JPEG. With afterSequence, waits (up to waitMs) for a frame newer than that.
 class JpegFrame
 {
 public:
-    JpegFrame();
+    explicit JpegFrame(uint32_t afterSequence = 0, uint32_t waitMs = 1000);
     ~JpegFrame();
     JpegFrame(const JpegFrame &) = delete;
     JpegFrame &operator=(const JpegFrame &) = delete;
@@ -38,10 +42,10 @@ public:
     bool ok() const { return data_ != nullptr; }
     const uint8_t *data() const { return data_; }
     size_t length() const { return length_; }
+    uint32_t sequence() const { return sequence_; }
 
 private:
-    camera_fb_t *frame_ = nullptr;
     uint8_t *data_ = nullptr;
     size_t length_ = 0;
-    bool ownsData_ = false;
+    uint32_t sequence_ = 0;
 };

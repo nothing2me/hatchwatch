@@ -80,7 +80,7 @@ void setup()
     CONSOLE("\nNestTrace ESP32-S3 camera starting\n");
 
     // Camera first: the raw-mode frame buffer needs a large block of internal RAM before Wi-Fi takes its share.
-    cameraReady = cameraBegin();
+    cameraReady = cameraBegin() && cameraStartCapture();
     if (!cameraReady)
     {
         CONSOLE("Stopped: camera not usable.\n");

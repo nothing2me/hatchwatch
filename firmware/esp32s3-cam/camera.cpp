@@ -4,6 +4,8 @@
 #include "console.h"
 #include "esp_heap_caps.h"
 #include "img_converters.h"
+#include "motion.h"
+#include "freertos/semphr.h"
 
 namespace
 {
@@ -212,40 +214,106 @@ const char *captureModeName(CaptureMode mode)
     }
 }
 
-JpegFrame::JpegFrame()
+namespace
 {
-    frame_ = esp_camera_fb_get();
-    if (!frame_)
+    constexpr uint32_t CAPTURE_INTERVAL_MS = 200;  // 5 frames per second
+
+    SemaphoreHandle_t latestLock = nullptr;
+    uint8_t *latestJpeg = nullptr;  // PSRAM, owned by the capture task's swap
+    size_t latestLength = 0;
+    uint32_t latestSequence = 0;
+
+    // Turns one camera frame into a JPEG in PSRAM (copy for hardware JPEG, encode for raw).
+    bool encode(const camera_fb_t *frame, uint8_t **jpeg, size_t *length)
+    {
+        if (frame->format == PIXFORMAT_JPEG)
+        {
+            *jpeg = static_cast<uint8_t *>(ps_malloc(frame->len));
+            if (!*jpeg)
+            {
+                return false;
+            }
+            memcpy(*jpeg, frame->buf, frame->len);
+            *length = frame->len;
+            return true;
+        }
+        return frame2jpg(const_cast<camera_fb_t *>(frame), SOFTWARE_JPEG_QUALITY, jpeg, length);
+    }
+
+    void captureTask(void *)
+    {
+        TickType_t wake = xTaskGetTickCount();
+        while (true)
+        {
+            camera_fb_t *frame = esp_camera_fb_get();
+            if (frame)
+            {
+                motion::feed(frame);
+                uint8_t *jpeg = nullptr;
+                size_t length = 0;
+                const bool ok = encode(frame, &jpeg, &length);
+                // The raw buffer goes back as soon as it is encoded, so the camera can fill the next frame.
+                esp_camera_fb_return(frame);
+                if (ok)
+                {
+                    xSemaphoreTake(latestLock, portMAX_DELAY);
+                    uint8_t *old = latestJpeg;
+                    latestJpeg = jpeg;
+                    latestLength = length;
+                    latestSequence++;
+                    xSemaphoreGive(latestLock);
+                    free(old);
+                }
+            }
+            vTaskDelayUntil(&wake, pdMS_TO_TICKS(CAPTURE_INTERVAL_MS));
+        }
+    }
+}
+
+bool cameraStartCapture()
+{
+    latestLock = xSemaphoreCreateMutex();
+    if (!latestLock)
+    {
+        return false;
+    }
+    motion::begin();
+    // Pinned to core 1, away from the Wi-Fi stack on core 0.
+    return xTaskCreatePinnedToCore(captureTask, "capture", 8192, nullptr, 5, nullptr, 1) == pdPASS;
+}
+
+JpegFrame::JpegFrame(uint32_t afterSequence, uint32_t waitMs)
+{
+    if (!latestLock)
     {
         return;
     }
-    if (frame_->format == PIXFORMAT_JPEG)
+    const uint32_t started = millis();
+    while (true)
     {
-        data_ = frame_->buf;
-        length_ = frame_->len;
-        return;
+        xSemaphoreTake(latestLock, portMAX_DELAY);
+        if (latestJpeg && latestSequence > afterSequence)
+        {
+            data_ = static_cast<uint8_t *>(ps_malloc(latestLength));
+            if (data_)
+            {
+                memcpy(data_, latestJpeg, latestLength);
+                length_ = latestLength;
+                sequence_ = latestSequence;
+            }
+            xSemaphoreGive(latestLock);
+            return;
+        }
+        xSemaphoreGive(latestLock);
+        if (millis() - started >= waitMs)
+        {
+            return;
+        }
+        delay(20);
     }
-    uint8_t *encoded = nullptr;
-    size_t encodedLength = 0;
-    if (frame2jpg(frame_, SOFTWARE_JPEG_QUALITY, &encoded, &encodedLength))
-    {
-        data_ = encoded;
-        length_ = encodedLength;
-        ownsData_ = true;
-    }
-    // The raw buffer is free again as soon as it is encoded, so the camera can fill the next frame.
-    esp_camera_fb_return(frame_);
-    frame_ = nullptr;
 }
 
 JpegFrame::~JpegFrame()
 {
-    if (ownsData_)
-    {
-        free(data_);
-    }
-    if (frame_)
-    {
-        esp_camera_fb_return(frame_);
-    }
+    free(data_);
 }

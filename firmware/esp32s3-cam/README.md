@@ -9,6 +9,8 @@ Standalone camera firmware for field tests. The board serves a camera page, a JP
 | `http://<ip>/capture`   | One JPEG (`?download=1` to save it)                                           |
 | `http://<ip>/status`    | JSON: sensor, mode, picture size, stream fps, Wi-Fi signal, uptime, free heap |
 | `http://<ip>:81/stream` | MJPEG stream (open it in a browser or VLC)                                    |
+| `http://<ip>/motion`    | Motion mask (80×60 grey JPEG, white = moving)                                  |
+| `POST http://<ip>/motion/settings?threshold=NN` | Motion threshold 5–100 (`?reset=1` relearns the background) |
 
 
 
@@ -42,6 +44,12 @@ Close the IDE's Serial Monitor before uploading from the command line; it holds 
 2. **Raw RGB565 + software JPEG** (sensors without JPEG, such as GC0308 on this board, or GC2145): one raw frame at up to 320×240 in **internal RAM**, encoded to JPEG on the ESP32.
 
 
+
+## Motion on the board
+
+A capture task owns the camera at 5 fps. Each raw frame is sampled to an 80×60 grey grid and compared with a background that adapts slowly (still objects fade in about 2 s). A cell moves when its brightness differs by more than the threshold (default 20); below 1% of the picture moving counts as still (sensor noise). `/status` reports `motion.percent`, `motion.active`, `motion.box` (x, y, w, h in picture pixels), `motion.secondsSince` and `motion.threshold`, and the Serial Monitor logs when motion starts and stops. It is a viewing aid only: not the digging detector, and it raises no alerts. It works in raw mode (this board's GC0308); with a hardware-JPEG sensor motion stays at 0.
+
+The stream server handles one viewer at a time; a second `/stream` viewer waits until the first closes. Snapshots, status and the motion mask stay available to everyone.
 
 ## Why the old sketch showed a striped, rainbow picture
 
