@@ -30,6 +30,12 @@ FOOT_WIDEN = 3.0         # a lower row this many times wider ends the person (tu
 FUSE_M = 1.0             # same-frame detections from two views closer than this are merged
 LINK_M = 1.5             # max step between linked detections
 MAX_GAP_FRAMES = 4
+ABSORB_M = 2.0           # an unmatched detection this close to a track updated in the same frame is dropped
+STITCH_OVERLAP_M = 2.0   # merge overlapping tracks whose mean separation over the overlap is at most this
+STITCH_GAP_S = 2.5       # merge a track into one starting at most this long after it ends ...
+STITCH_BASE_M = 1.5      # ... when its extrapolated end lands within STITCH_BASE_M + STITCH_PER_S * gap
+STITCH_PER_S = 1.0
+STITCH_VELOCITY_S = 1.0  # velocity for extrapolation: over the track's last second
 MIN_BOTH_VIEW_FRAMES = 2    # keep a track with this many frames where both cameras agree (within FUSE_M) ...
 SINGLE_VIEW_MIN_HITS = 6    # ... or, single-camera coverage: at least this many hits
 SINGLE_VIEW_MIN_DENSITY = 0.5  # ... filling at least this share of the frames the track spans
@@ -239,9 +245,14 @@ def _link(frames, times):
             used_d.add(di)
             d = dets[di]
             open_tracks[ti]['pts'].append((t, *map(float, d[:4])))
+        updated = [np.array(open_tracks[ti]['pts'][-1][1:3]) for ti in used_t]
         for di, d in enumerate(dets):
-            if di not in used_d:
-                tracks.append({'pts': [(t, *map(float, d[:4]))]})
+            if di in used_d:
+                continue
+            # the other view's off-position foot for a person already tracked: absorb, don't spawn
+            if any(float(np.hypot(*(u - d[:2]))) <= ABSORB_M for u in updated):
+                continue
+            tracks.append({'pts': [(t, *map(float, d[:4]))]})
     return [tr['pts'] for tr in tracks]
 
 
@@ -253,6 +264,63 @@ def _confirmed(track):
     return len(track) >= SINGLE_VIEW_MIN_HITS and len(track) / span >= SINGLE_VIEW_MIN_DENSITY
 
 
+def _xz_at(track, t):
+    ts = [p[0] for p in track]
+    return np.array([np.interp(t, ts, [p[1] for p in track]), np.interp(t, ts, [p[2] for p in track])])
+
+
+def _line_fit(points, t):
+    """Least-squares position at time t and velocity over points; robust to a single foot jump."""
+    ts = np.array([q[0] for q in points])
+    xz = np.array([q[1:3] for q in points], float)
+    if len(points) < 2 or np.ptp(ts) == 0:
+        return xz.mean(axis=0), np.zeros(2)
+    A = np.column_stack([ts - t, np.ones_like(ts)])
+    (v, pos), *_ = np.linalg.lstsq(A, xz, rcond=None)
+    return pos, v
+
+
+def _should_stitch(a, b):
+    """a starts no later than b; points are (t, x, z, height)."""
+    a0, a1, b0, b1 = a[0][0], a[-1][0], b[0][0], b[-1][0]
+    if b0 <= a1:  # overlapping spans
+        ts = [p[0] for p in b if p[0] <= a1] + [p[0] for p in a if p[0] >= b0]
+        sep = [float(np.linalg.norm(_xz_at(a, t) - _xz_at(b, t))) for t in ts]
+        return bool(sep) and float(np.mean(sep)) <= STITCH_OVERLAP_M
+    gap = b0 - a1
+    if gap > STITCH_GAP_S:
+        return False
+    end, v = _line_fit([q for q in a if q[0] >= a1 - STITCH_VELOCITY_S], a1)
+    start, _ = _line_fit([q for q in b if q[0] <= b0 + STITCH_VELOCITY_S], b0)
+    return float(np.linalg.norm(end + v * gap - start)) <= STITCH_BASE_M + STITCH_PER_S * gap
+
+
+def _merge(a, b):
+    by_t = {}
+    for p in a + b:
+        q = by_t.get(p[0])
+        by_t[p[0]] = p if q is None else (p[0], (p[1] + q[1]) / 2, (p[2] + q[2]) / 2, max(p[3], q[3]))
+    return [by_t[t] for t in sorted(by_t)]
+
+
+def _stitch(tracks):
+    """Merge fragments of one person: overlapping close tracks, or a short gap bridged by extrapolation."""
+    tracks = sorted(tracks, key=lambda tr: tr[0][0])
+    merged = True
+    while merged:
+        merged = False
+        for i in range(len(tracks)):
+            for j in range(i + 1, len(tracks)):
+                if _should_stitch(tracks[i], tracks[j]):
+                    tracks[i] = _merge(tracks[i], tracks[j])
+                    del tracks[j]
+                    merged = True
+                    break
+            if merged:
+                break
+    return tracks
+
+
 def _people_tracks(per_view, times):
     """Kept person tracks as [(t, x, z, height)], sorted by start time."""
     kept = []
@@ -260,8 +328,7 @@ def _people_tracks(per_view, times):
         if len(tr) < 2 or times[tr[-1][0]] - times[tr[0][0]] < MIN_DURATION_S or not _confirmed(tr):
             continue
         kept.append([(times[f], x, z, hm) for f, x, z, hm, _ in tr])
-    kept.sort(key=lambda tr: tr[0][0])
-    return kept
+    return _stitch(kept)
 
 
 def _decimate(points):
@@ -326,7 +393,9 @@ def run(run_dir):
     doc = detect_people(run_dir)
     out = Path(run_dir) / 'people' / 'people.json'
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(doc, indent=2))
+    tmp = out.with_name(out.name + '.tmp')
+    tmp.write_text(json.dumps(doc, indent=2))
+    tmp.replace(out)  # atomic: watchers never see a half-written file
     return doc
 
 

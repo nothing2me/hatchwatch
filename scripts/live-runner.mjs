@@ -181,6 +181,8 @@ async function analyzeAndPublish(chunk)
         }
         catch (error)
         {
+            if (stopping)
+                throw error;
             log(`${script} failed for ${chunk.chunkId}, publishing without it: ${error.message}`);
         }
     }

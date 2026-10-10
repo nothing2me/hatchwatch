@@ -157,7 +157,9 @@ def run(run_dir, threshold=None):
     doc = build_tracks(signals, cal, pins, times, threshold)
     out = run_dir / 'tracks' / 'tracks.json'
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(doc, indent=2))
+    tmp = out.with_name(out.name + '.tmp')
+    tmp.write_text(json.dumps(doc, indent=2))
+    tmp.replace(out)  # atomic: watchers never see a half-written file
     return doc
 
 

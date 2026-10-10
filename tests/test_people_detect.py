@@ -239,3 +239,37 @@ def test_missing_calibration_key_is_a_clean_exit():
     del cal['vertical_fov_degrees']
     with pytest.raises(SystemExit, match='vertical_fov_degrees'):
         people_detect.detect_in_frames([(cal, [])], [])
+
+
+# ---- fragmentation regressions (review round 2) ----
+
+T80 = [f / 8 for f in range(80)]
+
+
+def _views(paths, frames=range(80), jitter=0.0):
+    """paths: list of f -> (x, z). Both views see every path; view 1's foot jumps by `jitter` m on odd frames."""
+    v0, v1 = [[] for _ in T80], [[] for _ in T80]
+    for f in frames:
+        for path in paths:
+            x, z = path(f)
+            v0[f].append((x, z, 1.8))
+            v1[f].append((x, z + (jitter if f % 2 else 0.0), 1.8))
+    return [v0, v1]
+
+
+def test_two_view_foot_jitter_is_one_person():
+    tracks = people_detect._people_tracks(_views([lambda f: (-8 + 0.17 * f, 1.0)], jitter=1.5), T80)
+    assert len(tracks) == 1
+
+
+def test_dropout_of_one_and_a_half_seconds_is_one_person():
+    frames = [f for f in range(80) if not 30 <= f < 42]  # 12 frames = 1.5 s missing in both views
+    tracks = people_detect._people_tracks(_views([lambda f: (-8 + 0.17 * f, 1.0)], frames), T80)
+    assert len(tracks) == 1
+    assert tracks[0][0][0] <= 0.01 and tracks[0][-1][0] >= 9.8
+
+
+def test_two_walkers_six_metres_apart_are_two_people():
+    paths = [lambda f: (-8 + 0.17 * f, -3.0), lambda f: (5 - 0.17 * f, 3.0)]
+    tracks = people_detect._people_tracks(_views(paths), T80)
+    assert len(tracks) == 2
