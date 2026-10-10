@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { requireRole } from '@/lib/auth/guard';
+import { requireCurrentUser } from '@/lib/auth/guard';
 
 // Admin gate in place now; the setup tools arrive in Plan 3.
 export default async function SetupPage()
 {
-    await requireRole('ADMIN');
+    await requireCurrentUser('ADMIN');
     return (
         <main className="grid min-h-full place-items-center bg-night-950 p-6 text-center">
             <div>

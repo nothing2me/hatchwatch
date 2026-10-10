@@ -106,7 +106,7 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
             const [lng, lat] = simPointToLngLat(frame, simPin.point);
             // A pin seen by one camera belongs to that camera; two-camera pins stay on <pair>1.
             const view = simPin.source_views.length === 1 ? simPin.source_views[0] : 0;
-            await tx.alert.create({
+            const created = await tx.alert.create({
                 data: {
                     videoId: videos[view].id,
                     cameraId: cameras[view].id,
@@ -121,8 +121,10 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
                     endT: simPin.interval[1],
                     evidenceTier: simPin.evidence_tier === 'two_camera' ? 'TWO_CAMERA' : 'SINGLE_CAMERA',
                     simulated: true,
+                    detectedAt: new Date(),
                 },
             });
+            await tx.siteEvent.create({ data: { alertId: created.id, type: 'detected', author: 'Camera', userId: null, at: created.detectedAt ?? new Date() } });
         }
 
         return { runId, videoIds: [videos[0].id, videos[1].id] as [string, string], alertCount: pins.length };

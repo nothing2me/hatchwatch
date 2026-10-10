@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'VIEWER';
+export type Role = 'ADMIN' | 'VOLUNTEER' | 'VIEWER';
 export type ActivityLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type CameraStatus = 'ONLINE' | 'OFFLINE';
 export type VideoSource = 'UPLOAD' | 'SIMULATION';
@@ -12,7 +12,23 @@ export const ALERT_MESSAGES = {
 } as const;
 
 export type AlertKind = keyof typeof ALERT_MESSAGES;
-export type AlertStatus = 'NEW' | 'REVIEWED' | 'DISMISSED' | 'FIELD_CONFIRMED';
+export type AlertStatus = 'NEW' | 'REVIEWED' | 'DISMISSED' | 'FIELD_CONFIRMED' | 'HATCHED' | 'LOST' | 'ARCHIVED';
+export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'protectionInstalled' | 'hatched' | 'lost' | 'note';
+export type Protection = 'unprotected' | 'protected' | 'notNeeded';
+export type Nesting = 'unresolved' | 'confirmed' | 'noNest';
+export type Outcome = 'open' | 'hatched' | 'lost';
+
+export interface SiteSummary
+{
+    protection: Protection;
+    nesting: Nesting;
+    outcome: Outcome;
+    active: boolean;
+    personActed: boolean;
+    patrolVisited: boolean;
+    detectedAt: string | null;
+    archivedAt: string | null;
+}
 
 export interface ZoneView
 {
@@ -64,6 +80,7 @@ export interface AlertView
     endT: number;
     evidenceTier: EvidenceTier | null;
     simulated: boolean;
+    site: SiteSummary;
 }
 
 export interface MapSnapshot
@@ -74,4 +91,7 @@ export interface MapSnapshot
     camerasOnline: number;
     camerasTotal: number;
     activeAlertCount: number; // status NEW
+    inactiveCount: number;    // dismissed, hatched, lost or archived
+    outcomes: { saved: number; notSaved: number; pending: number };
+    fadeMinutes: number;
 }

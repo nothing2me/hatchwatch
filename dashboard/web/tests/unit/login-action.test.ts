@@ -14,6 +14,13 @@ describe('authenticate', () =>
         expect(user).toEqual({ id: 'u1', email: 'admin@x.y', name: 'Admin', role: 'ADMIN' });
     });
 
+    it('rejects disabled users after a dummy verification', async () =>
+    {
+        const verify = vi.fn().mockResolvedValue(true);
+        expect(await authenticate('admin@x.y', 'pw', { findUser: vi.fn().mockResolvedValue({ ...row, disabledAt: new Date() }), verify })).toBeNull();
+        expect(verify).toHaveBeenCalledTimes(1);
+    });
+
     it('normalises email before lookup', async () =>
     {
         const findUser = vi.fn().mockResolvedValue(null);

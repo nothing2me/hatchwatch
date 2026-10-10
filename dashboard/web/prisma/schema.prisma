@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  VOLUNTEER
   VIEWER
 }
 
@@ -51,6 +52,9 @@ enum AlertStatus {
   REVIEWED
   DISMISSED
   FIELD_CONFIRMED
+  HATCHED
+  LOST
+  ARCHIVED
 }
 
 model User {
@@ -60,6 +64,8 @@ model User {
   name          String
   role          Role                @default(VIEWER)
   createdAt     DateTime            @default(now())
+  disabledAt    DateTime?
+  siteEvents    SiteEvent[]
   videos        Video[]
   notes         AlertNote[]
   statusChanges AlertStatusChange[]
@@ -75,6 +81,8 @@ model Zone {
   activityLevel ActivityLevel @default(LOW)
   cameras       Camera[]
   alerts        Alert[]
+  createdById   String?
+  liveChunks    LiveChunk[]
 }
 
 model Camera {
@@ -114,6 +122,8 @@ model Video {
   height         Int?
   uploadedById   String?
   uploadedBy     User?       @relation(fields: [uploadedById], references: [id])
+  liveChunkId    String?
+  liveChunk      LiveChunk?  @relation(fields: [liveChunkId], references: [id], onDelete: SetNull)
   createdAt      DateTime    @default(now())
   jobs           Job[]
   tracks         Track[]
@@ -184,8 +194,11 @@ model Alert {
   createdAt             DateTime            @default(now())
   notes                 AlertNote[]
   statusChanges         AlertStatusChange[]
+  events                SiteEvent[]
+  detectedAt            DateTime?
 
   @@index([status, createdAt])
+  @@index([status])
 }
 
 model AlertNote {
@@ -218,4 +231,30 @@ model AuditLog {
   targetId   String
   details    Json?
   createdAt  DateTime @default(now())
+}
+
+model SiteEvent {
+  id        String   @id @default(cuid())
+  alertId   String
+  alert     Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  type      String
+  author    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  note      String?
+  at        DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([alertId, at])
+}
+
+model LiveChunk {
+  id          String   @id
+  sequence    Int      @unique
+  zoneId      String
+  zone        Zone     @relation(fields: [zoneId], references: [id])
+  startedAt   DateTime
+  importedAt  DateTime @default(now())
+  mediaPruned Boolean  @default(false)
+  videos      Video[]
 }

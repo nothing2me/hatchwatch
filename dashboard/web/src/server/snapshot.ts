@@ -1,6 +1,8 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
-import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, VideoSource } from '@/lib/types';
+import { outcomeCounts } from '@/lib/sites/outcomes';
+import { summarizeSite } from '@/lib/sites/summary';
+import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, SiteEventType, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
 {
@@ -22,6 +24,7 @@ export interface AlertRow
     lng: number | null; lat: number | null; radiusM: number; score: number | null; createdAt: Date;
     videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
     evidenceTier: EvidenceTier | null; simulated: boolean;
+    events: { type: string; at: Date }[];
 }
 
 export interface SnapshotRows
@@ -29,6 +32,16 @@ export interface SnapshotRows
     zones: ZoneRow[];
     cameras: CameraRow[];
     alerts: AlertRow[];
+    inactiveCount?: number;
+    outcomeEvents?: { type: string; at: Date }[][];
+}
+
+const toEvents = (events: { type: string; at: Date }[]) => events as { type: SiteEventType; at: Date }[];
+
+export function fadeMinutes(): number
+{
+    const value = Number(process.env.LIVE_FADE_MINUTES);
+    return Number.isFinite(value) && value > 0 ? value : 5;
 }
 
 function ringOf(outline: unknown): LngLat[]
@@ -77,6 +90,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         endT: alert.endT,
         evidenceTier: alert.evidenceTier,
         simulated: alert.simulated,
+        site: summarizeSite(toEvents(alert.events)),
     }));
 
     return {
@@ -86,12 +100,16 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         camerasOnline: cameras.filter(camera => camera.status === 'ONLINE').length,
         camerasTotal: cameras.length,
         activeAlertCount: alerts.filter(alert => alert.status === 'NEW').length,
+        inactiveCount: rows.inactiveCount ?? alerts.filter(alert => ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'].includes(alert.status)).length,
+        outcomes: outcomeCounts((rows.outcomeEvents ?? rows.alerts.map(alert => alert.events)).map(events => summarizeSite(toEvents(events)))),
+        fadeMinutes: fadeMinutes(),
     };
 }
 
 export async function getMapSnapshot(): Promise<MapSnapshot>
 {
-    const [zones, cameras, alerts] = await Promise.all([
+    const recent = await prisma.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 100, select: { id: true } });
+    const [zones, cameras, alerts, activeCount, inactiveCount, everyAlert] = await Promise.all([
         prisma.zone.findMany({ orderBy: { code: 'asc' } }),
         prisma.camera.findMany({
             orderBy: { code: 'asc' },
@@ -105,12 +123,18 @@ export async function getMapSnapshot(): Promise<MapSnapshot>
                 },
             },
         }),
+        // Every open site plus the newest 100 others, each with its log.
         prisma.alert.findMany({
+            where: { OR: [{ status: { in: ['NEW', 'REVIEWED', 'FIELD_CONFIRMED'] } }, { id: { in: recent.map(row => row.id) } }] },
             orderBy: { createdAt: 'desc' },
-            take: 100,
-            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } } },
+            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true } } },
         }),
+        prisma.alert.count({ where: { status: 'NEW' } }),
+        prisma.alert.count({ where: { status: { in: ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'] } } }),
+        // Outcome totals read every site's log; acceptable at demo scale.
+        prisma.alert.findMany({ select: { events: { select: { type: true, at: true } } } }),
     ]);
 
-    return toMapSnapshot({ zones, cameras, alerts });
+    const snapshot = toMapSnapshot({ zones, cameras, alerts, inactiveCount, outcomeEvents: everyAlert.map(alert => alert.events) });
+    return { ...snapshot, activeAlertCount: activeCount };
 }

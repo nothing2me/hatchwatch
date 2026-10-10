@@ -18,6 +18,16 @@ describe('hasRole', () =>
         expect(hasRole(viewer, 'ADMIN')).toBe(false);
     });
 
+    it('volunteer sits between viewer and admin', () =>
+    {
+        const volunteer = { id: '3', email: 'w@x.y', name: 'W', role: 'VOLUNTEER' as const };
+        expect(hasRole(volunteer, 'VIEWER')).toBe(true);
+        expect(hasRole(volunteer, 'VOLUNTEER')).toBe(true);
+        expect(hasRole(volunteer, 'ADMIN')).toBe(false);
+        expect(hasRole(viewer, 'VOLUNTEER')).toBe(false);
+        expect(hasRole(admin, 'VOLUNTEER')).toBe(true);
+    });
+
     it('no session satisfies nothing', () =>
     {
         expect(hasRole(null, 'VIEWER')).toBe(false);

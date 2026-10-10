@@ -5,14 +5,14 @@ import type { SessionUser } from '@/lib/auth/session';
 
 interface AuthDeps
 {
-    findUser: (email: string) => Promise<(SessionUser & { passwordHash: string }) | null>;
+    findUser: (email: string) => Promise<(SessionUser & { passwordHash: string; disabledAt?: Date | null }) | null>;
     verify: (passwordHash: string, plain: string) => Promise<boolean>;
 }
 
 const defaultDeps: AuthDeps = {
     findUser: email => prisma.user.findUnique({
         where: { email },
-        select: { id: true, email: true, name: true, role: true, passwordHash: true },
+        select: { id: true, email: true, name: true, role: true, passwordHash: true, disabledAt: true },
     }),
     verify: verifyPassword,
 };
@@ -24,7 +24,7 @@ const DUMMY_HASH = '$argon2id$v=19$m=19456,t=2,p=1$SV5OmXRofAjK1xmMGd+5KQ$+IBmQT
 export async function authenticate(email: string, password: string, deps: AuthDeps = defaultDeps): Promise<SessionUser | null>
 {
     const row = await deps.findUser(email.trim().toLowerCase());
-    if (!row)
+    if (!row || row.disabledAt)
     {
         await deps.verify(DUMMY_HASH, password);
         return null;
