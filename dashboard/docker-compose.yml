@@ -34,9 +34,26 @@ services:
       - ./media:/media
       - ../artifacts/public:/sim-public:ro
       - ./recordings:/recordings
+    networks:
+      - default
+      - internal
     depends_on:
       db:
         condition: service_healthy
+
+  # People and possible-turtle detection on live frames (spec 2026-10-10-live-detection-design.md). No published ports;
+  # the internal network has no route out, so frames and results never leave the laptop.
+  worker:
+    build: ./worker
+    environment:
+      WEB_URL: http://web:3000
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+    networks:
+      - internal
+    depends_on:
+      - web
+    # An unset WORKER_TOKEN exits non-zero: retry 3 times, then stay down instead of looping forever.
+    restart: on-failure:3
 
   caddy:
     image: caddy:2
@@ -53,3 +70,7 @@ services:
 volumes:
   pgdata:
   caddy_data:
+
+networks:
+  internal:
+    internal: true

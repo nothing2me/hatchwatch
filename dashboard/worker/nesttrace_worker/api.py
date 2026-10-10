@@ -1,8 +1,10 @@
+import logging
 from dataclasses import dataclass
 
 import httpx
 
 TIMEOUT_S = 3.0
+log = logging.getLogger('nesttrace_worker')
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,9 @@ class InternalApi:
         response = self.client.post(f'/api/internal/detections/{device_id}', json=payload)
         if response.status_code in (404, 409):
             return False  # device gone, or a newer result is already stored
+        if response.status_code in (400, 413):
+            log.warning('detections for %s refused with %s; skipped', device_id, response.status_code)  # status only
+            return False  # one bad payload must not back the whole loop off
         response.raise_for_status()
         return True
 

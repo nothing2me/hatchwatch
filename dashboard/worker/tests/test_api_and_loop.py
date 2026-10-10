@@ -213,3 +213,46 @@ def test_the_pipeline_is_built_once_per_device(web, make_api):
         clock.now += 1.0
         assert scheduler.tick() == ['d1']
     assert len(built) == 1
+
+
+class RaisingPipeline:
+    def process(self, bgr, at_ms):
+        raise cv2.error('boom')
+
+
+def test_a_pipeline_error_on_one_device_does_not_stop_the_others(web, make_api):
+    web.devices = {'a': 1, 'b': 1, 'c': 1}
+    pipelines = iter([RaisingPipeline(), CountingPipeline([]), CountingPipeline([])])
+    scheduler = Scheduler(make_api(), lambda: next(pipelines), FakeClock())
+    assert scheduler.tick() == ['b', 'c']
+    assert 'a' not in web.posted and len(web.posted['b']) == 1
+
+
+def test_a_pipeline_that_cannot_be_built_does_not_stop_the_others(web, make_api):
+    web.devices = {'a': 1, 'b': 1}
+    built = []
+
+    def factory():
+        built.append(1)
+        if len(built) == 1:
+            raise RuntimeError('model missing')
+        return CountingPipeline([])
+
+    scheduler = Scheduler(make_api(), factory, FakeClock())
+    assert scheduler.tick() == ['b']
+
+
+@pytest.mark.parametrize('status,expected', [(400, False), (413, False), (404, False), (409, False), (200, True)])
+def test_post_detections_skips_bad_payload_statuses(status, expected):
+    import httpx
+
+    api = InternalApi('http://web', TOKEN, httpx.MockTransport(lambda request: httpx.Response(status, json={})))
+    assert api.post_detections('d1', {}) is expected
+
+
+def test_post_detections_401_still_raises():
+    import httpx
+
+    api = InternalApi('http://web', TOKEN, httpx.MockTransport(lambda request: httpx.Response(401)))
+    with pytest.raises(httpx.HTTPStatusError):
+        api.post_detections('d1', {})

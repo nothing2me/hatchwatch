@@ -61,7 +61,7 @@ class Scheduler:
             try:
                 if self.serve(device_id):
                     served.append(device_id)
-            except (httpx.HTTPError, KeyError, ValueError) as error:
+            except Exception as error:  # noqa: BLE001 - network, cv2 and detector errors alike must not stop the other devices
                 log.warning('device %s failed: %s', device_id, type(error).__name__)  # class only: never the token or URL
             self.last_served = device_id  # a failing device must not starve the ones after it
         return served
