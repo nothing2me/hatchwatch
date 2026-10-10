@@ -102,6 +102,16 @@ Admins click the pencil on the map to enter edit mode. Esc or Done leaves edit m
 
 Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
 
+## Live phone cameras
+
+Signed-in volunteers and admins can turn a phone on the same Wi-Fi into a live camera.
+
+1. Set `LAN_HOST` in `dashboard/.env` to the laptop's LAN IP (`ipconfig getifaddr en0`), not `localhost` or `127.0.0.1`, then run `docker compose up -d --build`. Caddy serves `https://localhost:3443` and `https://LAN_HOST:3443`; port 3443 is the only port open to the LAN (`web` and `db` stay on loopback).
+2. Admins open **Live cameras > Connect phone** and scan the QR code. On the phone, accept the one-time certificate warning (it is Caddy's own CA; to remove it, run `docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .` and install that file on the phone), sign in as a volunteer or admin, and press Start.
+3. The **Live cameras** page shows one tile per online phone, with Expand and a **Motion view**. The motion view is a viewing aid, not the detector. Admins link a phone to a camera with the **Source** picker (Setup > Cameras, or the camera panel on the map); the panel then shows LIVE, and falls back to "Phone offline" and the simulation loop when the phone stops.
+4. Recording: every phone is recorded as 10-minute mp4 segments (5 fps) under `RECORDINGS_ROOT` (`./recordings`, git-ignored; Compose mounts it at `/recordings`). Segments are deleted after `RECORDING_RETENTION_HOURS` (default 72, swept hourly). `RECORDING=off` turns recording off, and `FFMPEG_PATH` overrides the `ffmpeg` binary (the web image includes ffmpeg; without it segments stay as `.avi`). Admins see the Recordings list on **Live cameras** with Play and Download; a new recording can take up to about 45 s to appear and be playable.
+5. Limits: one `web` instance holds the newest frames in memory, about 6 phones at once, no audio, LAN only. Phone footage is real beach footage: it stays on local disk, is never committed, and never reaches the detector.
+
 ## Limits
 
 Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.

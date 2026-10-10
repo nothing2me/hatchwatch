@@ -4,6 +4,8 @@ A local synthetic experiment for locating observable digging activity from saved
 
 The team’s **real dashboard** lives in [`dashboard/`](dashboard/README.md): a Docker Compose app (Next.js on port 3000, Postgres) with logins, a satellite map, and camera feeds. It imports reviewed simulation outputs through a separate adapter and never reads simulator state or private truth. This research simulator and its local API do not own real camera data or production operations. [`agent.md`](agent.md) records the boundaries and the eventual adapter contract.
 
+Standalone ESP32-S3 camera firmware (not connected to the dashboard) lives in [`firmware/esp32s3-cam/`](firmware/esp32s3-cam/README.md).
+
 ## Run locally
 
 Requires Node 22+, Python 3.10+, and Chrome/Edge (or Playwright Chromium). The checked-in lockfiles pin dependencies.
