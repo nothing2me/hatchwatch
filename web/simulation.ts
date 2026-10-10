@@ -69,13 +69,20 @@ export class Simulation{
   if(!actor.model||!actor.modelBase||actor.lastModelTime===t)return;
   const position=actor.model.geometry.getAttribute('position') as THREE.BufferAttribute;
   const base=actor.modelBase,active=mode!=='none',dig=mode==='dig'||mode==='cover';
-  const phase=(t-actor.startAt)*(dig?10:6)+actor.id*0.7;
+  const phase=(t-actor.startAt)*7.4+actor.id*0.7;
   for(let i=0;i<position.count;i++){
    const k=i*3,x=base[k],y=base[k+1],z=base[k+2];
-   const front=Math.max(0,Math.min(1,(Math.abs(x)-0.29)/0.42))*Math.max(0,Math.min(1,(z+0.12)/0.35));
-   const rear=Math.max(0,Math.min(1,(Math.abs(x)-0.25)/0.35))*Math.max(0,Math.min(1,(-z-0.1)/0.3));
-   const wave=Math.sin(phase+Math.sign(x)*0.75),amount=active?(dig?0.11:0.075):0;
-   position.setXYZ(i,x+Math.sign(x)*front*wave*amount*0.4,y+front*Math.max(0,wave)*amount*0.55+rear*Math.max(0,-wave)*amount*0.25,z+front*wave*amount+rear*wave*amount*0.35);
+   const side=Math.sign(x)||1;
+   const front=Math.max(0,Math.min(1,(Math.abs(x)-0.37)/0.30))*Math.max(0,Math.min(1,(z+0.02)/0.27));
+   const rear=Math.max(0,Math.min(1,(Math.abs(x)-0.34)/0.32))*Math.max(0,Math.min(1,(-z-0.14)/0.28));
+   const stroke=Math.sin(phase+(side>0?Math.PI:0));
+   const frontStroke=dig?Math.sin(phase*1.35):stroke;
+   const recovery=Math.max(0,-frontStroke);
+   const amount=active?1:0;
+   position.setXYZ(i,
+    x+amount*side*front*frontStroke*(dig?0.07:0.10),
+    y+amount*(front*recovery*(dig?0.055:0.15)+rear*Math.max(0,stroke)*0.045),
+    z-amount*(front*frontStroke*(dig?0.15:0.25)+rear*stroke*0.075));
   }
   position.needsUpdate=true;actor.model.geometry.computeVertexNormals();actor.lastModelTime=t;
  }
@@ -89,8 +96,12 @@ export class Simulation{
  if(t<this.lastTracksTime)this.lastTracksTime=-1;
  for(let tt=this.lastTracksTime<0?0:Math.floor(this.lastTracksTime*4)/4+.25;tt<t-.001;tt+=.25)this.environment.update(tt,tracks(tt,this.forcing(tt)));
  this.environment.update(t,tracks(t,forces));this.lastTracksTime=t;
- for(let j=0;j<this.actors.length;j++){const actor=this.actors[j],f=forces[j];actor.group.visible=this.config.scenario!=='unrelated'&&t>=actor.startAt&&t<this.pauseEnd(actor)+8;actor.group.position.set(f.x,surface(f.z)-.04,f.z);actor.group.rotation.y=f.heading;
- actor.flippers.forEach((flipper,i)=>{flipper.rotation.y=(i<2?-1:1)*.4+Math.sin((t-actor.startAt)*(f.mode==='dig'||f.mode==='cover'?11:7)+i*2)*(f.mode!=='none'?.65:0)});this.animateModel(actor,t,f.mode);}
+ this.environment.setLiveContact(forces);
+ for(let j=0;j<this.actors.length;j++){const actor=this.actors[j],f=forces[j];actor.group.visible=this.config.scenario!=='unrelated'&&t>=actor.startAt&&t<this.pauseEnd(actor)+8;
+ const crawling=f.mode==='travel',cycle=(t-actor.startAt)*7.4;
+ actor.group.position.set(f.x,surface(f.z)-.04+(crawling?0.024*Math.sin(cycle*2):0),f.z);
+ actor.group.rotation.set(crawling?0.024*Math.sin(cycle):0,f.heading+(crawling?0.055*Math.sin(cycle):0),crawling?0.04*Math.sin(cycle):0);
+ actor.flippers.forEach(flipper=>{const side=Math.sign(flipper.position.x),front=flipper.position.z>0,stroke=Math.sin(cycle+(side>0?Math.PI:0));flipper.rotation.y=side*(front?.4:.24)+stroke*(f.mode!=='none'?(front?.8:.35):0);flipper.rotation.x=front?Math.max(0,-stroke)*.45:Math.max(0,stroke)*.2;flipper.position.y=.1+(f.mode!=='none'?Math.max(0,-stroke)*(front?.09:.035):0)});this.animateModel(actor,t,f.mode);}
  if(view===3){const first=this.actors[0],f=forces[0];this.detailCamera.position.set(f.x+2.8,1.55,f.z-3.25);this.detailCamera.lookAt(f.x,0.6,f.z+0.15)}
  if(view===3)this.scene.traverse(obj=>{if(obj.userData.calibrationMarker)obj.visible=false});
  this.renderer.render(this.scene,view===2?this.overhead:view===3?this.detailCamera:this.cameras[view]);

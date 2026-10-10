@@ -16,6 +16,7 @@ function beachHeight(x: number, z: number) {
 export class BeachEnvironment {
   readonly ready: Promise<void>;
   readonly ground: THREE.Mesh;
+  readonly trackSurface: THREE.Mesh;
   readonly water: THREE.Mesh;
   readonly foam: THREE.Mesh;
   readonly sky: Sky;
@@ -26,6 +27,9 @@ export class BeachEnvironment {
   private readonly marks: CanvasRenderingContext2D;
   private readonly markTexture: THREE.CanvasTexture;
   private lastMarksTime = -1;
+  private readonly trackBase: Float32Array;
+  private readonly trackOffset: Float32Array;
+  private readonly liveVertices = new Set<number>();
 
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
     const groundGeometry = new THREE.PlaneGeometry(360, 176, 360, 140);
@@ -40,6 +44,7 @@ export class BeachEnvironment {
     groundGeometry.computeVertexNormals();
     const sand = new THREE.MeshStandardMaterial({ color: 0xf4e7c8, roughness: 0.92 });
     sand.onBeforeCompile = shader => {
+      shader.uniforms.uTrackMarks = { value: this.markTexture };
       shader.vertexShader = shader.vertexShader.replace(
         'void main() {', 'varying vec2 vBeachXZ;\nvoid main() {');
       shader.vertexShader = shader.vertexShader.replace(
@@ -47,6 +52,7 @@ export class BeachEnvironment {
         '#include <worldpos_vertex>\n  vBeachXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
       shader.fragmentShader = shader.fragmentShader.replace(
         'void main() {', `varying vec2 vBeachXZ;
+          uniform sampler2D uTrackMarks;
           vec2 sandHash(vec2 p) {
             return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453);
           }
@@ -68,7 +74,13 @@ export class BeachEnvironment {
         #endif`);
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <color_fragment>',
-        '#include <color_fragment>\n  float wet = 1.0 - smoothstep(-15.6, -10.6, vBeachXZ.y);\n  diffuseColor.rgb *= mix(vec3(1.0), vec3(0.54, 0.61, 0.62), wet);');
+        `#include <color_fragment>
+          float wet = 1.0 - smoothstep(-15.6, -10.6, vBeachXZ.y);
+          diffuseColor.rgb *= mix(vec3(1.0), vec3(0.54, 0.61, 0.62), wet);
+          vec2 trackUv = vec2(vBeachXZ.x / 84.0 + 0.5, vBeachXZ.y / 32.0 + 0.5);
+          float inside = step(0.0, trackUv.x) * step(trackUv.x, 1.0) * step(0.0, trackUv.y) * step(trackUv.y, 1.0);
+          float scuff = texture2D(uTrackMarks, trackUv).a * inside;
+          diffuseColor.rgb *= 1.0 - scuff * 0.62;`);
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <roughnessmap_fragment>',
         `float roughnessFactor = roughness;
@@ -87,6 +99,24 @@ export class BeachEnvironment {
     this.ground = new THREE.Mesh(groundGeometry, sand);
     this.ground.receiveShadow = true;
     scene.add(this.ground);
+
+    // A dense local surface turns contact with the granular bed into actual
+    // relief. The broad dune stays coarse, so recordings do not pay for a
+    // quarter-metre grid across the whole landscape.
+    const trackGeometry = new THREE.PlaneGeometry(BEACH_LENGTH, BEACH_WIDTH, 336, 128);
+    trackGeometry.rotateX(-Math.PI / 2);
+    const trackPositions = trackGeometry.getAttribute('position') as THREE.BufferAttribute;
+    this.trackBase = new Float32Array(trackPositions.count);
+    this.trackOffset = new Float32Array(trackPositions.count);
+    for (let i = 0; i < trackPositions.count; i++) {
+      const y = beachHeight(trackPositions.getX(i), trackPositions.getZ(i)) + 0.027;
+      this.trackBase[i] = y;
+      trackPositions.setY(i, y);
+    }
+    trackGeometry.computeVertexNormals();
+    this.trackSurface = new THREE.Mesh(trackGeometry, sand);
+    this.trackSurface.receiveShadow = true;
+    scene.add(this.trackSurface);
 
     // Static dune grass provides scale beyond the nesting area.
     const bladeVertices: number[] = [];
@@ -267,13 +297,7 @@ export class BeachEnvironment {
     this.marks = this.markCanvas.getContext('2d')!;
     this.markTexture = new THREE.CanvasTexture(this.markCanvas);
     this.markTexture.colorSpace = THREE.SRGBColorSpace;
-    const markMaterial = new THREE.MeshBasicMaterial({ map: this.markTexture, transparent: true, depthWrite: false, opacity: 0.45, polygonOffset: true, polygonOffsetFactor: -1 });
-    const markGeometry = new THREE.PlaneGeometry(BEACH_LENGTH, BEACH_WIDTH, 84, 32);
-    markGeometry.rotateX(-Math.PI / 2);
-    const markPositions = markGeometry.getAttribute('position') as THREE.BufferAttribute;
-    for (let i = 0; i < markPositions.count; i++) markPositions.setY(i, beachHeight(markPositions.getX(i), markPositions.getZ(i)) + 0.012);
-    const markPlane = new THREE.Mesh(markGeometry, markMaterial);
-    scene.add(markPlane);
+    this.markTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
     const load = new THREE.TextureLoader();
     const url = (name: string) => new URL(`./assets/sand/${name}`, import.meta.url).href;
@@ -302,10 +326,74 @@ export class BeachEnvironment {
     if(night)this.waterMaterial.uniforms.sunDirection.value.set(0.94, 0.23, -0.18).normalize();
   }
 
+  private stamp(x: number, z: number, radius: number, depth: number) {
+    const positions = this.trackSurface.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const left = Math.max(0, Math.floor((x - radius + BEACH_LENGTH / 2) * 4));
+    const right = Math.min(336, Math.ceil((x + radius + BEACH_LENGTH / 2) * 4));
+    const top = Math.max(0, Math.floor((z - radius + BEACH_WIDTH / 2) * 4));
+    const bottom = Math.min(128, Math.ceil((z + radius + BEACH_WIDTH / 2) * 4));
+    for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) {
+      const i = row * 337 + col;
+      const distance = Math.hypot(positions.getX(i) - x, positions.getZ(i) - z) / radius;
+      if (distance >= 1) continue;
+      const hollow = Math.exp(-distance * distance * 9);
+      const rim = Math.exp(-Math.pow((distance - 0.72) * 8, 2));
+      this.trackOffset[i] = THREE.MathUtils.clamp(this.trackOffset[i] - depth * hollow + depth * 0.45 * rim, -0.021, 0.031);
+      positions.setY(i, this.trackBase[i] + this.trackOffset[i]);
+    }
+  }
+
+  // The current flipper load is a smooth moving height field; the smaller
+  // persistent stamps above remain when the animal moves away.
+  setLiveContact(contacts: Array<{ x: number; z: number; heading: number; mode: string; time: number }>) {
+    const positions = this.trackSurface.geometry.getAttribute('position') as THREE.BufferAttribute;
+    for (const i of this.liveVertices) positions.setY(i, this.trackBase[i] + this.trackOffset[i]);
+    this.liveVertices.clear();
+    const load = (x: number, z: number, radius: number, pressure: number) => {
+      const left = Math.max(0, Math.floor((x - radius + BEACH_LENGTH / 2) * 4));
+      const right = Math.min(336, Math.ceil((x + radius + BEACH_LENGTH / 2) * 4));
+      const top = Math.max(0, Math.floor((z - radius + BEACH_WIDTH / 2) * 4));
+      const bottom = Math.min(128, Math.ceil((z + radius + BEACH_WIDTH / 2) * 4));
+      for (let row = top; row <= bottom; row++) for (let col = left; col <= right; col++) {
+        const i = row * 337 + col;
+        const d = Math.hypot(positions.getX(i) - x, positions.getZ(i) - z) / radius;
+        if (d >= 1) continue;
+        const ridge = Math.exp(-Math.pow((d - 0.59) * 5.2, 2));
+        const hollow = Math.exp(-d * d * 12);
+        const delta = pressure * (0.072 * ridge - 0.02 * hollow);
+        positions.setY(i, Math.max(this.trackBase[i] - 0.018, positions.getY(i) + delta));
+        this.liveVertices.add(i);
+      }
+    };
+    for (const contact of contacts) {
+      if (contact.mode === 'none') continue;
+      const forwardX = Math.sin(contact.heading), forwardZ = Math.cos(contact.heading);
+      const sideX = Math.cos(contact.heading), sideZ = -Math.sin(contact.heading);
+      const phase = contact.time * 7.4;
+      for (const side of [-1, 1]) {
+        const stroke = Math.sin(phase + (side > 0 ? Math.PI : 0));
+        const pressure = contact.mode === 'travel' ? 0.35 + 0.65 * (stroke + 1) / 2 : 1.2;
+        const foreAft = contact.mode === 'travel' ? stroke * 0.22 : 0;
+        load(contact.x + side * sideX * 0.49 - forwardX * foreAft,
+          contact.z + side * sideZ * 0.49 - forwardZ * foreAft,
+          contact.mode === 'travel' ? 0.72 : 1.0, pressure);
+      }
+    }
+    positions.needsUpdate = true;
+    this.trackSurface.geometry.computeVertexNormals();
+  }
+
   update(t: number, trackPositions: Array<{ x: number; z: number; heading: number; digging: boolean }>) {
     this.waterMaterial.uniforms.time.value = t;
     this.washMaterial.uniforms.time.value = t;
-    if (t < this.lastMarksTime) this.marks.clearRect(0, 0, 2048, 512);
+    if (t < this.lastMarksTime) {
+      this.marks.clearRect(0, 0, 2048, 512);
+      this.trackOffset.fill(0);
+      const positions = this.trackSurface.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < positions.count; i++) positions.setY(i, this.trackBase[i]);
+      this.liveVertices.clear();
+      this.lastMarksTime = -1;
+    }
     if (t <= this.lastMarksTime) return;
     const ctx = this.marks;
     const paint = (x: number, z: number, r: number, opacity: number) => {
@@ -319,12 +407,15 @@ export class BeachEnvironment {
     };
     for (const point of trackPositions) {
       if (point.digging) {
-        paint(point.x, point.z, 0.72, 0.065);
+        paint(point.x, point.z, 0.72, 0.14);
+        this.stamp(point.x, point.z, 1.05, 0.012);
       } else {
-        paint(point.x, point.z, 0.22, 0.09);
+        paint(point.x, point.z, 0.25, 0.18);
         const sideX = Math.cos(point.heading) * 0.47, sideZ = -Math.sin(point.heading) * 0.47;
-        paint(point.x + sideX, point.z + sideZ, 0.22, 0.13);
-        paint(point.x - sideX, point.z - sideZ, 0.22, 0.13);
+        paint(point.x + sideX, point.z + sideZ, 0.24, 0.23);
+        paint(point.x - sideX, point.z - sideZ, 0.24, 0.23);
+        this.stamp(point.x + sideX, point.z + sideZ, 0.5, 0.015);
+        this.stamp(point.x - sideX, point.z - sideZ, 0.5, 0.015);
       }
     }
     this.markTexture.needsUpdate = true;

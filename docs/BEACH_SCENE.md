@@ -8,7 +8,9 @@ The official [Three.js `Water` addon](https://threejs.org/docs/pages/Water.html)
 
 ## Sand and dunes
 
-The physical particle bed in [`web/sand.ts`](../web/sand.ts) still drives disturbance. Its cells are much larger than real grains, so the visible undisturbed ground uses [Coast Sand 02](https://polyhaven.com/a/coast_sand_02) color, normal, and roughness maps. The material blends four seeded texture offsets per sample to break obvious square tiling. The ground mesh adds small undulations, rises inland into a broad dune, and continues far beyond the right edge of both camera views. Sand marks conform to that surface. The local model and terrain remain separate from detector inputs and evaluator truth.
+The 134,400 physical particles in [`web/sand.ts`](../web/sand.ts) are about 18 cm across, far larger than real grains. Rendering every untouched cell as a pebble would make the beach look less real. The fine visible surface therefore uses [Coast Sand 02](https://polyhaven.com/a/coast_sand_02) color, normal, and roughness maps with four seeded texture offsets per sample to break tiling. A quarter-metre local mesh now holds lasting travel tracks and excavation hollows. A separate smooth pressure ridge follows each alternating flipper stroke, so the sand visibly changes while the turtle crawls. Travel exposes only a sparse sample of grains; digging exposes all displaced struck cells as small sand clumps. The broad ground adds small undulations, rises inland into a dune, and continues beyond the camera edge. Track color is sampled in the sand shader, so it follows that relief. This is a coarse granular simulation with a detailed rendering surface, not a simulation of every real sand grain.
+
+The optional local turtle is a single unrigged mesh. Its front and rear flipper vertices now sweep and lift in alternating crawl strokes, with a small body weight shift. A proper skeleton and joint weights would allow more anatomically faithful motion.
 
 ## Beach objects
 
