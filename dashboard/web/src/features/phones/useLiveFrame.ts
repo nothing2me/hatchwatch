@@ -31,24 +31,10 @@ export function useLiveFrame(deviceId: string | null, fps = 5): { url: string | 
             while (active)
             {
                 const started = performance.now();
-                if (document.visibilityState === 'visible')
+                // poll() never throws: errors and requests hanging past 3 s come back as offline.
+                if (document.visibilityState === 'visible' && await poller.poll() && active)
                 {
-                    try
-                    {
-                        if (await poller.poll() && active)
-                        {
-                            setFrame({ deviceId, url: poller.url, state: poller.state });
-                        }
-                    }
-                    catch
-                    {
-                        // A network error looks the same as a phone that stopped sending.
-                        poller.state = 'offline';
-                        if (active)
-                        {
-                            setFrame(previous => previous.deviceId === deviceId && previous.state === 'offline' ? previous : { deviceId, url: poller.url, state: 'offline' });
-                        }
-                    }
+                    setFrame({ deviceId, url: poller.url, state: poller.state });
                 }
                 const live = poller.state === 'live' || poller.state === 'loading';
                 await wait(live ? Math.max(0, 1000 / fps - (performance.now() - started)) : RETRY_MS);
@@ -59,6 +45,7 @@ export function useLiveFrame(deviceId: string | null, fps = 5): { url: string | 
         return () =>
         {
             active = false;
+            // Also aborts the request in flight, so its frame never becomes an unrevoked URL.
             poller.stop();
         };
     }, [deviceId, fps]);
