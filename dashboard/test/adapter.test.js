@@ -105,6 +105,8 @@ test('converts every pin into a site inside its zone with logged arrival and dep
         assert.equal(site.events[0].time, new Date(Date.parse(fixtureManifest.recording_started_at) + pin.interval[0] * 1000).toISOString());
         assert.equal(site.events[1].type, 'departed');
         assert.equal(site.events[1].time, new Date(Date.parse(fixtureManifest.recording_started_at) + pin.interval[1] * 1000).toISOString());
+        assert.equal(site.events[2].type, 'alertRaised');
+        assert.equal(site.events[2].time, fixtureManifest.published_at);
         assert.equal(site.seenByCameras.length, pin.source_views.length);
         assert.equal(site.source.chunkId, fixtureManifest.chunk_id);
     });

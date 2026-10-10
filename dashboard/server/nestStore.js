@@ -46,6 +46,7 @@ export class NestStore extends EventEmitter
             if (saved.version === 1)
             {
                 this.state = saved;
+                await this.backfillAlertEntries();
             }
         }
         catch (error)
@@ -54,6 +55,35 @@ export class NestStore extends EventEmitter
             {
                 throw new Error(`Could not read ${join(this.dataDirectory, 'state.json')}: ${error.message}`);
             }
+        }
+    }
+
+    // Sites saved before "Alert raised" was logged get that entry added from
+    // their recorded alertRaisedAt, so every site's log shows the alert.
+    async backfillAlertEntries()
+    {
+        const added = [];
+        for (const site of this.state.sites)
+        {
+            if (site.alertRaisedAt && !site.events.some((event) => event.type === 'alertRaised'))
+            {
+                const entry =
+                {
+                    eventIdentifier: this.nextEventIdentifier(site.nestIdentifier),
+                    type: 'alertRaised',
+                    time: site.alertRaisedAt,
+                    source: 'system',
+                    author: 'Dashboard',
+                    note: 'Alert sent to every connected dashboard (added to the log from the saved alert time).',
+                };
+                site.events.push(entry);
+                added.push({ nestIdentifier: site.nestIdentifier, ...entry });
+            }
+        }
+        if (added.length > 0)
+        {
+            await this.save();
+            await this.audit(added);
         }
     }
 

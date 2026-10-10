@@ -123,6 +123,6 @@ test('persists state and keeps an append-only audit trail', async () =>
     assert.ok(reloaded.hasChunk('live-000001-fixture'));
 
     const auditLines = (await readFile(join(dataDirectory, 'audit.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-    assert.equal(auditLines.length, 6 * 2 + 1); // arrival + departure per site, plus the patrol visit
+    assert.equal(auditLines.length, 6 * 3 + 1); // arrival, departure and alert per site, plus the patrol visit
     assert.equal(auditLines.at(-1).type, 'patrolVisit');
 });

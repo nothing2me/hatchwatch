@@ -249,6 +249,8 @@ export function convertChunk(manifest, pins, zones, cameraPairs)
             [
                 { type: 'detected', time: arrivedAt, source: 'system', author: cameraLabel, note: detectionAlertText },
                 { type: 'departed', time: departedAt, source: 'system', author: cameraLabel, note: 'Activity ended; no movement at the site.' },
+                // When the pipeline finished and the dashboard was told: the patrol's response clock starts here.
+                { type: 'alertRaised', time: manifest.published_at, source: 'system', author: 'Dashboard', note: 'Alert sent to every connected dashboard.' },
             ],
         };
     });

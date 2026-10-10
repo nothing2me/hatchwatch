@@ -1577,3 +1577,119 @@ button.app-bar__link--active:hover
     border-bottom: 1px solid var(--color-border);
     text-align: left;
 }
+
+/* ---- Patrol response times ---- */
+.worst-bars
+{
+    --worst-label-width: 110px;
+    --worst-value-width: 84px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 22px;
+}
+
+.worst-bars__row
+{
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--worst-label-width) minmax(0, 1fr) var(--worst-value-width);
+    align-items: center;
+    padding: 3px 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 13px;
+    text-align: left;
+}
+
+.worst-bars__row:hover,
+.worst-bars__row:focus-visible
+{
+    background: #F1F5F7;
+}
+
+.worst-bars__track
+{
+    height: 12px;
+}
+
+.worst-bars__bar
+{
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 0 4px 4px 0;
+}
+
+.worst-bars__value
+{
+    padding-left: 8px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* Reference line for the average, across all rows */
+.worst-bars__average
+{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 2px;
+    background: var(--color-text-muted);
+    pointer-events: none;
+}
+
+.worst-bars__average-label
+{
+    position: absolute;
+    top: 0;
+    left: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.worst-bars__tooltip
+{
+    top: 0;
+    left: 50%;
+}
+
+.response-log
+{
+    max-height: 340px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+}
+
+.response-log__table
+{
+    margin-top: 0;
+}
+
+.response-log__table thead th
+{
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface);
+}
+
+.response-log__site
+{
+    padding: 0;
+    font-weight: 700;
+}
+
+.response-log__waiting
+{
+    color: var(--color-bad);
+    font-weight: 600;
+}

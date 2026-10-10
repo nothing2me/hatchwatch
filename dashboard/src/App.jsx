@@ -193,6 +193,7 @@ export default function App()
                         nestSites={nestSites}
                         zones={snapshot.zones}
                         dataTag={dataTag}
+                        generatedAt={snapshot.generatedAt}
                         selectedNestIdentifier={selectedNestIdentifier}
                         onSelectNest={setSelectedNestIdentifier}
                         onAddPatrolEntry={dataSource.addPatrolEntry}
