@@ -6,7 +6,7 @@ import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { compassPoint } from '@/lib/geo';
 import type { CameraView } from '@/lib/types';
-import { CameraVideo, type SeekRequest } from './CameraVideo';
+import { CameraVideo, type FeedVariant, type SeekRequest } from './CameraVideo';
 import { ExpandedFeed } from './ExpandedFeed';
 import { PANEL_MAX, PANEL_MIN, PANEL_STEP, usePanelWidth } from './usePanelWidth';
 
@@ -19,6 +19,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera
     const { width, setWidth, nudge } = usePanelWidth();
     const drag = useRef<{ x: number; width: number } | null>(null);
     const [expanded, setExpanded] = useState(false);
+    const [variant, setVariant] = useState<FeedVariant>('raw');
     // Last clock value seen from whichever player ran, so the panel can pick up where the overlay stopped.
     const lastTime = useRef(0);
     const [resume, setResume] = useState<{ request: SeekRequest; base: SeekRequest | null } | null>(null);
@@ -94,7 +95,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera
                     <div className="mt-2 grid aspect-video max-md:aspect-[5/2] place-items-center rounded-lg border border-white/6 bg-night-950 text-sm text-ink-muted">Playing in expanded view</div>
                 )
                 : playable
-                ? <CameraVideo key={playable.id} video={playable} onTime={track} seekTo={panelSeek} />
+                ? <CameraVideo key={playable.id} video={playable} onTime={track} seekTo={panelSeek} variant={variant} onVariantChange={setVariant} />
                 : (
                     <div className="relative mt-2 grid aspect-video max-md:aspect-[5/2] place-items-center overflow-hidden rounded-lg border border-white/6 bg-night-950 text-center">
                         <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(135deg,transparent_0_10px,rgba(255,255,255,0.018)_10px_20px)]" />
@@ -127,7 +128,7 @@ export function CameraPanel({ camera, onClose, onTime, seekTo = null }: { camera
                 </p>
             )}
         </GlassPanel>
-        {playable && expanded && <ExpandedFeed camera={camera} video={playable} onClose={() => handOff(false)} onTime={track} seekTo={panelSeek} />}
+        {playable && expanded && <ExpandedFeed camera={camera} video={playable} onClose={() => handOff(false)} onTime={track} seekTo={panelSeek} variant={variant} onVariantChange={setVariant} />}
         </>
     );
 }

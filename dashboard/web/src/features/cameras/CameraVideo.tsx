@@ -16,11 +16,12 @@ const CLOCK_MS = 250;
 const HAVE_METADATA = 1;
 
 // Looping muted feed with an optional Raw/Motion switch. Publishes its clock so the map can gate pins.
-export function CameraVideo({ video, onTime, seekTo = null, large = false }: { video: FeedVideo; onTime?: (t: number) => void; seekTo?: SeekRequest | null; large?: boolean })
+export function CameraVideo({ video, onTime, seekTo = null, large = false, variant: variantProp, onVariantChange }: { video: FeedVideo; onTime?: (t: number) => void; seekTo?: SeekRequest | null; large?: boolean; variant?: FeedVariant; onVariantChange?: (next: FeedVariant) => void })
 {
     const ref = useRef<HTMLVideoElement>(null);
     const resumeAt = useRef<number | null>(null);
-    const [variant, setVariant] = useState<FeedVariant>('raw');
+    const [localVariant, setVariant] = useState<FeedVariant>('raw');
+    const variant = variantProp ?? localVariant;
 
     useEffect(() =>
     {
@@ -66,6 +67,7 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false }: { v
                 resumeAt.current = ref.current?.currentTime ?? 0;
             }
             setVariant(next);
+            onVariantChange?.(next);
         }
     }
 
@@ -85,7 +87,7 @@ export function CameraVideo({ video, onTime, seekTo = null, large = false }: { v
             <video
                 ref={ref}
                 data-testid="camera-video"
-                className={cn('block aspect-video w-full', large ? 'object-contain' : 'object-cover max-md:aspect-[5/2]')}
+                className={cn('block aspect-video w-full', large ? 'max-h-[calc(92vh-5rem)] object-contain' : 'object-cover max-md:aspect-[5/2]')}
                 src={`/api/media/video/${video.id}?variant=${variant}`}
                 autoPlay
                 muted

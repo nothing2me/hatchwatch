@@ -67,3 +67,35 @@ describe('expanded camera view', () =>
         expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe('328');
     });
 });
+
+describe('expanded view fixes', () =>
+{
+    it('keeps Raw/Motion across expand and close', () =>
+    {
+        render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand camera view' }));
+        expect(screen.getByTestId('camera-video').getAttribute('src')).toContain('variant=motion');
+        fireEvent.click(screen.getByRole('button', { name: 'Close expanded view' }));
+        expect(screen.getByTestId('camera-video').getAttribute('src')).toContain('variant=motion');
+    });
+
+    it('does not carry a hand-off to another camera when keyed by camera', () =>
+    {
+        vi.useFakeTimers();
+        const other = { ...camera, id: 'c2', code: 'B2', video: { ...(camera.video as object), id: 'v2' } } as unknown as CameraView;
+        const view = (c: CameraView) => <CameraPanel key={c.id} camera={c} onClose={() => undefined} onTime={() => undefined} />;
+        const { rerender } = render(view(camera));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand camera view' }));
+        const big = screen.getByTestId('camera-video') as HTMLVideoElement;
+        fireEvent(big, new Event('loadedmetadata'));
+        big.currentTime = 40;
+        vi.advanceTimersByTime(300);
+        fireEvent.click(screen.getByRole('button', { name: 'Close expanded view' }));
+        rerender(view(other));
+        const next = screen.getByTestId('camera-video') as HTMLVideoElement;
+        fireEvent(next, new Event('loadedmetadata'));
+        expect(next.currentTime).toBe(0);
+        vi.useRealTimers();
+    });
+});
