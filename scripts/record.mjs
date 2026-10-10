@@ -17,7 +17,7 @@ const python=process.platform==='win32'?resolve('.venv/Scripts/python.exe'):reso
 const ffmpegLookup=spawnSync(python,['-c','import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())'],{encoding:'utf8'});
 if(ffmpegLookup.error||ffmpegLookup.status!==0)throw Error(`Could not locate FFmpeg through ${python}: ${ffmpegLookup.error?.message||ffmpegLookup.stderr||`exit ${ffmpegLookup.status}`}`);
 const ffmpeg=ffmpegLookup.stdout.trim();
-const executablePath=process.env.NESTTRACE_BROWSER || ['C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync);
+const executablePath=process.env.HATCHWATCH_BROWSER || process.env.NESTTRACE_BROWSER || ['C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync);
 const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{}),args:['--enable-webgl','--no-sandbox',...(process.platform==='win32'?['--use-angle=d3d11']:[])]});
 let encoders=[];
 try{

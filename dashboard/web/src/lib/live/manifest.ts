@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LEGACY_LIVE_CHUNK_SCHEMA } from '@/lib/legacyNames';
 
 // live-chunk.v1: mirrors schemas/live-chunk.v1.json. The only contract with the continuous simulator.
 const camera = z.object({
@@ -14,7 +15,7 @@ const camera = z.object({
 }).strict();
 
 export const liveManifestSchema = z.object({
-    schema: z.literal('nesttrace.live-chunk'),
+    schema: z.union([z.literal('hatchwatch.live-chunk'), z.literal(LEGACY_LIVE_CHUNK_SCHEMA)]),
     version: z.literal(1),
     chunk_id: z.string().regex(/^live-[0-9]{6}-[A-Za-z0-9]+$/),
     sequence: z.number().int().min(0),

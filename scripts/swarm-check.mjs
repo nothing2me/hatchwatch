@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
-const browser=await chromium.launch({headless:true,executablePath:process.env.NESTTRACE_BROWSER||'C:/Program Files/Google/Chrome/Application/chrome.exe',args:['--enable-webgl','--no-sandbox',...(process.platform==='win32'?['--use-angle=d3d11']:[])]});
+const browser=await chromium.launch({headless:true,executablePath:process.env.HATCHWATCH_BROWSER||process.env.NESTTRACE_BROWSER||'C:/Program Files/Google/Chrome/Application/chrome.exe',args:['--enable-webgl','--no-sandbox',...(process.platform==='win32'?['--use-angle=d3d11']:[])]});
 try{
  const page=await browser.newPage({viewport:{width:1320,height:760}});
  await page.goto('http://127.0.0.1:5173/record.html');

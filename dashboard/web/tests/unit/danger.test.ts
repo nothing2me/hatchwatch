@@ -19,6 +19,19 @@ describe('tracks.v1 and people.v1 mirrors', () =>
         expect(people.people[0].points[0]).toHaveLength(3);
     });
 
+    it('accept the HatchWatch and the older NestTrace ids and refuse the other file\'s id', () =>
+    {
+        const tracks = fixture('tracks.json') as object;
+        const people = fixture('people.json') as object;
+        for (const prefix of ['hatchwatch', 'nesttrace'])
+        {
+            expect(tracksFileSchema.safeParse({ ...tracks, schema: `${prefix}.tracks` }).success).toBe(true);
+            expect(peopleFileSchema.safeParse({ ...people, schema: `${prefix}.people` }).success).toBe(true);
+            expect(tracksFileSchema.safeParse({ ...tracks, schema: `${prefix}.people` }).success).toBe(false);
+            expect(peopleFileSchema.safeParse({ ...people, schema: `${prefix}.tracks` }).success).toBe(false);
+        }
+    });
+
     it('reject malformed files', () =>
     {
         const tracks = fixture('tracks.json') as { tracks: { id: string; points: number[][] }[] };

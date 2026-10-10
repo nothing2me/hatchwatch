@@ -49,11 +49,27 @@ describe('Recorder', () =>
         await recorder.closeAll();
         expect(parseAvi(readFileSync(join(root, `${base}.avi`))).totalFrames).toBe(4);
         expect(sidecar(join(root, `${base}.json`))).toEqual({
-            schema: 'nesttrace.recording', version: 1, deviceId: 'd1', deviceName: 'Dune phone', cameraCode: 'E1',
+            schema: 'hatchwatch.recording', version: 1, deviceId: 'd1', deviceName: 'Dune phone', cameraCode: 'E1',
             startedAt: new Date(T0).toISOString(), endedAt: new Date(T0 + 800).toISOString(), durationS: 0.8, fps: 5, frameCount: 4, width: 960, height: 540, file: '070509.avi',
         });
         const [listed] = await recorder.list();
         expect(listed).toMatchObject({ path: `${base}.avi`, deviceId: 'd1', cameraCode: 'E1', durationS: 0.8, playable: false });
+    });
+
+    it('lists sidecars written before the rename (nesttrace.recording) next to new ones, and skips other schemas', async () =>
+    {
+        const { root, make } = setup('none');
+        const recorder = make();
+        mkdirSync(join(root, 'd1/2026-10-01'), { recursive: true });
+        const write = (name: string, schema: string) =>
+        {
+            writeFileSync(join(root, `d1/2026-10-01/${name}.mp4`), 'x');
+            writeFileSync(join(root, `d1/2026-10-01/${name}.json`), JSON.stringify({ schema, version: 1, deviceId: 'd1', deviceName: 'p', cameraCode: null, startedAt: new Date(T0 - 600_000).toISOString(), endedAt: new Date(T0).toISOString(), durationS: 600, fps: 5, frameCount: 3000, width: 960, height: 540, file: `${name}.mp4` }));
+        };
+        write('010101', 'nesttrace.recording');
+        write('020202', 'hatchwatch.recording');
+        write('030303', 'other.recording');
+        expect((await recorder.list()).map(item => item.path).sort()).toEqual(['d1/2026-10-01/010101.mp4', 'd1/2026-10-01/020202.mp4']);
     });
 
     it('converts with ffmpeg, then points the sidecar at the mp4 and deletes the avi', async () =>

@@ -1,6 +1,6 @@
 """Default simulator renders stay byte-identical (opt-in layout/humans must not leak into defaults).
 
-Skipped unless NESTTRACE_SIM_CHECK=1 and root Vite answers on 127.0.0.1:5173, because it needs a real
+Skipped unless HATCHWATCH_SIM_CHECK=1 (or the older NESTTRACE_SIM_CHECK=1) and root Vite answers on 127.0.0.1:5173, because it needs a real
 WebGL browser. Runs scripts/sim-frame-hash.mjs --check and scripts/sim-markers-check.mjs.
 """
 import os
@@ -23,8 +23,8 @@ def _vite_answers():
 
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get('NESTTRACE_SIM_CHECK') != '1' or not _vite_answers(),
-    reason='set NESTTRACE_SIM_CHECK=1 and serve web/ with root Vite on 5173',
+    os.environ.get('HATCHWATCH_SIM_CHECK', os.environ.get('NESTTRACE_SIM_CHECK')) != '1' or not _vite_answers(),
+    reason='set HATCHWATCH_SIM_CHECK=1 and serve web/ with root Vite on 5173',
 )
 
 

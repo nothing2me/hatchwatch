@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import type { Role } from '@/lib/types';
 import { cn } from '@/lib/cn';
-import { describeFrameStatus, describeMediaError, MESSAGES, PHONE_NAME_KEY, QUALITY_PRESETS, type QualityName } from './camMessages';
+import { readStored, STORAGE_KEYS } from '@/lib/storageKeys';
+import { describeFrameStatus, describeMediaError, MESSAGES, QUALITY_PRESETS, type QualityName } from './camMessages';
 import { startFrameSender, type FrameSender } from './frameSender';
 
 type Facing = 'environment' | 'user';
@@ -19,7 +20,7 @@ function loadPhoneName(): string
 {
     try
     {
-        return localStorage.getItem(PHONE_NAME_KEY) ?? '';
+        return readStored(localStorage, 'phoneName') ?? '';
     }
     catch
     {
@@ -153,7 +154,7 @@ export function CamSender({ user }: { user: { name: string; role: Role } })
 
         try
         {
-            localStorage.setItem(PHONE_NAME_KEY, phoneName);
+            localStorage.setItem(STORAGE_KEYS.phoneName, phoneName);
         }
         catch
         {

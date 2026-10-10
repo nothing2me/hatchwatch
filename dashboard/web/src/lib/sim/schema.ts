@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LEGACY_PEOPLE_SCHEMA, LEGACY_TRACKS_SCHEMA } from '@/lib/legacyNames';
 
 // sim-import-v1: the only simulator files the dashboard reads, all from a run's public folder.
 export const pinSchema = z.object({
@@ -30,7 +31,7 @@ export type SimPin = z.infer<typeof pinSchema>;
 const pathPoint = z.tuple([z.number(), z.number(), z.number()]);
 
 export const tracksFileSchema = z.object({
-    schema: z.literal('nesttrace.tracks'),
+    schema: z.union([z.literal('hatchwatch.tracks'), z.literal(LEGACY_TRACKS_SCHEMA)]),
     version: z.literal(1),
     note: z.string(),
     tracks: z.array(z.object({
@@ -41,7 +42,7 @@ export const tracksFileSchema = z.object({
 }).strict();
 
 export const peopleFileSchema = z.object({
-    schema: z.literal('nesttrace.people'),
+    schema: z.union([z.literal('hatchwatch.people'), z.literal(LEGACY_PEOPLE_SCHEMA)]),
     version: z.literal(1),
     note: z.string(),
     people: z.array(z.object({

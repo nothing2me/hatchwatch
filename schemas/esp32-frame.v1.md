@@ -10,9 +10,10 @@ Shared contract between `firmware/esp32s3-cam` (sender) and the NestTrace dashbo
 | `Authorization` | `Bearer <token>`: the 43-character base64url token shown once by **Live cameras > Add board camera** or **Rotate token** |
 | `Content-Type` | `image/jpeg` |
 | Body | one JPEG (starts `FF D8`), at most 500 KB |
-| `X-NestTrace-Motion` | optional, see below |
+| `X-HatchWatch-Motion` | optional, see below; sent by firmware built after the HatchWatch rename |
+| `X-NestTrace-Motion` | same value; accepted for boards flashed before the rename. When both are present, `X-HatchWatch-Motion` wins |
 
-## `X-NestTrace-Motion`
+## `X-HatchWatch-Motion` (and `X-NestTrace-Motion`)
 
 ```
 v1;percent=<P>;active=<A>;box=<x>,<y>,<w>,<h>
@@ -24,7 +25,7 @@ v1;percent=<P>;active=<A>;box=<x>,<y>,<w>,<h>
 - Fields appear in exactly this order, with no spaces. The whole value is at most 160 characters.
 - A receiver ignores a malformed value or any version other than `v1`; the frame is still accepted. Later versions use a new leading token (`v2;...`) and a new file `schemas/esp32-frame.v2.md`.
 
-Example: `X-NestTrace-Motion: v1;percent=4.2;active=1;box=96,40,64,72`
+Example: `X-HatchWatch-Motion: v1;percent=4.2;active=1;box=96,40,64,72` (a board flashed before the rename sends the same value as `X-NestTrace-Motion`)
 
 ## Responses the board acts on
 

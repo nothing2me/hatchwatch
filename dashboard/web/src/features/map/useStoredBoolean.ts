@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { readStored, STORAGE_KEYS, type StorageKeyName } from '@/lib/storageKeys';
 
 // Boolean UI preference kept in localStorage. Storage can be blocked or
 // cleared, so every access is guarded and the initial value always works.
-export function useStoredBoolean(key: string, initial: boolean): [boolean, (next: boolean) => void]
+export function useStoredBoolean(name: StorageKeyName, initial: boolean): [boolean, (next: boolean) => void]
 {
     const [value, setValue] = useState(initial);
 
@@ -12,7 +13,7 @@ export function useStoredBoolean(key: string, initial: boolean): [boolean, (next
     {
         try
         {
-            const stored = localStorage.getItem(key);
+            const stored = readStored(localStorage, name);
             if (stored === 'true' || stored === 'false')
             {
                 setValue(stored === 'true');
@@ -22,20 +23,20 @@ export function useStoredBoolean(key: string, initial: boolean): [boolean, (next
         {
             // Keep the initial value.
         }
-    }, [key]);
+    }, [name]);
 
     const update = useCallback((next: boolean) =>
     {
         setValue(next);
         try
         {
-            localStorage.setItem(key, String(next));
+            localStorage.setItem(STORAGE_KEYS[name], String(next));
         }
         catch
         {
             // Preference just won't persist.
         }
-    }, [key]);
+    }, [name]);
 
     return [value, update];
 }

@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
+import { LEGACY_RECORDING_SCHEMA } from '@/lib/legacyNames';
 import type { RecordingView } from '@/lib/types';
 import { AVI_HEADER_BYTES, AviWriter, MAX_SEGMENT_BYTES, repairAvi } from './avi';
 import type { FrameRecorder } from './http';
@@ -17,10 +18,12 @@ export interface RecorderOptions
     ffmpegPath: string;
 }
 
+export const RECORDING_SCHEMA = 'hatchwatch.recording';
+
 // Written when a segment opens (file = .avi.part) and rewritten when it closes or converts.
 export interface Sidecar
 {
-    schema: 'nesttrace.recording';
+    schema: typeof RECORDING_SCHEMA | typeof LEGACY_RECORDING_SCHEMA;
     version: 1;
     deviceId: string;
     deviceName: string;
@@ -75,7 +78,7 @@ async function readSidecar(path: string): Promise<Sidecar | null>
     try
     {
         const value = JSON.parse(await readFile(path, 'utf8')) as Sidecar;
-        return value.schema === 'nesttrace.recording' && typeof value.file === 'string' && typeof value.startedAt === 'string' ? value : null;
+        return (value.schema === RECORDING_SCHEMA || value.schema === LEGACY_RECORDING_SCHEMA) && typeof value.file === 'string' && typeof value.startedAt === 'string' ? value : null;
     }
     catch
     {
@@ -85,7 +88,8 @@ async function readSidecar(path: string): Promise<Sidecar | null>
 
 async function writeSidecar(base: string, sidecar: Sidecar): Promise<void>
 {
-    await writeFile(`${base}.json.tmp`, JSON.stringify(sidecar, null, 2));
+    // A rewrite of a sidecar from before the rename is saved under the new id.
+    await writeFile(`${base}.json.tmp`, JSON.stringify({ ...sidecar, schema: RECORDING_SCHEMA }, null, 2));
     await rename(`${base}.json.tmp`, `${base}.json`);
 }
 
@@ -93,7 +97,7 @@ function sidecarOf(start: SegmentStart, frameCount: number, file: string, closed
 {
     const durationS = frameCount / start.fps;
     return {
-        schema: 'nesttrace.recording', version: 1, deviceId: start.deviceId, deviceName: start.deviceName, cameraCode: start.cameraCode,
+        schema: RECORDING_SCHEMA, version: 1, deviceId: start.deviceId, deviceName: start.deviceName, cameraCode: start.cameraCode,
         startedAt: new Date(start.startedAt).toISOString(), endedAt: closed ? new Date(start.startedAt + durationS * 1000).toISOString() : null,
         durationS, fps: start.fps, frameCount, width: start.width, height: start.height, file,
     };

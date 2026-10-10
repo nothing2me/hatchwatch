@@ -293,7 +293,7 @@ describe('AllCamerasScreen detections', () =>
         expect(screen.queryByText('person 0.82')).toBeNull();
         expect(screen.queryByText('People 1 · Possible turtles 0')).toBeNull();
         expect(screen.queryByText('Detection is a viewing aid; it can miss people and mistake objects.')).toBeNull();
-        expect(localStorage.getItem('nesttrace.detections')).toBe('off');
+        expect(localStorage.getItem('hatchwatch.detections')).toBe('off');
         unmount();
         show(viewer);
         expect((await screen.findByRole('button', { name: 'Detections' })).getAttribute('aria-pressed')).toBe('false');

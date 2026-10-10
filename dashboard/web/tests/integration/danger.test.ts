@@ -26,21 +26,22 @@ const TRACKS = [
 // Walk along x at y = 4, 1 m/s: within 3 m of pin-1 (2, 3) for t ≈ 4.2–9.8 s.
 const walk = (id: string, t0: number, y = 4) => ({ id, max_height_m: 1.8, points: Array.from({ length: 15 }, (_, i) => [t0 + i, -5 + i, y]) });
 
-function writePaths(dir: string, people: unknown[] | null, tracks: unknown[] | null = TRACKS)
+// prefix: 'nesttrace' is what runs before the HatchWatch rename wrote; both are imported.
+function writePaths(dir: string, people: unknown[] | null, tracks: unknown[] | null = TRACKS, prefix = 'nesttrace')
 {
     if (tracks)
     {
         mkdirSync(join(dir, 'tracks'), { recursive: true });
-        writeFileSync(join(dir, 'tracks/tracks.json'), JSON.stringify({ schema: 'nesttrace.tracks', version: 1, note: 'test', tracks }));
+        writeFileSync(join(dir, 'tracks/tracks.json'), JSON.stringify({ schema: `${prefix}.tracks`, version: 1, note: 'test', tracks }));
     }
     if (people)
     {
         mkdirSync(join(dir, 'people'), { recursive: true });
-        writeFileSync(join(dir, 'people/people.json'), JSON.stringify({ schema: 'nesttrace.people', version: 1, note: 'test', people }));
+        writeFileSync(join(dir, 'people/people.json'), JSON.stringify({ schema: `${prefix}.people`, version: 1, note: 'test', people }));
     }
 }
 
-function makeRun(name: string, people: unknown[] | null, tracks: unknown[] | null = TRACKS): string
+function makeRun(name: string, people: unknown[] | null, tracks: unknown[] | null = TRACKS, prefix = 'nesttrace'): string
 {
     const dir = join(work, 'artifacts/public', name);
     for (const sub of ['view-0', 'view-1', 'pins'])
@@ -58,7 +59,7 @@ function makeRun(name: string, people: unknown[] | null, tracks: unknown[] | nul
     writeFileSync(join(dir, 'timestamps.json'), JSON.stringify(Array.from({ length: 81 }, (_, i) => i * 0.125)));
     writeFileSync(join(dir, 'analysis.json'), JSON.stringify({ cameras: [0, 1], inference_complete: true }));
     writeFileSync(join(dir, 'pins/predictions.json'), JSON.stringify({ schema_version: 1, methods: { pins: PINS } }));
-    writePaths(dir, people, tracks);
+    writePaths(dir, people, tracks, prefix);
     return dir;
 }
 
@@ -141,6 +142,12 @@ describe('importing trails and people', () =>
         expect(siteEvents.map(event => event.type).sort()).toEqual(['danger', 'detected']);
         expect(siteEvents.find(event => event.type === 'danger')?.note).toMatch(/^Person within 3 m of the site at \d\d:\d\d \(person-1\)\.$/);
         expect(await prisma.alert.findUniqueOrThrow({ where: { id: site.id } })).toMatchObject({ kind: 'DIGGING', status: 'NEW', level: 0, message: 'Digging activity detected; nesting unresolved.' });
+    });
+
+    it('imports trails and people written with the HatchWatch schema ids', async () =>
+    {
+        const result = await importRun(makeRun('A-seaward-humans-demo-1', [walk('person-1', 0)], TRACKS, 'hatchwatch'));
+        expect(result).toMatchObject({ trackCount: 3, dangerCount: 1 });
     });
 
     it('raises a new danger for an approach after the minute window', async () =>

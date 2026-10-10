@@ -15,6 +15,20 @@ const alerts = [
 
 describe('AlertsFeed', () =>
 {
+    it('remembers collapsing under the HatchWatch key and keeps a state saved before the rename', () =>
+    {
+        const first = render(<AlertsFeed alerts={alerts} onSelect={() => undefined} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Collapse alerts' }));
+        expect(localStorage.getItem('hatchwatch.alerts.open')).toBe('false');
+        first.unmount();
+        localStorage.clear();
+        localStorage.setItem('nesttrace.alerts.open', 'false');
+        render(<AlertsFeed alerts={alerts} onSelect={() => undefined} />);
+        expect(screen.queryByRole('button', { name: 'Collapse alerts' })).toBeNull();
+        expect(localStorage.getItem('hatchwatch.alerts.open')).toBe('false');
+        expect(localStorage.getItem('nesttrace.alerts.open')).toBeNull();
+    });
+
     it('counts active and inactive sites in the tabs', () =>
     {
         render(<AlertsFeed alerts={alerts} onSelect={vi.fn()} />);

@@ -23,9 +23,12 @@ describe('CamSender', () =>
 
     it('remembers the phone name and defaults to the rear camera and Standard quality', () =>
     {
+        // Saved before the HatchWatch rename: read once and moved to the new key.
         localStorage.setItem('nesttrace.phoneName', 'Dune phone');
         render(<CamSender user={volunteer} />);
         expect((screen.getByLabelText('Phone name') as HTMLInputElement).value).toBe('Dune phone');
+        expect(localStorage.getItem('hatchwatch.phoneName')).toBe('Dune phone');
+        expect(localStorage.getItem('nesttrace.phoneName')).toBeNull();
         expect((screen.getByLabelText('Camera') as HTMLSelectElement).value).toBe('environment');
         expect((screen.getByLabelText('Quality') as HTMLSelectElement).value).toBe('standard');
     });

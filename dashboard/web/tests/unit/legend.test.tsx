@@ -22,9 +22,19 @@ describe('Legend', () =>
     {
         const first = render(<Legend />);
         fireEvent.click(screen.getByRole('button', { name: /legend/i }));
+        expect(localStorage.getItem('hatchwatch.legend.open')).toBe('false');
         first.unmount();
         render(<Legend />);
         expect(screen.queryByText('High')).toBeNull();
+    });
+
+    it('keeps a collapsed state saved before the HatchWatch rename', () =>
+    {
+        localStorage.setItem('nesttrace.legend.open', 'false');
+        render(<Legend />);
+        expect(screen.queryByText('High')).toBeNull();
+        expect(localStorage.getItem('hatchwatch.legend.open')).toBe('false');
+        expect(localStorage.getItem('nesttrace.legend.open')).toBeNull();
     });
 
     it('still works when storage throws', () =>

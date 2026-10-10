@@ -7,7 +7,6 @@ export const QUALITY_PRESETS: Record<QualityName, { label: string; width: number
 
 // Matches the 5 fps recording timeline and stays under the server's 10 frames/s cap.
 export const SEND_FPS = 5;
-export const PHONE_NAME_KEY = 'nesttrace.phoneName';
 
 export const MESSAGES = {
     https: 'This page is not on HTTPS, so the browser blocks the camera. Open the https:// address from the Connect phone QR code.',

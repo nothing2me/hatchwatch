@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "nesttrace.people v1",
+  "title": "hatchwatch.people v1",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "version", "people", "note"],
   "properties": {
-    "schema": {"const": "nesttrace.people"},
+    "schema": {"enum": ["hatchwatch.people", "nesttrace.people"], "description": "nesttrace.people is the id written before the HatchWatch rename; readers accept both."},
     "version": {"const": 1},
     "note": {"type": "string"},
     "people": {

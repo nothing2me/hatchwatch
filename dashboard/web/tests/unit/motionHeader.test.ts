@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { MOTION_HEADER, parseMotionHeader } from '@/lib/phones/motionHeader';
+import { MOTION_HEADER, motionHeaderValue, parseMotionHeader } from '@/lib/phones/motionHeader';
 
-describe('X-NestTrace-Motion v1', () =>
+describe('X-HatchWatch-Motion v1', () =>
 {
+    it('reads the new header, falls back to the one boards flashed before the rename send, and prefers the new one', () =>
+    {
+        expect(MOTION_HEADER).toBe('x-hatchwatch-motion');
+        expect(motionHeaderValue(new Headers({ 'X-HatchWatch-Motion': 'new' }))).toBe('new');
+        expect(motionHeaderValue(new Headers({ 'X-NestTrace-Motion': 'old' }))).toBe('old');
+        expect(motionHeaderValue(new Headers({ 'X-NestTrace-Motion': 'old', 'X-HatchWatch-Motion': 'new' }))).toBe('new');
+        expect(motionHeaderValue(new Headers())).toBeNull();
+    });
+
     it('parses the firmware format', () =>
     {
-        expect(MOTION_HEADER).toBe('x-nesttrace-motion');
         expect(parseMotionHeader('v1;percent=4.2;active=1;box=96,40,64,72')).toEqual({ percent: 4.2, active: true, box: [96, 40, 64, 72] });
         expect(parseMotionHeader('v1;percent=0.0;active=0;box=0,0,0,0')).toEqual({ percent: 0, active: false, box: [0, 0, 0, 0] });
         expect(parseMotionHeader('v1;percent=100.0;active=1;box=0,0,320,240')).toEqual({ percent: 100, active: true, box: [0, 0, 320, 240] });

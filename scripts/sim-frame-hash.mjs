@@ -28,7 +28,7 @@ export function simConfig(args)
 
 export async function launchRecordPage()
 {
-    const executablePath = process.env.NESTTRACE_BROWSER || ['C:/Program Files/Google/Chrome/Application/chrome.exe', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(existsSync);
+    const executablePath = process.env.HATCHWATCH_BROWSER || process.env.NESTTRACE_BROWSER || ['C:/Program Files/Google/Chrome/Application/chrome.exe', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(existsSync);
     const browser = await chromium.launch({headless: true, ...(executablePath ? {executablePath} : {}), args: ['--enable-webgl', '--no-sandbox', ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : [])]});
     const page = await browser.newPage();
     await page.goto('http://127.0.0.1:5173/record.html');

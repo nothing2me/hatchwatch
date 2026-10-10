@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { readStored, STORAGE_KEYS } from '@/lib/storageKeys';
 
-export const DETECTIONS_KEY = 'nesttrace.detections';
+export const DETECTIONS_KEY = STORAGE_KEYS.detections;
 
 const listeners = new Set<() => void>();
 // Used only when localStorage is blocked, so the choice still holds until the page reloads.
@@ -23,7 +24,7 @@ function read(): boolean
 {
     try
     {
-        return window.localStorage.getItem(DETECTIONS_KEY) !== 'off';
+        return readStored(window.localStorage, 'detections') !== 'off';
     }
     catch
     {

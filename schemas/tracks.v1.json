@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "nesttrace.tracks v1",
+  "title": "hatchwatch.tracks v1",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "version", "tracks", "note"],
   "properties": {
-    "schema": {"const": "nesttrace.tracks"},
+    "schema": {"enum": ["hatchwatch.tracks", "nesttrace.tracks"], "description": "nesttrace.tracks is the id written before the HatchWatch rename; readers accept both."},
     "version": {"const": 1},
     "note": {"type": "string"},
     "tracks": {

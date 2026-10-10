@@ -201,11 +201,11 @@ describe('board frames', () =>
     let now: number;
     beforeEach(() => { now = T0; });
     const deps = (user: SessionUser | null, store: FrameStore, recorder: FrameRecorder | null = null) => ({ prisma, user, store, recorder, now: () => (now += 200) });
-    const boardFrame = (token: string | null, motion?: string, body: Uint8Array<ArrayBuffer> = jpeg()) =>
+    const boardFrame = (token: string | null, motion?: string, body: Uint8Array<ArrayBuffer> = jpeg(), header = 'x-nesttrace-motion') =>
     {
         const headers: Record<string, string> = { 'content-type': 'image/jpeg' };
         if (token !== null) headers.authorization = `Bearer ${token}`;
-        if (motion !== undefined) headers['x-nesttrace-motion'] = motion;
+        if (motion !== undefined) headers[header] = motion;
         return new Request('https://x/api/live/frame/id', { method: 'POST', body, headers });
     };
     async function board(name = 'Dune board'): Promise<{ id: string; token: string }>
@@ -263,6 +263,16 @@ describe('board frames', () =>
         const statuses: number[] = [];
         for (let i = 0; i < 11; i++) statuses.push((await postFrame(fast, id, boardFrame(token))).status);
         expect(statuses).toEqual([...Array(10).fill(200), 429]);
+    });
+
+    it('stores the motion reading from the HatchWatch header and from the header boards flashed before the rename send', async () =>
+    {
+        const { id, token } = await board();
+        const store = new FrameStore();
+        expect((await postFrame(deps(null, store), id, boardFrame(token, 'v1;percent=4.2;active=1;box=96,40,64,72', jpeg(), 'x-nesttrace-motion'))).status).toBe(200);
+        expect(store.motion(id, now)).toMatchObject({ percent: 4.2, active: true, box: [96, 40, 64, 72] });
+        expect((await postFrame(deps(null, store), id, boardFrame(token, 'v1;percent=1.5;active=0;box=1,2,3,4', jpeg(), 'x-hatchwatch-motion'))).status).toBe(200);
+        expect(store.motion(id, now)).toMatchObject({ percent: 1.5, active: false, box: [1, 2, 3, 4] });
     });
 
     it('stores the motion header for boards, ignores bad ones, and lists it without the token', async () =>

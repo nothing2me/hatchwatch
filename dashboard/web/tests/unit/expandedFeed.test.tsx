@@ -63,10 +63,19 @@ describe('expanded camera view', () =>
         expect(handle.getAttribute('aria-valuenow')).toBe('304');
         fireEvent.keyDown(handle, { key: 'ArrowLeft' });
         expect(handle.getAttribute('aria-valuenow')).toBe('328');
-        expect(localStorage.getItem('nesttrace.panel.width')).toBe('328');
+        expect(localStorage.getItem('hatchwatch.panel.width')).toBe('328');
         unmount();
         render(<CameraPanel camera={camera} onClose={() => undefined} />);
         expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe('328');
+    });
+
+    it('keeps a width saved before the HatchWatch rename and moves it to the new key', () =>
+    {
+        localStorage.setItem('nesttrace.panel.width', '400');
+        render(<CameraPanel camera={camera} onClose={() => undefined} />);
+        expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe('400');
+        expect(localStorage.getItem('hatchwatch.panel.width')).toBe('400');
+        expect(localStorage.getItem('nesttrace.panel.width')).toBeNull();
     });
 });
 

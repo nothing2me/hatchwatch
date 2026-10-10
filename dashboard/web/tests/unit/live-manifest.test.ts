@@ -18,6 +18,12 @@ export const validManifest = () => ({
 describe('liveManifestSchema', () =>
 {
     it('accepts a valid manifest', () => { expect(liveManifestSchema.safeParse(validManifest()).success).toBe(true); });
+    it('accepts the HatchWatch and the older NestTrace schema id, nothing else', () =>
+    {
+        expect(liveManifestSchema.safeParse({ ...validManifest(), schema: 'hatchwatch.live-chunk' }).success).toBe(true);
+        expect(liveManifestSchema.safeParse({ ...validManifest(), schema: 'nesttrace.live-chunk' }).success).toBe(true);
+        expect(liveManifestSchema.safeParse({ ...validManifest(), schema: 'other.live-chunk' }).success).toBe(false);
+    });
     it('accepts the live night development rendering label', () =>
     {
         expect(liveManifestSchema.safeParse({ ...validManifest(), rendering: 'synthetic-active-nir' }).success).toBe(true);

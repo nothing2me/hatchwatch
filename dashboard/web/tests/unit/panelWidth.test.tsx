@@ -24,6 +24,7 @@ describe('usePanelWidth', () =>
         expect(result.current.width).toBe(304);
         act(() => result.current.setWidth(600));
         expect(result.current.width).toBe(600);
+        expect(localStorage.getItem('hatchwatch.panel.width')).toBe('600');
         unmount();
         const again = renderHook(() => usePanelWidth());
         expect(again.result.current.width).toBe(600);
@@ -31,9 +32,18 @@ describe('usePanelWidth', () =>
 
     it('ignores a garbage stored value', () =>
     {
-        localStorage.setItem('nesttrace.panel.width', 'wide');
+        localStorage.setItem('hatchwatch.panel.width', 'wide');
         const { result } = renderHook(() => usePanelWidth());
         expect(result.current.width).toBe(304);
+    });
+
+    it('reads a width saved before the HatchWatch rename once and moves it to the new key', () =>
+    {
+        localStorage.setItem('nesttrace.panel.width', '480');
+        const { result } = renderHook(() => usePanelWidth());
+        expect(result.current.width).toBe(480);
+        expect(localStorage.getItem('hatchwatch.panel.width')).toBe('480');
+        expect(localStorage.getItem('nesttrace.panel.width')).toBeNull();
     });
 
     it('still works when storage throws', () =>

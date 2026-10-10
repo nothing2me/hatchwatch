@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { readStored, STORAGE_KEYS } from '@/lib/storageKeys';
 
 export const PANEL_MIN = 304;
 export const PANEL_MAX = 720;
 export const PANEL_STEP = 24;
-const KEY = 'nesttrace.panel.width';
 
 export function clampWidth(value: number): number
 {
@@ -25,7 +25,7 @@ export function usePanelWidth(): { width: number; setWidth: (next: number) => vo
     {
         try
         {
-            const stored = localStorage.getItem(KEY);
+            const stored = readStored(localStorage, 'panelWidth');
             if (stored !== null && Number.isFinite(Number(stored)))
             {
                 setState(clampWidth(Number(stored)));
@@ -43,7 +43,7 @@ export function usePanelWidth(): { width: number; setWidth: (next: number) => vo
         setState(clamped);
         try
         {
-            localStorage.setItem(KEY, String(clamped));
+            localStorage.setItem(STORAGE_KEYS.panelWidth, String(clamped));
         }
         catch
         {
@@ -58,7 +58,7 @@ export function usePanelWidth(): { width: number; setWidth: (next: number) => vo
             const next = clampWidth(current + delta);
             try
             {
-                localStorage.setItem(KEY, String(next));
+                localStorage.setItem(STORAGE_KEYS.panelWidth, String(next));
             }
             catch
             {

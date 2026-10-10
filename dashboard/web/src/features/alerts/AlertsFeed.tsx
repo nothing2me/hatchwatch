@@ -65,7 +65,7 @@ const outcomeNote = { saved: 'Saved', notSaved: 'Not saved', pending: '', none: 
 // Open dangers come first in Active, one card per person passing; `canResolve` (volunteers, admins) adds Resolve buttons.
 export function AlertsFeed({ alerts, onSelect, playback = null, selectedId = null, inactiveCount, canResolve = false }: { alerts: AlertView[]; onSelect: (alert: AlertView) => void; playback?: Playback | null; selectedId?: string | null; inactiveCount?: number; canResolve?: boolean })
 {
-    const [open, setOpen] = useStoredBoolean('nesttrace.alerts.open', true);
+    const [open, setOpen] = useStoredBoolean('alertsOpen', true);
     const [tab, setTab] = useState<Tab>('active');
     const [activities, setActivities] = useState<Set<AlertKind>>(() => new Set(ACTIVITIES.map(item => item.kind)));
     // Danger ids whose group card is expanded (a card stays open as its dangers are resolved one by one).

@@ -93,12 +93,15 @@ describe('CameraPanel with a linked phone', () =>
         expect(screen.getByText('Detection off')).toBeTruthy();
         second.unmount();
 
+        // Turned off before the HatchWatch rename: still off, and moved to the new key.
         localStorage.setItem('nesttrace.detections', 'off');
         detections.value = { at: 1, dark: false, width: 320, height: 240, objects: [{ track: 'P1', label: 'person', score: 0.82, box: [1, 2, 3, 4] }], trails: [] };
         render(<CameraPanel camera={camera} onClose={() => undefined} />);
         expect(screen.queryByText('person 0.82')).toBeNull();
         expect(screen.queryByText('People 1 · Possible turtles 0')).toBeNull();
         expect(screen.queryByText('Detection off')).toBeNull();
+        expect(localStorage.getItem('hatchwatch.detections')).toBe('off');
+        expect(localStorage.getItem('nesttrace.detections')).toBeNull();
     });
 
     it('greys a person outside the linked camera\'s watch area', () =>

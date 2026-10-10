@@ -4,7 +4,7 @@ import { isJpeg, readCapped } from './body';
 import { bearerToken } from './deviceToken';
 import { boardAccess, cleanDeviceName, DEVICE_NAME_MAX, frameAccess, listDevices, registerDevice, touchDevice } from './devices';
 import { MAX_FRAME_BYTES, type BoardMotion, type FrameStore } from './frameStore';
-import { MOTION_HEADER, parseMotionHeader } from './motionHeader';
+import { motionHeaderValue, parseMotionHeader } from './motionHeader';
 
 export interface FrameRecorder
 {
@@ -86,7 +86,7 @@ export async function postFrame(deps: PhoneDeps, deviceId: string, request: Requ
             return json({ error: BOARD_REFUSED }, 401);
         }
         device = board.device;
-        motion = parseMotionHeader(request.headers.get(MOTION_HEADER));
+        motion = parseMotionHeader(motionHeaderValue(request.headers));
     }
     else
     {

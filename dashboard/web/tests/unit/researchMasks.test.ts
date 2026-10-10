@@ -74,6 +74,17 @@ describe('camera mask store', () =>
     {
         expect(readDefaultMasks().map(entry => entry.camera)).toEqual([0, 1]);
     });
+
+    it('reads a masks file with the HatchWatch id, the older NestTrace id, or none', () =>
+    {
+        for (const schema of [RESEARCH_MASKS_SCHEMA, 'nesttrace.camera_masks', undefined])
+        {
+            const { live, operator } = folders();
+            mkdirSync(operator, { recursive: true });
+            writeFileSync(join(operator, 'camera-masks.json'), JSON.stringify({ schema, version: 1, cameras: [{ camera: 1, polygon: [[1, 1], [2, 1], [2, 2]] }] }));
+            expect(readMasks(live, operator)).toMatchObject({ source: 'public', cameras: [{ camera: 1 }] });
+        }
+    });
 });
 
 describe('syncResearchMasks', () =>

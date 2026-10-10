@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/nothing2me/nesttrace/schemas/live-chunk.v1.json",
-  "title": "NestTrace live chunk manifest, version 1",
+  "$id": "https://github.com/nothing2me/hatchwatch/schemas/live-chunk.v1.json",
+  "title": "HatchWatch live chunk manifest, version 1",
   "description": "Written last, as artifacts/public/<chunk_id>/live-chunk.json, by scripts/live-runner.mjs once a chunk's public outputs are complete. It is the only contract between the continuous simulator and the dashboard adapter. Every path is relative to the chunk's public folder and must match the fixed names below; nothing here may point at artifacts/private, seeds, scenario names, simulator state, or evaluator truth.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "version", "chunk_id", "sequence", "recording_started_at", "published_at", "clip_seconds", "fps", "rendering", "ground_bounds_m", "cameras", "pins", "note"],
   "properties": {
-    "schema": { "const": "nesttrace.live-chunk" },
+    "schema": { "enum": ["hatchwatch.live-chunk", "nesttrace.live-chunk"], "description": "nesttrace.live-chunk is the id written before the HatchWatch rename; readers accept both." },
     "version": { "const": 1 },
     "chunk_id": { "type": "string", "pattern": "^live-[0-9]{6}-[A-Za-z0-9]+$", "description": "Same as the chunk's folder name." },
     "sequence": { "type": "integer", "minimum": 0, "description": "Increases by one per chunk, across runner restarts." },

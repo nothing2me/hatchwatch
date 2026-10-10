@@ -15,7 +15,7 @@ const levels = [
 
 export function Legend({ className }: { className?: string; fadeMinutes?: number })
 {
-    const [open, setOpen] = useStoredBoolean('nesttrace.legend.open', true);
+    const [open, setOpen] = useStoredBoolean('legendOpen', true);
     return (
         <GlassPanel className={cn('w-52 text-xs', className)}>
             <Collapsible.Root open={open} onOpenChange={setOpen}>

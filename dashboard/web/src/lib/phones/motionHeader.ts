@@ -1,9 +1,16 @@
+import { LEGACY_MOTION_HEADER } from '@/lib/legacyNames';
 import type { BoardMotion } from './frameStore';
 
-export const MOTION_HEADER = 'x-nesttrace-motion';
+export const MOTION_HEADER = 'x-hatchwatch-motion';
 const MAX_LENGTH = 160;
 // schemas/esp32-frame.v1.md: fixed order, one decimal, no spaces, no leading zeros.
 const V1 = /^v1;percent=(100\.0|[1-9]?\d\.\d);active=([01]);box=(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4})$/;
+
+/** The new header wins; boards flashed before the rename keep sending the old one (schemas/esp32-frame.v1.md). */
+export function motionHeaderValue(headers: Headers): string | null
+{
+    return headers.get(MOTION_HEADER) ?? headers.get(LEGACY_MOTION_HEADER);
+}
 
 // The board's motion reading, or null when absent, malformed or another version (the frame is still accepted).
 export function parseMotionHeader(value: string | null): BoardMotion | null
