@@ -68,7 +68,7 @@ export async function scanOnce(prisma: PrismaClient, settings: LiveSettings): Pr
             if (result)
             {
                 imported += 1;
-                console.log(`[live] imported ${result.chunkId} onto zone ${result.zoneCode} (${result.sites} sites)`);
+                console.log(`[live] imported ${result.chunkId} onto zone ${result.zoneCode} (${result.sites} sites, ${result.tracks} trails, ${result.dangers} dangers)`);
             }
         }
         catch (error)
@@ -81,15 +81,17 @@ export async function scanOnce(prisma: PrismaClient, settings: LiveSettings): Pr
 }
 
 // Archives active sites older than archiveMinutes that no person has touched.
+// Never DANGER alerts, and never a site whose danger is still open (both stay active until a person acts).
 export async function ageSites(prisma: PrismaClient, settings: LiveSettings, now: Date = new Date()): Promise<number>
 {
     const cutoff = new Date(now.getTime() - settings.archiveMinutes * 60_000);
     const candidates = await prisma.alert.findMany({
         where: {
             status: 'NEW',
+            kind: { not: 'DANGER' },
             video: { liveChunkId: { not: null } },
             detectedAt: { lt: cutoff },
-            events: { none: { type: { in: PERSON_EVENTS } } },
+            events: { none: { type: { in: [...PERSON_EVENTS, 'danger'] } } },
         },
         select: { id: true },
     });

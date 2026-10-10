@@ -45,6 +45,7 @@ enum AlertKind {
   DIGGING
   TRACK_ONLY
   NO_TURTLE
+  DANGER
 }
 
 enum AlertStatus {
@@ -169,6 +170,14 @@ model Track {
   endT          Float
   geoReferenced Boolean @default(false)
   label         String
+  /// Site (alert) this trail was matched to; null for an unmatched trail.
+  alertId       String?
+  alert         Alert?  @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  /// Index into the dashboard trail palette (pin order); null = unmatched (grey).
+  colorIndex    Int?
+
+  @@index([videoId])
+  @@index([alertId])
 }
 
 model Alert {
@@ -196,8 +205,16 @@ model Alert {
   statusChanges         AlertStatusChange[]
   events                SiteEvent[]
   detectedAt            DateTime?
+  /// 1 = level-1 (DANGER); 0 = ordinary site.
+  level                 Int                 @default(0)
+  /// DANGER alerts: the nest site the person came near.
+  siteId                String?
+  site                  Alert?              @relation("DangerSite", fields: [siteId], references: [id], onDelete: Cascade)
+  dangers               Alert[]             @relation("DangerSite")
+  tracks                Track[]
 
   @@index([status, createdAt])
+  @@index([siteId])
   @@index([status])
 }
 

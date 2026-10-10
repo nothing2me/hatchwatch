@@ -1,19 +1,28 @@
-import type { AlertStatus, SiteEventType, SiteSummary } from '@/lib/types';
+import type { AlertKind, AlertStatus, SiteEventType, SiteSummary } from '@/lib/types';
 
-export const PERSON_EVENTS: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost', 'note'];
+export const PERSON_EVENTS: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost', 'note', 'dangerResolved'];
 const ON_SITE: SiteEventType[] = ['patrolVisit', 'nestConfirmed', 'noNestFound', 'protectionInstalled', 'hatched', 'lost'];
+/** Person entries that answer an active danger on a nest site. */
+export const RESOLVES_DANGER: SiteEventType[] = ['dangerResolved', 'protectionInstalled', 'patrolVisit', 'note'];
+/** Entry types a person may add to a DANGER alert itself. */
+export const DANGER_ALERT_EVENTS: SiteEventType[] = ['dangerResolved'];
+/** Minutes after the first danger within which protection must be logged, or the site counts as Not saved. */
+export const DANGER_PROTECT_MINUTES = 30;
 
 type Ev = { type: SiteEventType; at: Date | string; createdAt?: Date | string };
 const time = (at: Date | string) => (at instanceof Date ? at : new Date(at));
 
 // Reads a site's log oldest-first; later entries win so a patrol can correct an earlier finding.
-export function summarizeSite(events: Ev[]): SiteSummary
+// A DANGER alert's own log (`kind: 'DANGER'`) is active until its danger is resolved and never carries a deadline.
+export function summarizeSite(events: Ev[], kind?: AlertKind): SiteSummary
 {
     // Ties on `at` fall back to creation order, then to input order (Array.sort is stable).
     const ordered = [...events].sort((a, b) => time(a.at).getTime() - time(b.at).getTime()
         || (a.createdAt && b.createdAt ? time(a.createdAt).getTime() - time(b.createdAt).getTime() : 0));
-    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null };
+    const summary: SiteSummary = { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null };
     let archivedWithoutFollowUp = false;
+    let firstDanger: number | null = null;
+    let protectedAt: number | null = null;
 
     for (const event of ordered)
     {
@@ -27,25 +36,50 @@ export function summarizeSite(events: Ev[]): SiteSummary
         {
             summary.patrolVisited = true;
         }
+        if (event.type === 'danger')
+        {
+            summary.danger = 'active';
+            firstDanger ??= time(event.at).getTime();
+        }
+        else if (summary.danger === 'active' && RESOLVES_DANGER.includes(event.type))
+        {
+            summary.danger = 'resolved';
+        }
         switch (event.type)
         {
             case 'detected': summary.detectedAt ??= iso; break;
             case 'archived': summary.archivedAt = iso; archivedWithoutFollowUp = true; break;
             case 'nestConfirmed': summary.nesting = 'confirmed'; if (summary.protection === 'notNeeded') summary.protection = 'unprotected'; break;
             case 'noNestFound': summary.nesting = 'noNest'; summary.protection = 'notNeeded'; break;
-            case 'protectionInstalled': summary.protection = 'protected'; break;
+            case 'protectionInstalled': summary.protection = 'protected'; protectedAt ??= time(event.at).getTime(); break;
             case 'hatched': summary.outcome = 'hatched'; break;
             case 'lost': summary.outcome = 'lost'; break;
             default: break;
         }
     }
 
+    if (kind === 'DANGER')
+    {
+        summary.active = summary.danger !== 'resolved';
+        return summary;
+    }
     summary.active = summary.outcome === 'open' && summary.nesting !== 'noNest' && !archivedWithoutFollowUp;
+    // Not-saved rule: protection must be logged by the first danger + 30 min (protection logged earlier also counts).
+    if (firstDanger !== null)
+    {
+        const deadline = firstDanger + DANGER_PROTECT_MINUTES * 60_000;
+        if (protectedAt === null || protectedAt > deadline)
+        {
+            summary.dangerDeadline = new Date(deadline).toISOString();
+        }
+    }
     return summary;
 }
 
-export function statusFor(summary: SiteSummary, events: { type: SiteEventType }[]): AlertStatus
+export function statusFor(summary: SiteSummary, events: { type: SiteEventType }[], kind?: AlertKind): AlertStatus
 {
+    // A resolved danger alert is cached as REVIEWED and listed under Inactive.
+    if (kind === 'DANGER') return summary.danger === 'resolved' ? 'REVIEWED' : 'NEW';
     if (summary.outcome === 'hatched') return 'HATCHED';
     if (summary.outcome === 'lost') return 'LOST';
     if (summary.nesting === 'noNest') return 'DISMISSED';

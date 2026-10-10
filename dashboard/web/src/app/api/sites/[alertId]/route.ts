@@ -20,7 +20,7 @@ export async function GET(_request: Request, context: { params: Promise<{ alertI
     {
         return Response.json({ error: 'Site not found' }, { status: 404 });
     }
-    const summary = summarizeSite(alert.events.map(event => ({ type: event.type as SiteEventType, at: event.at, createdAt: event.createdAt })));
+    const summary = summarizeSite(alert.events.map(event => ({ type: event.type as SiteEventType, at: event.at, createdAt: event.createdAt })), alert.kind);
     return Response.json({
         site: {
             id: alert.id,
@@ -33,6 +33,10 @@ export async function GET(_request: Request, context: { params: Promise<{ alertI
             createdAt: alert.createdAt.toISOString(),
             videoId: alert.videoId,
             simulated: alert.simulated,
+            level: alert.level,
+            siteId: alert.siteId,
+            startT: alert.startT,
+            endT: alert.endT,
         },
         summary,
         events: [...alert.events].reverse().map(event => ({ id: event.id, type: event.type, author: event.author, note: event.note, at: event.at.toISOString() })),

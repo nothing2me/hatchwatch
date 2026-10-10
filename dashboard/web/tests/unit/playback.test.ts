@@ -5,8 +5,8 @@ import { alertKey, isActive, playbackKey, visibleAlerts } from '@/features/map/p
 const alert = (id: string, simRunId: string | null, startT: number, endT: number, position: [number, number] | null = [1, 2]): AlertView => ({
     id, kind: 'DIGGING', message: 'Digging activity detected; nesting unresolved.', status: 'NEW', zoneCode: 'B', cameraCode: 'B1',
     position, radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `v-${id}`, simRunId, startT, endT,
-    evidenceTier: 'TWO_CAMERA', simulated: simRunId !== null,
-    site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null },
+    evidenceTier: 'TWO_CAMERA', simulated: simRunId !== null, level: 0, siteId: null, colorIndex: null,
+    site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null },
 });
 
 describe('playback gating', () =>

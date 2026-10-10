@@ -1,3 +1,4 @@
+import { isNestSite } from '@/lib/danger';
 import { outcomeCounts } from '@/lib/sites/outcomes';
 import type { AlertView, MapSnapshot, Nesting, Protection } from '@/lib/types';
 import { PROTECTION } from '@/features/sites/labels';
@@ -53,10 +54,14 @@ export function isArchived(alert: AlertView): boolean
     return !alert.site.active && alert.site.outcome === 'open' && alert.site.nesting !== 'noNest';
 }
 
-export function analyticsMetrics(snapshot: Pick<MapSnapshot, 'alerts' | 'zones' | 'outcomes' | 'inactiveCount'>, scope: Scope): AnalyticsMetrics
+// Nest sites only: danger alerts are events about a site (counted by their own tile), never sites themselves.
+export function analyticsMetrics(snapshot: Pick<MapSnapshot, 'alerts' | 'zones' | 'outcomes' | 'inactiveCount'> & Partial<Pick<MapSnapshot, 'dangerCount' | 'dangerTotal'>>, scope: Scope): AnalyticsMetrics
 {
-    const active = snapshot.alerts.filter(alert => alert.site.active);
-    const rows = scope === 'map' ? active : snapshot.alerts;
+    const sites = snapshot.alerts.filter(isNestSite);
+    const active = sites.filter(alert => alert.site.active);
+    const rows = scope === 'map' ? active : sites;
+    // inactiveCount also covers resolved danger alerts (they sit in the Inactive tab).
+    const inactiveSites = Math.max(0, snapshot.inactiveCount - ((snapshot.dangerTotal ?? 0) - (snapshot.dangerCount ?? 0)));
     const count = (pick: (alert: AlertView) => boolean) => rows.filter(pick).length;
 
     const unprotected = count(alert => alert.site.protection === 'unprotected');
@@ -65,7 +70,7 @@ export function analyticsMetrics(snapshot: Pick<MapSnapshot, 'alerts' | 'zones' 
     const charted = rows.length;
 
     return {
-        sites: scope === 'map' ? charted : Math.max(charted, active.length + snapshot.inactiveCount),
+        sites: scope === 'map' ? charted : Math.max(charted, active.length + inactiveSites),
         charted,
         unprotected,
         unprotectedPct: percentOf(unprotected, charted),

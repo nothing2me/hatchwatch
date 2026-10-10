@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
 import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
+import { isNestSite } from '@/lib/danger';
 import { addCameraPair, deleteZone } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
@@ -25,7 +26,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const snapshot = useLiveSnapshot(initialSnapshot);
     const now = useNow(30_000);
     // Same definition as the feed's Active tab, so the top bar and the tab always agree.
-    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
+    const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
     const mapRef = useRef<MapRef>(null);
     const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
     // The open drawer keeps the last version of its site it saw, so a site that drops out of the

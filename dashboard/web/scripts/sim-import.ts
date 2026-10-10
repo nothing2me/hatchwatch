@@ -24,7 +24,7 @@ const prisma = createPrismaClient();
 try
 {
     const result = await importSimRun({ runDir: args.run, pair: pair as 'A' | 'B' | 'C' | 'D', mediaRoot: mediaRoot(), prisma });
-    console.log(`Imported ${result.runId} onto ${pair}1/${pair}2 with ${result.alertCount} alert(s).`);
+    console.log(`Imported ${result.runId} onto ${pair}1/${pair}2 with ${result.alertCount} site(s), ${result.trackCount} trail(s) and ${result.dangerCount} danger alert(s).`);
 }
 finally
 {

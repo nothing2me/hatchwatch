@@ -26,7 +26,7 @@ const snapshot: MapSnapshot = {
         siteAlert('a4', { active: false, archivedAt: '2026-10-09T00:20:00.000Z' }),
     ],
     camerasOnline: 2, camerasTotal: 4, inactiveCount: 2,
-    outcomes: { saved: 1, notSaved: 1, pending: 2 }, fadeMinutes: 5,
+    outcomes: { saved: 1, notSaved: 1, pending: 2 }, fadeMinutes: 5, tracks: [], dangerCount: 0, dangerTotal: 0,
 };
 
 const tile = (label: string) => screen.getByRole('group', { name: label });

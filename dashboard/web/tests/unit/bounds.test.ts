@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FALLBACK_BOUNDS, fitPadding, initialBounds } from '@/features/map/bounds';
 import type { MapSnapshot } from '@/lib/types';
 
-const empty: MapSnapshot = { zones: [], cameras: [], alerts: [], camerasOnline: 0, camerasTotal: 0, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5 };
+const empty: MapSnapshot = { zones: [], cameras: [], alerts: [], camerasOnline: 0, camerasTotal: 0, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5, tracks: [], dangerCount: 0, dangerTotal: 0 };
 
 describe('initialBounds', () =>
 {

@@ -4,6 +4,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Archive, Cctv, Footprints, MapPin, Radar, ShieldAlert } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth/session';
 import type { MapSnapshot } from '@/lib/types';
+import { isNestSite } from '@/lib/danger';
 import { cn } from '@/lib/cn';
 import { TopBar } from '@/features/shell/TopBar';
 import { useLiveSnapshot } from '@/features/live/useLiveSnapshot';
@@ -194,7 +195,7 @@ export function AnalyticsScreen({ snapshot: initialSnapshot, user }: { snapshot:
     const snapshot = useLiveSnapshot(initialSnapshot);
     const [scope, setScope] = useState<Scope>('map');
     const m = analyticsMetrics(snapshot, scope);
-    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
+    const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
     const nothingYet = snapshot.alerts.length === 0 && snapshot.inactiveCount === 0;
     const icon = 'h-4 w-4';
 

@@ -9,14 +9,16 @@ export const ALERT_MESSAGES = {
     DIGGING: 'Digging activity detected; nesting unresolved.',
     TRACK_ONLY: 'Crawl tracked; digging not observed.',
     NO_TURTLE: 'No turtle tracked.',
+    DANGER: 'Danger · person near an active nest site — immediate action',
 } as const;
 
 export type AlertKind = keyof typeof ALERT_MESSAGES;
 export type AlertStatus = 'NEW' | 'REVIEWED' | 'DISMISSED' | 'FIELD_CONFIRMED' | 'HATCHED' | 'LOST' | 'ARCHIVED';
-export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'protectionInstalled' | 'hatched' | 'lost' | 'note';
+export type SiteEventType = 'detected' | 'departed' | 'archived' | 'patrolVisit' | 'nestConfirmed' | 'noNestFound' | 'protectionInstalled' | 'hatched' | 'lost' | 'note' | 'danger' | 'dangerResolved';
 export type Protection = 'unprotected' | 'protected' | 'notNeeded';
 export type Nesting = 'unresolved' | 'confirmed' | 'noNest';
 export type Outcome = 'open' | 'hatched' | 'lost';
+export type DangerState = 'none' | 'active' | 'resolved';
 
 export interface SiteSummary
 {
@@ -28,6 +30,10 @@ export interface SiteSummary
     patrolVisited: boolean;
     detectedAt: string | null;
     archivedAt: string | null;
+    /** Person-near-site state from the log: a `danger` entry makes it active until someone resolves or acts on the site. */
+    danger: DangerState;
+    /** ISO time the site counts as Not saved unless protection is logged first (first danger + 30 min); null = no deadline. */
+    dangerDeadline: string | null;
 }
 
 export interface ZoneView
@@ -81,7 +87,23 @@ export interface AlertView
     endT: number;
     evidenceTier: EvidenceTier | null;
     simulated: boolean;
+    /** 1 = level-1 danger; 0 = ordinary site. */
+    level: number;
+    /** DANGER alerts: the linked nest site. */
+    siteId: string | null;
+    /** Trail palette index of this site's matched trail; null when it has none. */
+    colorIndex: number | null;
     site: SiteSummary;
+}
+
+export interface TrackView
+{
+    id: string;
+    alertId: string | null;
+    colorIndex: number | null;
+    /** Clip key (simRunId) the trail's clock belongs to. */
+    key: string;
+    points: { t: number; position: LngLat }[];
 }
 
 export interface MapSnapshot
@@ -91,7 +113,10 @@ export interface MapSnapshot
     alerts: AlertView[];
     camerasOnline: number;
     camerasTotal: number;
-    inactiveCount: number;    // dismissed, hatched, lost or archived
+    inactiveCount: number;    // dismissed, hatched, lost or archived nest sites, plus resolved danger alerts
+    tracks: TrackView[];
+    dangerCount: number;      // DANGER alerts not yet resolved
+    dangerTotal: number;      // every DANGER alert in the log
     outcomes: { saved: number; notSaved: number; pending: number };
     fadeMinutes: number;
 }

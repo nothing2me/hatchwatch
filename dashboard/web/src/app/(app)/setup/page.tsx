@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { requireCurrentUser } from '@/lib/auth/guard';
+import { isNestSite } from '@/lib/danger';
 import { getMapSnapshot } from '@/server/snapshot';
 import { TopBar } from '@/features/shell/TopBar';
 
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function SetupPage()
 {
     const [user, snapshot] = await Promise.all([requireCurrentUser('ADMIN'), getMapSnapshot()]);
-    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
+    const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
     return (
         <main className="min-h-full bg-night-950">
             <div className="sticky top-0 z-20 p-3">

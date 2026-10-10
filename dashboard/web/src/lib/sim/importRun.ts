@@ -4,6 +4,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { ALERT_MESSAGES, type LngLat } from '@/lib/types';
 import { simPointToLngLat, zoneFrame } from './frame';
+import { readRunPaths, storeRunPaths, type StoredSite } from './paths';
 import { calibrationSchema, pinsFileSchema, timestampsSchema, type SimPin } from './schema';
 
 export const SIM_IMPORT_SCHEMA = 'sim-import-v1';
@@ -13,6 +14,8 @@ export interface ImportResult
     runId: string;
     videoIds: [string, string];
     alertCount: number;
+    trackCount: number;
+    dangerCount: number;
 }
 
 const REQUIRED = ['camera-0.mp4', 'camera-1.mp4', 'view-0/pure-motion.mp4', 'view-1/pure-motion.mp4', 'calibration-0.json', 'calibration-1.json', 'timestamps.json', 'analysis.json'];
@@ -47,6 +50,7 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
     const timestamps = timestampsSchema.parse(readJson(join(dir, 'timestamps.json')));
     const pinsPath = join(dir, 'pins/predictions.json');
     const pins: SimPin[] = existsSync(pinsPath) ? pinsFileSchema.parse(readJson(pinsPath)).methods.pins : [];
+    const paths = readRunPaths(dir);
 
     const step = timestamps[1] - timestamps[0];
     const fps = 1 / step;
@@ -64,7 +68,7 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
     {
         copyFileSync(join(dir, source), join(target, destination));
     }
-    const manifestFiles = [...REQUIRED, ...(existsSync(pinsPath) ? ['pins/predictions.json'] : [])];
+    const manifestFiles = [...REQUIRED, ...(existsSync(pinsPath) ? ['pins/predictions.json'] : []), ...paths.files];
     writeFileSync(join(target, 'import-manifest.json'), JSON.stringify({
         schema: SIM_IMPORT_SCHEMA,
         runId,
@@ -81,8 +85,11 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
         const previous = { OR: [{ simRunId: runId }, { source: 'SIMULATION' as const, cameraId: { in: cameras.map(camera => camera.id) } }] };
         const old = await tx.video.findMany({ where: previous, select: { id: true } });
         const oldAlerts = { alert: { videoId: { in: old.map(video => video.id) } } };
+        await tx.track.deleteMany({ where: { videoId: { in: old.map(video => video.id) } } });
         await tx.alertStatusChange.deleteMany({ where: oldAlerts });
         await tx.alertNote.deleteMany({ where: oldAlerts });
+        // Danger alerts first: they point at the sites (cascade) and carry their own notes.
+        await tx.alert.deleteMany({ where: { videoId: { in: old.map(video => video.id) }, kind: 'DANGER' } });
         await tx.alert.deleteMany({ where: { videoId: { in: old.map(video => video.id) } } });
         await tx.video.deleteMany({ where: previous });
 
@@ -101,6 +108,8 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
             },
         })));
 
+        const importedAt = new Date();
+        const sites: StoredSite[] = [];
         for (const simPin of pins)
         {
             const [lng, lat] = simPointToLngLat(frame, simPin.point);
@@ -121,12 +130,16 @@ export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
                     endT: simPin.interval[1],
                     evidenceTier: simPin.evidence_tier === 'two_camera' ? 'TWO_CAMERA' : 'SINGLE_CAMERA',
                     simulated: true,
-                    detectedAt: new Date(),
+                    detectedAt: importedAt,
                 },
             });
-            await tx.siteEvent.create({ data: { alertId: created.id, type: 'detected', author: 'Camera', userId: null, at: created.detectedAt ?? new Date() } });
+            await tx.siteEvent.create({ data: { alertId: created.id, type: 'detected', author: 'Camera', userId: null, at: importedAt } });
+            sites.push({ pinId: simPin.id, alertId: created.id, videoId: created.videoId, cameraId: created.cameraId, position: [lng, lat], startT: simPin.interval[0] });
         }
 
-        return { runId, videoIds: [videos[0].id, videos[1].id] as [string, string], alertCount: pins.length };
+        // A looping demo clip has no wall clock: its dangers are logged at import time, after the detections.
+        const stored = await storeRunPaths(tx, { paths, pins, sites, frame, zoneId: zone.id, fallbackVideoId: videos[0].id, clock: () => importedAt });
+
+        return { runId, videoIds: [videos[0].id, videos[1].id] as [string, string], alertCount: pins.length, trackCount: stored.tracks, dangerCount: stored.dangers };
     });
 }

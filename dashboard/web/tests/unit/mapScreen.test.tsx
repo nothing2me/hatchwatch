@@ -59,6 +59,7 @@ const snapshot: MapSnapshot = {
     cameras: [{ id: 'c1', code: 'B1', zoneCode: 'B', position: [0.5, 0.5], headingDeg: 203, fovDeg: 44, rangeM: 350, status: 'ONLINE', calibrated: false, video: null }],
     alerts: [],
     camerasOnline: 1, camerasTotal: 1, inactiveCount: 0, outcomes: { saved: 0, notSaved: 0, pending: 0 }, fadeMinutes: 5,
+    tracks: [], dangerCount: 0, dangerTotal: 0,
 };
 const user = { id: 'u', email: 'v@x.y', name: 'V', role: 'VIEWER' as const };
 
@@ -125,8 +126,8 @@ describe('MapScreen', () =>
     const simAlert = (id: string, runId: string, cameraCode: string, startT: number): AlertView => ({
         id, kind: 'DIGGING', message: `Digging activity detected; nesting unresolved.`, status: 'NEW', zoneCode: 'B', cameraCode,
         position: [0.5, 0.5], radiusM: 0.9, score: 1, createdAt: '2026-10-09T00:00:00.000Z', videoId: `video-${runId}`,
-        simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true,
-        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null },
+        simRunId: runId, startT, endT: startT + 4, evidenceTier: 'TWO_CAMERA', simulated: true, level: 0, siteId: null, colorIndex: null,
+        site: { protection: 'unprotected', nesting: 'unresolved', outcome: 'open', active: true, personActed: false, patrolVisited: false, detectedAt: null, archivedAt: null, danger: 'none', dangerDeadline: null },
     });
     const twoRuns: MapSnapshot = {
         ...snapshot,

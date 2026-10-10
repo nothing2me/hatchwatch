@@ -91,3 +91,17 @@ describe('analyticsMetrics', () =>
         expect(m).toMatchObject({ sites: 0, unprotected: 0, unprotectedPct: 0, bothCamerasPct: 0, byZone: [] });
     });
 });
+
+describe('danger alerts in analytics', () =>
+{
+    it('are not counted as sites, in either scope', () =>
+    {
+        const open = siteAlert('d1', { danger: 'active' }, { kind: 'DANGER', level: 1, siteId: 'a1' });
+        const resolved = siteAlert('d2', { danger: 'resolved', active: false }, { kind: 'DANGER', level: 1, siteId: 'a3', status: 'REVIEWED' });
+        const base = analyticsMetrics(snapshot, 'all');
+        // The server's inactive count includes the resolved danger alert; analytics takes it back out.
+        const withDangers = analyticsMetrics({ ...snapshot, alerts: [...alerts, open, resolved], inactiveCount: snapshot.inactiveCount + 1, dangerCount: 1, dangerTotal: 2 }, 'all');
+        expect(withDangers).toEqual(base);
+        expect(analyticsMetrics({ ...snapshot, alerts: [...alerts, open] }, 'map')).toEqual(analyticsMetrics(snapshot, 'map'));
+    });
+});
