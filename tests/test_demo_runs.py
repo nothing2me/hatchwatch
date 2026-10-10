@@ -14,10 +14,17 @@ def test_registered_seeds_collects_every_registration(tmp_path):
 
 def test_demo_seeds_are_not_registered():
     used = demo_runs.registered_seeds(demo_runs.ROOT / 'config')
-    assert not ({seed for _, _, seed in demo_runs.DEMO_RUNS} & used)
+    assert not ({run['seed'] for run in demo_runs.DEMO_RUNS} & used)
 
 
 def test_guard_rejects_registered_seed(tmp_path):
     (tmp_path / 'x-registration.json').write_text(json.dumps({'seeds': [907]}))
     with pytest.raises(SystemExit, match='907'):
         demo_runs.check_seeds(tmp_path)
+
+
+def test_new_runs_declared():
+    runs = {run['id']: run for run in demo_runs.DEMO_RUNS}
+    assert runs['A-seaward-humans-demo-929']['humans'] == 2
+    assert runs['A-seaward-demo-941']['layout'] == 'seaward'
+    assert {929, 937, 941} <= {run['seed'] for run in runs.values()}

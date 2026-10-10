@@ -11,7 +11,7 @@
 // Evaluation against private truth is never run here.
 //
 // Usage (Vite must be serving the simulator on 127.0.0.1:5173):
-//   node scripts/live-runner.mjs [--scenario swarm-spread] [--model A] [--keep 40] [--chunks 0]
+//   node scripts/live-runner.mjs [--scenario swarm-spread] [--model A] [--layout along|seaward] [--humans 0-4] [--keep 40] [--chunks 0]
 
 import {spawn} from 'node:child_process';
 import {mkdir, readFile, readdir, rename, rm, writeFile} from 'node:fs/promises';
@@ -32,6 +32,12 @@ const model = args.model || 'A';
 const keepChunks = Math.max(4, Number(args.keep || 40));
 const maxChunks = Number(args.chunks || 0); // 0 = run until stopped
 const seedBase = Number(args['seed-base'] || 910000);
+const layout = args.layout || 'along';
+const humans = args.humans === undefined ? 0 : Number(args.humans);
+if (!['along', 'seaward'].includes(layout) || !Number.isInteger(humans) || humans < 0 || humans > 4)
+{
+    throw Error(`Unsupported live configuration: layout ${args.layout}, humans ${args.humans} (along|seaward, 0-4)`);
+}
 
 const supportedScenarios = {'swarm-spread': 'synthetic-daylight', swarm: 'synthetic-daylight', 'swarm-night': 'synthetic-very-dark'};
 if (!supportedScenarios[scenario] || !['A', 'B'].includes(model))
@@ -152,7 +158,7 @@ async function recordChunk(sequence, seed)
     const chunkId = `live-${String(sequence).padStart(6, '0')}-${Date.now().toString(36)}`;
     const recordingStartedAt = new Date().toISOString();
     log(`Recording ${chunkId}`);
-    await run('node', ['scripts/record.mjs', '--seed', String(seed), '--scenario', scenario, '--model', model, '--id', chunkId]);
+    await run('node', ['scripts/record.mjs', '--seed', String(seed), '--scenario', scenario, '--model', model, '--layout', layout, '--humans', String(humans), '--id', chunkId]);
     return {chunkId, sequence, recordingStartedAt};
 }
 
@@ -166,6 +172,20 @@ async function analyzeAndPublish(chunk)
         '--camera-1', resolve(publicRun, 'view-1/detection/predictions.json'),
         '--registration', 'config/pin-settings.json',
         '--output', resolve(publicRun, 'pins/predictions.json')]);
+
+    for (const script of ['track_paths.py', 'people_detect.py'])
+    {
+        try
+        {
+            await run(python, [`scripts/${script}`, publicRun]);
+        }
+        catch (error)
+        {
+            if (stopping)
+                throw error;
+            log(`${script} failed for ${chunk.chunkId}, publishing without it: ${error.message}`);
+        }
+    }
 
     const manifest =
     {
@@ -224,7 +244,7 @@ async function main()
         return seed++;
     }
 
-    log(`Starting at sequence ${sequence}: scenario ${scenario}, model ${model}, keeping ${keepChunks} chunks, skipping ${registeredSeeds.size} registered seeds`);
+    log(`Starting at sequence ${sequence}: scenario ${scenario}, model ${model}, layout ${layout}, humans ${humans}, keeping ${keepChunks} chunks, skipping ${registeredSeeds.size} registered seeds`);
 
     let analysis = Promise.resolve();
     let produced = 0;

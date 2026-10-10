@@ -25,3 +25,31 @@ export const calibrationSchema = z.object({
 export const timestampsSchema = z.array(z.number()).min(2);
 
 export type SimPin = z.infer<typeof pinSchema>;
+
+// Optional public trail and people files; mirror schemas/tracks.v1.json and schemas/people.v1.json. Points are [t, x, y] in sim metres.
+const pathPoint = z.tuple([z.number(), z.number(), z.number()]);
+
+export const tracksFileSchema = z.object({
+    schema: z.literal('nesttrace.tracks'),
+    version: z.literal(1),
+    note: z.string(),
+    tracks: z.array(z.object({
+        id: z.string().regex(/^track-[0-9]+$/),
+        pin_id: z.string().nullable(),
+        points: z.array(pathPoint).min(2),
+    }).strict()),
+}).strict();
+
+export const peopleFileSchema = z.object({
+    schema: z.literal('nesttrace.people'),
+    version: z.literal(1),
+    note: z.string(),
+    people: z.array(z.object({
+        id: z.string().regex(/^person-[0-9]+$/),
+        max_height_m: z.number(),
+        points: z.array(pathPoint).min(2),
+    }).strict()),
+}).strict();
+
+export type SimTrack = z.infer<typeof tracksFileSchema>['tracks'][number];
+export type SimPerson = z.infer<typeof peopleFileSchema>['people'][number];

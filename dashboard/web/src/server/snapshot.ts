@@ -2,15 +2,14 @@ import 'server-only';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
 import { outcomeCounts } from '@/lib/sites/outcomes';
-import { PERSON_EVENTS, summarizeSite } from '@/lib/sites/summary';
+import { DANGER_PROTECT_MINUTES, PERSON_EVENTS, summarizeSite } from '@/lib/sites/summary';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
-import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, MotionCandidateView, SiteEventType, VideoSource } from '@/lib/types';
+import type { ActivityLevel, AlertKind, AlertStatus, CameraStatus, EvidenceTier, LngLat, MapSnapshot, MotionCandidateView, SiteEventType, TrackView, VideoSource } from '@/lib/types';
 
 export interface ZoneRow
 {
     id: string; code: string; name: string; activityLevel: ActivityLevel;
     outline: unknown;
-    createdById?: string | null;
 }
 
 export interface CameraRow
@@ -27,7 +26,16 @@ export interface AlertRow
     lng: number | null; lat: number | null; radiusM: number; score: number | null; createdAt: Date;
     videoId: string; video: { simRunId: string | null }; startT: number; endT: number;
     evidenceTier: EvidenceTier | null; simulated: boolean;
-    events: { type: string; at: Date; createdAt?: Date }[];
+    level?: number; siteId?: string | null;
+    events: { type: string; at: Date; createdAt?: Date; author?: string }[];
+}
+
+export interface TrackRow
+{
+    id: string; alertId: string | null; colorIndex: number | null; videoId: string;
+    video: { simRunId: string | null };
+    /** [{ t, lng, lat }] */
+    points: unknown;
 }
 
 export interface SnapshotRows
@@ -35,15 +43,27 @@ export interface SnapshotRows
     zones: ZoneRow[];
     cameras: CameraRow[];
     alerts: AlertRow[];
+    tracks?: TrackRow[];
     inactiveCount?: number;
     outcomes?: MapSnapshot['outcomes'];
+    dangerCount?: number;
+    dangerTotal?: number;
+    now?: Date;
 }
 
 /** Hours a site stays in the snapshot after a person's last entry, however old it is. */
 export const RECENT_ENTRY_HOURS = 6;
 
-// Cached statuses mirror each site's log (statusFor), so totals need no event reads.
-export function outcomesFromStatusCounts(rows: { status: AlertStatus; _count: number }[]): MapSnapshot['outcomes']
+// Inactive = closed nest sites plus resolved danger alerts (cached REVIEWED). These are the Inactive tab.
+const INACTIVE_SITE_STATUSES: AlertStatus[] = ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'];
+const INACTIVE_WHERE = { OR: [{ status: { in: INACTIVE_SITE_STATUSES } }, { kind: 'DANGER' as const, status: { not: 'NEW' as const } }] };
+// Open = what the Active tab lists: open nest sites and unresolved danger alerts.
+const OPEN_WHERE = { OR: [{ status: { in: ['NEW', 'FIELD_CONFIRMED'] as AlertStatus[] } }, { status: 'REVIEWED' as const, kind: { not: 'DANGER' as const } }] };
+
+// Cached statuses mirror each site's log (statusFor), so totals need no event reads. Nest sites only (no DANGER rows).
+// `dangerMissed` = open sites whose first danger passed 30 min without protection: time-dependent, so not a cached
+// status; counted from events by the caller and moved from pending to not saved.
+export function outcomesFromStatusCounts(rows: { status: AlertStatus; _count: number }[], dangerMissed = 0): MapSnapshot['outcomes']
 {
     const counts = { saved: 0, notSaved: 0, pending: 0 };
     for (const { status, _count: count } of rows)
@@ -52,10 +72,46 @@ export function outcomesFromStatusCounts(rows: { status: AlertStatus; _count: nu
         else if (status === 'LOST' || status === 'ARCHIVED') counts.notSaved += count;
         else if (status !== 'DISMISSED') counts.pending += count;
     }
+    const moved = Math.min(dangerMissed, counts.pending);
+    counts.pending -= moved;
+    counts.notSaved += moved;
     return counts;
 }
 
+// Open nest sites with a danger that went 30 min without protection logged (same rule as classifyOutcome).
+export async function countDangerMissed(client: PrismaClient, now: Date): Promise<number>
+{
+    const iso = now.toISOString();
+    const minutes = DANGER_PROTECT_MINUTES;
+    const [row] = await client.$queryRaw<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM "Alert" a
+        WHERE a.status IN ('NEW', 'REVIEWED', 'FIELD_CONFIRMED') AND a.kind <> 'DANGER'
+          AND EXISTS (
+            SELECT 1 FROM "SiteEvent" d
+            WHERE d."alertId" = a.id AND d.type = 'danger'
+              AND d.at + make_interval(mins => ${minutes}::int) <= CAST(${iso} AS timestamp)
+              AND NOT EXISTS (
+                SELECT 1 FROM "SiteEvent" p
+                WHERE p."alertId" = a.id AND p.type = 'protectionInstalled' AND p.at <= d.at + make_interval(mins => ${minutes}::int)))`;
+    return row?.n ?? 0;
+}
+
+function trackPoints(points: unknown): TrackView['points']
+{
+    return Array.isArray(points)
+        ? points.filter(point => typeof point?.t === 'number' && typeof point?.lng === 'number' && typeof point?.lat === 'number')
+            .map(point => ({ t: point.t as number, position: [point.lng, point.lat] as LngLat }))
+        : [];
+}
+
 const toEvents = (events: { type: string; at: Date; createdAt?: Date }[]) => events as { type: SiteEventType; at: Date; createdAt?: Date }[];
+
+// Who resolved a danger alert: its latest `dangerResolved` entry (null for sites and open dangers).
+function resolution(alert: AlertRow): { resolvedBy: string | null; resolvedAt: string | null }
+{
+    const entry = alert.kind === 'DANGER' ? alert.events.findLast(event => event.type === 'dangerResolved') : undefined;
+    return { resolvedBy: entry?.author ?? null, resolvedAt: entry ? entry.at.toISOString() : null };
+}
 
 export function fadeMinutes(): number
 {
@@ -98,6 +154,22 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         };
     });
 
+    const tracks: TrackView[] = (rows.tracks ?? []).map(track => ({
+        id: track.id,
+        alertId: track.alertId,
+        colorIndex: track.colorIndex,
+        key: track.video.simRunId ?? track.videoId,
+        points: trackPoints(track.points),
+    }));
+    const colorBySite = new Map<string, number>();
+    for (const track of tracks)
+    {
+        if (track.alertId && track.colorIndex !== null && !colorBySite.has(track.alertId))
+        {
+            colorBySite.set(track.alertId, track.colorIndex);
+        }
+    }
+
     const alerts = rows.alerts.map(alert => ({
         id: alert.id,
         kind: alert.kind,
@@ -115,8 +187,14 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
         endT: alert.endT,
         evidenceTier: alert.evidenceTier,
         simulated: alert.simulated,
-        site: summarizeSite(toEvents(alert.events)),
+        level: alert.level ?? 0,
+        siteId: alert.siteId ?? null,
+        colorIndex: colorBySite.get(alert.id) ?? null,
+        ...resolution(alert),
+        site: summarizeSite(toEvents(alert.events), alert.kind),
     }));
+    const sites = alerts.filter(alert => alert.kind !== 'DANGER');
+    const dangers = alerts.filter(alert => alert.kind === 'DANGER');
 
     const motionCandidates: MotionCandidateView[] = rows.cameras.flatMap(camera =>
     {
@@ -132,15 +210,19 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
     });
 
     return {
-        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline), custom: (zone.createdById ?? null) !== null })),
+        zones: rows.zones.map(zone => ({ id: zone.id, code: zone.code, name: zone.name, activityLevel: zone.activityLevel, ring: ringOf(zone.outline) })),
         cameras,
         alerts,
         motionCandidates,
         camerasOnline: cameras.filter(camera => camera.status === 'ONLINE').length,
         camerasTotal: cameras.length,
-        inactiveCount: rows.inactiveCount ?? alerts.filter(alert => ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'].includes(alert.status)).length,
-        outcomes: rows.outcomes ?? outcomeCounts(alerts.map(alert => alert.site)),
+        inactiveCount: rows.inactiveCount ?? alerts.filter(alert => INACTIVE_SITE_STATUSES.includes(alert.status) || (alert.kind === 'DANGER' && !alert.site.active)).length,
+        outcomes: rows.outcomes ?? outcomeCounts(sites.map(alert => alert.site), rows.now ?? Date.now()),
+        tracks,
+        dangerCount: rows.dangerCount ?? dangers.filter(alert => alert.site.active).length,
+        dangerTotal: rows.dangerTotal ?? dangers.length,
         fadeMinutes: fadeMinutes(),
+        generatedAt: (rows.now ?? new Date()).toISOString(),
     };
 }
 
@@ -167,7 +249,7 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
 {
     const recent = await client.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 100, select: { id: true } });
     const since = new Date(now.getTime() - RECENT_ENTRY_HOURS * 3600_000);
-    const [zones, cameras, alerts, inactiveCount, statusCounts] = await Promise.all([
+    const [zones, cameras, alerts, inactiveCount, statusCounts, dangerCount, dangerTotal, dangerMissed] = await Promise.all([
         client.zone.findMany({ orderBy: { code: 'asc' } }),
         client.camera.findMany({
             orderBy: { code: 'asc' },
@@ -186,18 +268,30 @@ export async function loadMapSnapshot(client: PrismaClient, now = new Date()): P
         // (so recording an old site's outcome never drops it from under the open drawer). Each with its log.
         client.alert.findMany({
             where: { OR: [
-                { status: { in: ['NEW', 'REVIEWED', 'FIELD_CONFIRMED'] } },
+                OPEN_WHERE,
                 { id: { in: recent.map(row => row.id) } },
                 { events: { some: { type: { in: PERSON_EVENTS }, createdAt: { gte: since } } } },
             ] },
             orderBy: { createdAt: 'desc' },
-            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
+            include: { zone: { select: { code: true } }, camera: { select: { code: true } }, video: { select: { simRunId: true } }, events: { select: { type: true, at: true, createdAt: true, author: true }, orderBy: [{ at: 'asc' }, { createdAt: 'asc' }] } },
         }),
-        client.alert.count({ where: { status: { in: ['DISMISSED', 'HATCHED', 'LOST', 'ARCHIVED'] } } }),
-        client.alert.groupBy({ by: ['status'], _count: true }),
+        client.alert.count({ where: INACTIVE_WHERE }),
+        // Outcomes cover nest sites only; danger alerts are events about a site.
+        client.alert.groupBy({ by: ['status'], where: { kind: { not: 'DANGER' } }, _count: true }),
+        client.alert.count({ where: { kind: 'DANGER', status: 'NEW' } }),
+        client.alert.count({ where: { kind: 'DANGER' } }),
+        countDangerMissed(client, now),
     ]);
 
-    return toMapSnapshot({ zones, cameras, alerts, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts) });
+    // Trails of the listed sites, plus unmatched trails of the clips the cameras are showing now.
+    const feedVideoIds = cameras.flatMap(camera => camera.videos.map(video => video.id));
+    const tracks = await client.track.findMany({
+        where: { OR: [{ alertId: { in: alerts.map(alert => alert.id) } }, { alertId: null, videoId: { in: feedVideoIds } }] },
+        orderBy: [{ videoId: 'asc' }, { label: 'asc' }],
+        select: { id: true, alertId: true, colorIndex: true, videoId: true, points: true, video: { select: { simRunId: true } } },
+    });
+
+    return toMapSnapshot({ zones, cameras, alerts, tracks, inactiveCount, outcomes: outcomesFromStatusCounts(statusCounts, dangerMissed), dangerCount, dangerTotal, now });
 }
 
 export function getMapSnapshot(): Promise<MapSnapshot>

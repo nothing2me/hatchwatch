@@ -90,7 +90,7 @@ describe('importLiveChunk', () =>
     {
         const dir = makeChunk(7);
         const result = await importLiveChunk(prisma, { chunkDir: dir, mediaRoot: settings.mediaRoot });
-        expect(result).toEqual({ chunkId: 'live-000007-abc7', zoneCode: 'D', sites: 2 });
+        expect(result).toEqual({ chunkId: 'live-000007-abc7', zoneCode: 'D', sites: 2, tracks: 0, dangers: 0 });
         expect(await prisma.liveChunk.findUniqueOrThrow({ where: { id: 'live-000007-abc7' } })).toMatchObject({ sequence: 7 });
         const videos = await prisma.video.findMany({ include: { camera: true }, orderBy: { path: 'asc' } });
         expect(videos.map(video => [video.camera.code, video.source, video.simRunId, video.liveChunkId, video.pureMotionPath, video.path])).toEqual([

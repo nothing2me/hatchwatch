@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pinFeatures } from '@/features/map/pins';
+import { dangerPins, pinFeatures } from '@/features/map/pins';
 import { siteAlert } from './siteFixtures';
 
 const now = Date.parse('2026-10-09T01:00:00.000Z');
@@ -58,4 +58,40 @@ describe('pinFeatures', () =>
         expect(a.selected).toBe(false);
         expect(b.selected).toBe(true);
     });
+
+    it('rings a site in its trail colour when it has one, in both modes', () =>
+    {
+        const [still] = pinFeatures([siteAlert('a', {}, { colorIndex: 1 })], null, now, 5, null).map(feature => feature.properties);
+        const [playing] = pinFeatures([siteAlert('a', {}, { colorIndex: 1 })], { key: 'live-000001-abc', t: 5 }, now, 5, null).map(feature => feature.properties);
+        expect(still.color).toBe('#F06292');
+        expect(playing.color).toBe('#F06292');
+        expect(still.strokeWidth).toBe(2.5);
+    });
+
+    it('leaves danger alerts out of the site pins and haloes a site while its danger is open', () =>
+    {
+        const features = pinFeatures([
+            siteAlert('s1', { danger: 'active' }),
+            siteAlert('s2', { danger: 'resolved' }),
+            siteAlert('d1', { danger: 'active' }, { kind: 'DANGER', level: 1, siteId: 's1' }),
+        ], null, now, 5, null).map(feature => feature.properties);
+        expect(features.map(pin => pin.id)).toEqual(['s1', 's2']);
+        expect(features[0].danger).toBe(true);
+        expect(features[1].danger).toBe(false);
+    });
 });
+
+describe('dangerPins', () =>
+{
+    it('lists open dangers with a position, never faded and not gated by the feed clock', () =>
+    {
+        const pins = dangerPins([
+            siteAlert('d1', { danger: 'active', detectedAt: minutesAgo(90) }, { kind: 'DANGER', level: 1, siteId: 's1', position: [3, 4] }),
+            siteAlert('d2', { danger: 'resolved', active: false }, { kind: 'DANGER', level: 1, siteId: 's1' }),
+            siteAlert('d3', { danger: 'active' }, { kind: 'DANGER', level: 1, siteId: 's2', position: null }),
+            siteAlert('s1'),
+        ]);
+        expect(pins).toEqual([{ id: 'd1', siteId: 's1', position: [3, 4] }]);
+    });
+});
+

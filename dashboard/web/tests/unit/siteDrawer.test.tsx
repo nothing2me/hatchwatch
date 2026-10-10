@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { SiteSummary } from '@/lib/types';
 import { openSite, siteAlert } from './siteFixtures';
 
@@ -121,5 +121,67 @@ describe('SiteDrawer', () =>
         expect(document.activeElement).toBe(close);
         fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab', shiftKey: true });
         expect(document.activeElement).toBe(submit);
+    });
+});
+
+describe('SiteDrawer for a danger alert', () =>
+{
+    const DANGER = 'Danger · person near an active nest site — immediate action';
+    const site = siteAlert('s1', { danger: 'active' }, { colorIndex: 1, startT: 8 });
+    const danger = siteAlert('d1', { danger: 'active', detectedAt: null }, { kind: 'DANGER', level: 1, siteId: 's1', message: DANGER, startT: 14.2, endT: 16.4 });
+    const dangerLog = {
+        site: { id: 'd1' },
+        summary: { ...openSite, danger: 'active' },
+        events: [{ id: 'e1', type: 'danger', author: 'Camera', note: 'person-2 within 3 m at 14.2 s of the clip.', at: '2026-10-09T00:00:00.000Z' }],
+    };
+
+    it('shows the level, the approach time and the linked site', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json(dangerLog)));
+        const onOpenAlert = vi.fn();
+        render(<SiteDrawer alert={danger} linkedSite={site} user={viewer} onClose={vi.fn()} onOpenAlert={onOpenAlert} />);
+        await screen.findByText('Person near the site');
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.getAttribute('aria-label')).toBe('Danger in zone B');
+        expect(within(dialog).getByText('Level 1 · Danger')).toBeTruthy();
+        expect(within(dialog).getByText('14.2–16.4 s')).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: /Zone B · pink trail · dug at 8.0 s/ }));
+        expect(onOpenAlert).toHaveBeenCalledWith('s1');
+        expect(within(dialog).queryByRole('button', { name: 'Resolve danger' })).toBeNull();
+        expect(within(dialog).getByText(/View only/)).toBeTruthy();
+    });
+
+    it('lets a volunteer resolve it with an optional note', async () =>
+    {
+        const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST' ? json({ summary: openSite }) : json(dangerLog));
+        vi.stubGlobal('fetch', fetchMock);
+        render(<SiteDrawer alert={danger} linkedSite={site} user={volunteer} onClose={vi.fn()} />);
+        await screen.findByText('Person near the site');
+        expect(screen.queryByLabelText('Entry')).toBeNull();
+        fireEvent.change(screen.getByLabelText(/Note/), { target: { value: 'Walker moved off' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Resolve danger' }));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+        const post = fetchMock.mock.calls[1];
+        expect(post[0]).toBe('/api/sites/d1/events');
+        expect(JSON.parse(String(post[1]?.body))).toEqual({ type: 'dangerResolved', note: 'Walker moved off' });
+    });
+
+    it('says when the linked site is already closed', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json(dangerLog)));
+        render(<SiteDrawer alert={danger} linkedSite={siteAlert('s1', { active: false, outcome: 'hatched' }, { startT: 8 })} user={viewer} onClose={vi.fn()} />);
+        expect(await screen.findByText('Site closed · danger still open')).toBeTruthy();
+    });
+
+    it('on the nest site, flags the open danger and links to it', async () =>
+    {
+        vi.stubGlobal('fetch', vi.fn(async () => json({ ...log({ danger: 'active' }), events: [dangerLog.events[0]] })));
+        const onOpenAlert = vi.fn();
+        render(<SiteDrawer alert={site} dangers={[danger]} user={volunteer} onClose={vi.fn()} onOpenAlert={onOpenAlert} />);
+        await screen.findByText('Person near the site');
+        fireEvent.click(screen.getByRole('button', { name: /Person near this site/ }));
+        expect(onOpenAlert).toHaveBeenCalledWith('d1');
+        // The site's own form never offers "Danger resolved": that belongs to the danger alert.
+        expect(screen.queryByRole('option', { name: 'Danger resolved' })).toBeNull();
     });
 });

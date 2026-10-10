@@ -41,4 +41,11 @@ describe('Legend', () =>
             Storage.prototype.getItem = original;
         }
     });
+
+    it('explains trail colours and danger pins', () =>
+    {
+        render(<Legend />);
+        expect(screen.getByText('Turtle trail — colour matches its site')).toBeTruthy();
+        expect(screen.getByText('Danger — person near a site')).toBeTruthy();
+    });
 });

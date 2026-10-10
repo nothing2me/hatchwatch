@@ -63,3 +63,45 @@ describe('summarizeSite', () =>
         expect(summarizeSite([detected, visit, late]).active).toBe(false);
     });
 });
+
+describe('danger lifecycle', () =>
+{
+    it('a danger entry is active until a resolve, protection, patrol or note follows', () =>
+    {
+        expect(summarizeSite([e('detected', 0)]).danger).toBe('none');
+        expect(summarizeSite([e('detected', 0), e('danger', 1)]).danger).toBe('active');
+        for (const type of ['dangerResolved', 'protectionInstalled', 'patrolVisit', 'note'])
+        {
+            expect(summarizeSite([e('detected', 0), e('danger', 1), e(type, 2)]).danger).toBe('resolved');
+        }
+        expect(summarizeSite([e('detected', 0), e('danger', 1), e('nestConfirmed', 2)]).danger).toBe('active');
+        expect(summarizeSite([e('detected', 0), e('danger', 1), e('note', 2), e('danger', 3)]).danger).toBe('active');
+    });
+
+    it('a danger does not change a nest site status or activity on its own', () =>
+    {
+        const events = [e('detected', 0), e('danger', 1)];
+        expect(summarizeSite(events)).toMatchObject({ active: true, personActed: false });
+        expect(statusFor(summarizeSite(events), events)).toBe('NEW');
+    });
+
+    it('a DANGER alert is active until resolved, then cached as REVIEWED', () =>
+    {
+        const open = [e('danger', 0)];
+        expect(summarizeSite(open, 'DANGER')).toMatchObject({ danger: 'active', active: true, dangerDeadline: null });
+        expect(statusFor(summarizeSite(open, 'DANGER'), open, 'DANGER')).toBe('NEW');
+        const done = [e('danger', 0), e('dangerResolved', 4)];
+        expect(summarizeSite(done, 'DANGER')).toMatchObject({ danger: 'resolved', active: false });
+        expect(statusFor(summarizeSite(done, 'DANGER'), done, 'DANGER')).toBe('REVIEWED');
+    });
+
+    it('sets a not-saved deadline 30 min after the first danger unless protection came by then', () =>
+    {
+        expect(summarizeSite([e('detected', 0), e('danger', 1)]).dangerDeadline).toBe('2026-10-09T20:31:00.000Z');
+        expect(summarizeSite([e('detected', 0), e('danger', 1), e('danger', 10)]).dangerDeadline).toBe('2026-10-09T20:31:00.000Z');
+        expect(summarizeSite([e('detected', 0), e('danger', 1), e('protectionInstalled', 31)]).dangerDeadline).toBeNull();
+        expect(summarizeSite([e('detected', 0), e('protectionInstalled', 1), e('danger', 5)]).dangerDeadline).toBeNull();
+        expect(summarizeSite([e('detected', 0), e('danger', 1), e('protectionInstalled', 32)]).dangerDeadline).toBe('2026-10-09T20:31:00.000Z');
+        expect(summarizeSite([e('detected', 0)]).dangerDeadline).toBeNull();
+    });
+});

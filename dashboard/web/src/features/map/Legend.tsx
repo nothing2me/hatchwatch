@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { cn } from '@/lib/cn';
 import { PROTECTION } from '@/features/sites/labels';
+import { TRAIL_PALETTE } from './trails';
 import { useStoredBoolean } from './useStoredBoolean';
 
 const levels = [
@@ -82,7 +83,28 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                             </p>
                         </div>
                     </div>
-                    <p className="flex items-center gap-2 text-ink-muted"><span className={symbol}><span className="h-0.5 w-4 rounded-full bg-amber" /></span>Turtle track (with footage)</p>
+                    <p className="flex items-center gap-2">
+                        <span className={symbol}>
+                            <svg aria-hidden viewBox="0 0 20 16" className="h-4 w-5">
+                                <defs>
+                                    <linearGradient id="legend-trail" x1="0" x2="1">
+                                        {TRAIL_PALETTE.map((color, index) => <stop key={color} offset={index / (TRAIL_PALETTE.length - 1)} stopColor={color} />)}
+                                    </linearGradient>
+                                </defs>
+                                <path d="M1.5 13 C6 13 7 4 12 6 S16 9 16.5 4" fill="none" stroke="url(#legend-trail)" strokeWidth="2" strokeLinecap="round" />
+                                <circle cx="16.5" cy="4" r="2.2" fill="#FFF176" stroke="#070D13" strokeWidth="1" />
+                            </svg>
+                        </span>
+                        Turtle trail — colour matches its site
+                    </p>
+                    <p className="flex items-center gap-2">
+                        <span className={symbol}>
+                            <span className="relative grid h-3.5 w-3.5 place-items-center rounded-full border-2 border-alarm bg-alarm/30 shadow-[0_0_8px_rgba(255,77,94,0.7)]">
+                                <span className="h-1 w-1 rounded-full bg-white" />
+                            </span>
+                        </span>
+                        Danger — person near a site
+                    </p>
                 </Collapsible.Content>
             </Collapsible.Root>
         </GlassPanel>

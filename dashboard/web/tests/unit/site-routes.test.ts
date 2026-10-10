@@ -61,6 +61,18 @@ describe('POST /api/sites/[alertId]/events', () =>
         addSiteEvent.mockRejectedValueOnce(new FakeSiteEventError('NOT_PERSON_EVENT', 'n'));
         expect((await post({ type: 'note' })).status).toBe(400);
     });
+    it('accepts dangerResolved from volunteers, never the camera-only danger entry', async () =>
+    {
+        expect((await post({ type: 'danger' })).status).toBe(400);
+        const response = await post({ type: 'dangerResolved', note: 'walker moved on' });
+        expect(response.status).toBe(200);
+        expect(addSiteEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ type: 'dangerResolved', userId: 'u1', note: 'walker moved on' }));
+        currentUserOrNull.mockResolvedValue(user('VIEWER'));
+        expect((await post({ type: 'dangerResolved' })).status).toBe(403);
+        currentUserOrNull.mockResolvedValue(user('VOLUNTEER'));
+        addSiteEvent.mockRejectedValueOnce(new FakeSiteEventError('WRONG_KIND', 'n'));
+        expect((await post({ type: 'dangerResolved' })).status).toBe(400);
+    });
 });
 
 describe('GET /api/sites/[alertId]', () =>

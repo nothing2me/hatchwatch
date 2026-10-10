@@ -73,7 +73,7 @@ describe('expanded view fixes', () =>
     it('keeps Raw/Motion across expand and close', () =>
     {
         render(<CameraPanel camera={camera} onClose={() => undefined} />);
-        fireEvent.click(screen.getByRole('radio', { name: 'Motion' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion diff' }));
         fireEvent.click(screen.getByRole('button', { name: 'Expand camera view' }));
         expect(screen.getByTestId('camera-video').getAttribute('src')).toContain('variant=motion');
         fireEvent.click(screen.getByRole('button', { name: 'Close expanded view' }));

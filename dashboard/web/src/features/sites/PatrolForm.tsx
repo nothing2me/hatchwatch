@@ -8,6 +8,8 @@ import type { SiteEventType, SiteSummary } from '@/lib/types';
 import { EVENT_LABELS } from './labels';
 
 const NOTE_MAX = 1000;
+// "Danger resolved" belongs to the danger alert itself; the server refuses it on a nest site.
+const SITE_ENTRIES = PERSON_EVENTS.filter(type => type !== 'dangerResolved');
 const field = 'w-full rounded-lg border border-white/10 bg-night-950/70 px-2.5 text-sm text-ink transition-colors placeholder:text-ink-muted/60 hover:border-white/20 focus:border-amber/70 focus:outline-none';
 
 // Person entries for one site. The server re-checks role and the hatched rule; its message is shown as is.
@@ -58,7 +60,7 @@ export function PatrolForm({ alertId, summary, onSaved }: { alertId: string; sum
             <div>
                 <label htmlFor={`${ids}-type`} className="mb-1 block text-[10px] tracking-[0.12em] text-ink-muted uppercase">Entry</label>
                 <select id={`${ids}-type`} value={type} onChange={event => setType(event.target.value as SiteEventType)} aria-describedby={canHatch ? undefined : `${ids}-hint`} className={cn(field, 'h-9 appearance-none bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4%206l4%204%204-4%22%20fill%3D%22none%22%20stroke%3D%22%238A9BA6%22%20stroke-width%3D%221.5%22/%3E%3C/svg%3E")] bg-[length:14px] bg-[right_10px_center] bg-no-repeat pr-8')}>
-                    {PERSON_EVENTS.map(option => (
+                    {SITE_ENTRIES.map(option => (
                         <option key={option} value={option} disabled={option === 'hatched' && !canHatch} className="bg-night-900">{EVENT_LABELS[option]}</option>
                     ))}
                 </select>

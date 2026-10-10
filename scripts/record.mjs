@@ -7,6 +7,8 @@ import {createHash} from 'node:crypto';
 import {once} from 'node:events';
 const args=Object.fromEntries(process.argv.slice(2).reduce((a,x,i,all)=>{if(x.startsWith('--'))a.push([x.slice(2),all[i+1]]);return a},[]));
 const seed=Number(args.seed||11),scenario=args.scenario||'clean',model=args.model||'A';
+const layout=args.layout||'along';if(!['along','seaward'].includes(layout))throw Error(`Invalid --layout ${args.layout} (along|seaward)`);
+const humans=args.humans===undefined?0:Number(args.humans);if(!Number.isInteger(humans)||humans<0||humans>4)throw Error(`Invalid --humans ${args.humans} (integer 0-4)`);
 const id=args.id||`${model}-${scenario}-${seed}`;if(!/^[\w-]+$/.test(id))throw Error('Invalid run ID');
 const publicDir=resolve('artifacts/public',id),privateDir=resolve('artifacts/private',id);await mkdir(publicDir,{recursive:true});await mkdir(privateDir,{recursive:true});
 for(const marker of [`${publicDir}/analysis.json`,`${privateDir}/provenance.json`]){try{await unlink(marker)}catch(e){if(e.code!=='ENOENT')throw e}}
@@ -19,7 +21,7 @@ const browser=await chromium.launch({headless:true,...(executablePath?{executabl
 let encoders=[];
 try{
 const page=await browser.newPage();await page.goto('http://127.0.0.1:5173/record.html');await page.waitForFunction(()=>!!window.nestRecord);
-const config={seed,scenario,model,...(args.eggs==='false'?{eggs:false}:{})};
+const config={seed,scenario,model,...(args.eggs==='false'?{eggs:false}:{}),layout,humans};
 const init=await page.evaluate(c=>window.nestRecord.init(c),config);
 const gpuRenderer=await page.evaluate(()=>{const gl=document.querySelector('canvas').getContext('webgl2');const ext=gl.getExtension('WEBGL_debug_renderer_info');return ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)});
 if(process.platform==='win32'&&!/Direct3D11|D3D11/i.test(gpuRenderer))throw Error(`Hardware Direct3D 11 renderer required; Chrome returned ${gpuRenderer}`);

@@ -34,6 +34,8 @@ export const EVENT_LABELS: Record<SiteEventType, string> = {
     hatched: 'Hatched',
     lost: 'Lost',
     note: 'Note',
+    danger: 'Person near the site',
+    dangerResolved: 'Danger resolved',
 };
 
 // Why a site left the active list: its outcome, a no-nest finding, or ageing out untouched.

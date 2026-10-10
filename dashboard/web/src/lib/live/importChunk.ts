@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { PrismaClient } from '@/generated/prisma/client';
 import { publishChange } from '@/lib/changes';
 import { simPointToLngLat, zoneFrame } from '@/lib/sim/frame';
+import { readRunPaths, storeRunPaths, type StoredSite } from '@/lib/sim/paths';
 import { calibrationSchema, pinsFileSchema, type SimPin } from '@/lib/sim/schema';
 import { ALERT_MESSAGES, type LngLat } from '@/lib/types';
 import { liveManifestSchema } from './manifest';
@@ -23,7 +24,7 @@ const candidateSchema = z.object({
 const candidatesFileSchema = z.object({ methods: z.object({ frozen: z.array(candidateSchema).max(25) }) });
 
 // Imports one live-chunk.v1 folder. Returns null when the chunk is already imported.
-export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoot }: { chunkDir: string; mediaRoot: string }): Promise<{ chunkId: string; zoneCode: string; sites: number } | null>
+export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoot }: { chunkDir: string; mediaRoot: string }): Promise<{ chunkId: string; zoneCode: string; sites: number; tracks: number; dangers: number } | null>
 {
     const dir = resolve(chunkDir);
     if (dir.split(sep).includes('private'))
@@ -59,6 +60,8 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
         throw new Error(`Chunk ${manifest.chunk_id} has out-of-bounds motion candidates`);
     }
     const pins: SimPin[] = pinsFileSchema.parse(readJson(join(dir, manifest.pins))).methods.pins;
+    // Optional trails and people, written by the runner before the manifest.
+    const paths = readRunPaths(dir);
 
     const zones = await prisma.zone.findMany({ orderBy: { code: 'asc' } });
     if (zones.length === 0)
@@ -124,6 +127,7 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
                     liveChunkId: manifest.chunk_id,
                 },
             })));
+            const sites: StoredSite[] = [];
             for (const pin of pins)
             {
                 // One camera saw it: that camera owns it. Two cameras: the x_min (<zone>1) camera.
@@ -160,8 +164,14 @@ export async function importLiveChunk(prisma: PrismaClient, { chunkDir, mediaRoo
                         { alertId: alert.id, type: 'departed', author: 'Camera', userId: null, at: new Date(startedAt.getTime() + pin.interval[1] * 1000) },
                     ],
                 });
+                sites.push({ pinId: pin.id, alertId: alert.id, videoId: alert.videoId, cameraId: alert.cameraId, position: [lng, lat], startT: pin.interval[0] });
             }
-            return { chunkId: manifest.chunk_id, zoneCode: zone.code, sites: pins.length };
+            const xMin = manifest.cameras.findIndex(camera => camera.end === 'x_min');
+            const stored = await storeRunPaths(tx, {
+                paths, pins, sites, frame, zoneId: zone.id, fallbackVideoId: videos[xMin].id,
+                clock: t => new Date(startedAt.getTime() + t * 1000),
+            });
+            return { chunkId: manifest.chunk_id, zoneCode: zone.code, sites: pins.length, tracks: stored.tracks, dangers: stored.dangers };
         });
         renameSync(staging, target);
         publishChange('live-chunk');

@@ -21,13 +21,7 @@ describe('toMapSnapshot', () =>
 
     it('maps zones to rings', () =>
     {
-        expect(snapshot.zones[0]).toMatchObject({ code: 'B', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]], custom: false });
-    });
-
-    it('flags zones an admin added on the map', () =>
-    {
-        const added = toMapSnapshot({ ...rows, zones: [{ ...rows.zones[0], code: 'E', createdById: 'u1' }] });
-        expect(added.zones[0]).toMatchObject({ code: 'E', custom: true });
+        expect(snapshot.zones[0]).toMatchObject({ code: 'B', activityLevel: 'HIGH', ring: [[0, 0], [1, 0], [1, 1], [0, 0]] });
     });
 
     it('maps cameras with calibration flag and latest video', () =>
@@ -94,5 +88,20 @@ describe('outcomesFromStatusCounts', () =>
     it('is used when supplied instead of the loaded sites', () =>
     {
         expect(toMapSnapshot({ ...rows, outcomes: { saved: 9, notSaved: 8, pending: 7 } }).outcomes).toEqual({ saved: 9, notSaved: 8, pending: 7 });
+    });
+});
+
+describe('danger fields', () =>
+{
+    it('names who resolved a danger and stamps when the snapshot was made', () =>
+    {
+        const danger = { ...rows.alerts[0], id: 'd1', kind: 'DANGER' as const, status: 'REVIEWED' as const, level: 1, siteId: 'a1', events: [
+            { type: 'danger', at: new Date('2026-10-09T18:01:00Z'), author: 'Camera' },
+            { type: 'dangerResolved', at: new Date('2026-10-09T18:05:00Z'), author: 'Vera Volunteer' },
+        ] };
+        const snapshot = toMapSnapshot({ ...rows, alerts: [...rows.alerts, danger], now: new Date('2026-10-09T19:00:00Z') });
+        expect(snapshot.alerts[2]).toMatchObject({ resolvedBy: 'Vera Volunteer', resolvedAt: '2026-10-09T18:05:00.000Z' });
+        expect(snapshot.alerts[0]).toMatchObject({ resolvedBy: null, resolvedAt: null });
+        expect(snapshot.generatedAt).toBe('2026-10-09T19:00:00.000Z');
     });
 });

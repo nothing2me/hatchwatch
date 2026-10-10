@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { SessionUser } from '@/lib/auth/session';
 import type { AlertView, LngLat, MapSnapshot } from '@/lib/types';
-import { addCameraPair, deleteZone } from '@/app/(app)/camera-actions';
+import { isNestSite } from '@/lib/danger';
+import { addCameraPair, updateCamera } from '@/app/(app)/camera-actions';
 import { TopBar } from '@/features/shell/TopBar';
 import { AlertsFeed } from '@/features/alerts/AlertsFeed';
 import { CameraPanel } from '@/features/cameras/CameraPanel';
@@ -24,8 +25,9 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
 {
     const snapshot = useLiveSnapshot(initialSnapshot);
     const now = useNow(30_000);
-    // Same definition as the feed's Active tab, so the top bar and the tab always agree.
-    const activeSites = snapshot.alerts.filter(alert => alert.site.active).length;
+    // Open nest sites only. The Active tab also lists open dangers; those are counted by the top bar's red danger chip.
+    const activeSites = snapshot.alerts.filter(alert => isNestSite(alert) && alert.site.active).length;
+    const openDangers = snapshot.alerts.filter(alert => alert.kind === 'DANGER' && alert.site.active);
     const mapRef = useRef<MapRef>(null);
     const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
     // The open drawer keeps the last version of its site it saw, so a site that drops out of the
@@ -39,7 +41,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const selectedAlert = liveSelected ?? (heldAlert?.id === selectedAlertId ? heldAlert : null);
     const closeSite = useCallback(() => setSelectedAlertId(null), []);
     const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
-    const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, motion: true });
+const [layers, setLayers] = useState<Record<LayerKey, boolean>>({ zones: true, cameras: true, alerts: true, motion: true, trails: true });
 
     const selectedCamera = snapshot.cameras.find(camera => camera.id === selectedCameraId) ?? null;
     const [playback, setPlayback] = useState<Playback | null>(null);
@@ -76,18 +78,15 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         setPlayback(video ? { key: playbackKey(video), t: -Infinity } : null);
     }, [selectedCameraId, snapshot.cameras]);
 
-    // Admin camera editing: one map click adds a zone with a camera pair; added zones can be removed.
+    // Admin camera editing: a map click adds a seaward pair to the nearest zone; dragging a camera moves it.
     const isAdmin = user.role === 'ADMIN';
     const [editing, setEditing] = useState(false);
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState<EditNotice>(null);
-    const [confirmCode, setConfirmCode] = useState<string | null>(null);
-    const confirmZone = confirmCode ? snapshot.zones.find(zone => zone.code === confirmCode && zone.custom) ?? null : null;
 
     const finishEditing = useCallback(() =>
     {
         setEditing(false);
-        setConfirmCode(null);
         setNotice(null);
     }, []);
 
@@ -101,20 +100,12 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         {
             if (event.key === 'Escape')
             {
-                // Esc first dismisses the removal question, then leaves edit mode.
-                if (confirmCode)
-                {
-                    setConfirmCode(null);
-                }
-                else
-                {
-                    finishEditing();
-                }
+                finishEditing();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [editing, confirmCode, finishEditing]);
+    }, [editing, finishEditing]);
 
     useEffect(() =>
     {
@@ -126,18 +117,20 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         return () => clearTimeout(timer);
     }, [notice]);
 
-    const runEdit = useCallback(async (work: () => Promise<{ ok: true; code: string } | { ok: false; error: string }>, done: (code: string) => string) =>
+    const runEdit = useCallback(async <T extends object>(work: () => Promise<({ ok: true } & T) | { ok: false; error: string }>, done: (result: T) => string) =>
     {
         setBusy(true);
         setNotice(null);
         try
         {
             const result = await work();
-            setNotice(result.ok ? { kind: 'ok', text: done(result.code) } : { kind: 'error', text: result.error });
+            setNotice(result.ok ? { kind: 'ok', text: done(result) } : { kind: 'error', text: result.error });
+            return result.ok;
         }
         catch
         {
             setNotice({ kind: 'error', text: 'That did not save. Check your connection and try again.' });
+            return false;
         }
         finally
         {
@@ -149,24 +142,23 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
     const placing = useRef(false);
     const placePair = useCallback((at: LngLat) =>
     {
-        if (!editing || busy || confirmCode || placing.current)
+        if (!editing || busy || placing.current)
         {
             return;
         }
         placing.current = true;
-        void runEdit(() => addCameraPair(at), code => `Zone ${code} added`).finally(() => { placing.current = false; });
-    }, [editing, busy, confirmCode, runEdit]);
+        void runEdit(() => addCameraPair(at), ({ codes, zoneCode }: { codes: [string, string]; zoneCode: string }) => `${codes.join(' · ')} added to Zone ${zoneCode}`).finally(() => { placing.current = false; });
+    }, [editing, busy, runEdit]);
 
-    const removeZone = useCallback(() =>
+    // Resolves false when the move was refused, so the map puts the marker back.
+    const moveCamera = useCallback(async (code: string, to: LngLat): Promise<boolean> =>
     {
-        const code = confirmCode;
-        if (!code)
+        if (!editing)
         {
-            return;
+            return false;
         }
-        setConfirmCode(null);
-        void runEdit(() => deleteZone(code), removed => `Zone ${removed} removed`);
-    }, [confirmCode, runEdit]);
+        return runEdit(() => updateCamera(code, { lng: to[0], lat: to[1] }), ({ code: moved }: { code: string }) => `${moved} moved`);
+    }, [editing, runEdit]);
 
     const fitBeach = useCallback(() =>
     {
@@ -216,29 +208,43 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
         }
     }, [snapshot.alerts, openSite]);
 
+    // Other pages link the danger chip to /?alert=<id>; open it once the map is up, then tidy the address.
+    const linked = useRef(false);
+    useEffect(() =>
+    {
+        if (linked.current)
+        {
+            return;
+        }
+        linked.current = true;
+        const id = new URLSearchParams(window.location.search).get('alert');
+        if (id)
+        {
+            openSiteById(id);
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [openSiteById]);
+
+    const linkedSite = selectedAlert?.siteId ? snapshot.alerts.find(alert => alert.id === selectedAlert.siteId) ?? null : null;
+    const siteDangers = selectedAlert ? openDangers.filter(alert => alert.siteId === selectedAlert.id) : [];
+
     return (
         <main className="relative h-full overflow-hidden bg-night-950">
             <MapView ref={mapRef} snapshot={snapshot} layers={layers} selectedCameraId={selectedCameraId} onSelectCamera={selectCamera} playback={playback} now={now} selectedAlertId={selectedAlert?.id ?? null} onSelectAlert={openSiteById}
-                editing={editing} onMapClick={placePair} onDeleteZone={code => { setNotice(null); setConfirmCode(code); }} />
+                editing={editing} onMapClick={placePair} onMoveCamera={moveCamera} />
 
             {editing && (
-                <EditCamerasBanner
-                    busy={busy}
-                    notice={notice}
-                    confirm={confirmZone ? { code: confirmZone.code, cameraCodes: snapshot.cameras.filter(camera => camera.zoneCode === confirmZone.code).map(camera => camera.code) } : null}
-                    onConfirm={removeZone}
-                    onCancel={() => setConfirmCode(null)}
-                    onDone={finishEditing}
-                />
+                <EditCamerasBanner busy={busy} notice={notice} onDone={finishEditing} />
             )}
 
             {/* Overlay grid; pointer-events pass through except on panels */}
             <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
-                <TopBar user={user} current="map" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites} />
+                <TopBar user={user} current="map" camerasOnline={snapshot.camerasOnline} camerasTotal={snapshot.camerasTotal} activeSites={activeSites}
+                    dangerCount={snapshot.dangerCount} firstDangerId={openDangers[0]?.id ?? null} onDanger={openSiteById} />
 
                 <div className="flex min-h-0 flex-1 gap-3">
                     <div className="flex min-h-0 flex-col items-start max-md:absolute max-md:inset-x-3 max-md:bottom-9 max-md:max-h-[45%] md:w-72">
-                        <AlertsFeed alerts={snapshot.alerts} inactiveCount={snapshot.inactiveCount} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} />
+                        <AlertsFeed alerts={snapshot.alerts} inactiveCount={snapshot.inactiveCount} onSelect={openSite} playback={playback} selectedId={selectedAlert?.id ?? null} canResolve={user.role !== 'VIEWER'} />
                     </div>
 
                     <div className="ml-auto flex min-h-0 items-start gap-3 md:mb-6">
@@ -256,7 +262,7 @@ export function MapScreen({ snapshot: initialSnapshot, user }: { snapshot: MapSn
                             editing={editing}
                             onToggleEdit={isAdmin ? () => (editing ? finishEditing() : setEditing(true)) : undefined}
                         />
-                        {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} />}
+                        {selectedAlert && <SiteDrawer key={selectedAlert.id} alert={selectedAlert} user={user} onClose={closeSite} fadeMinutes={snapshot.fadeMinutes} linkedSite={linkedSite} dangers={siteDangers} onOpenAlert={openSiteById} />}
                     </div>
                 </div>
 

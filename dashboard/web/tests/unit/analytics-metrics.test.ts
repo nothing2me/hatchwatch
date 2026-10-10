@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyticsMetrics, percentOf } from '@/features/analytics/metrics';
+import { analyticsMetrics, dangerStats, percentOf } from '@/features/analytics/metrics';
 import type { MapSnapshot, ZoneView } from '@/lib/types';
 import { siteAlert } from './siteFixtures';
 
@@ -89,5 +89,52 @@ describe('analyticsMetrics', () =>
     {
         const m = analyticsMetrics({ alerts: [], zones: [], outcomes: { saved: 0, notSaved: 0, pending: 0 }, inactiveCount: 0 }, 'map');
         expect(m).toMatchObject({ sites: 0, unprotected: 0, unprotectedPct: 0, bothCamerasPct: 0, byZone: [] });
+    });
+});
+
+describe('danger alerts in analytics', () =>
+{
+    it('are not counted as sites, in either scope', () =>
+    {
+        const open = siteAlert('d1', { danger: 'active' }, { kind: 'DANGER', level: 1, siteId: 'a1' });
+        const resolved = siteAlert('d2', { danger: 'resolved', active: false }, { kind: 'DANGER', level: 1, siteId: 'a3', status: 'REVIEWED' });
+        const base = analyticsMetrics(snapshot, 'all');
+        // The server's inactive count includes the resolved danger alert; analytics takes it back out.
+        const withDangers = analyticsMetrics({ ...snapshot, alerts: [...alerts, open, resolved], inactiveCount: snapshot.inactiveCount + 1, dangerCount: 1, dangerTotal: 2 }, 'all');
+        expect(withDangers).toEqual(base);
+        expect(analyticsMetrics({ ...snapshot, alerts: [...alerts, open] }, 'map')).toEqual(analyticsMetrics(snapshot, 'map'));
+    });
+});
+
+describe('Not saved after a danger, on the client clock', () =>
+{
+    const generatedAt = '2026-10-09T01:00:00.000Z';
+    const deadline = '2026-10-09T01:10:00.000Z';
+    const before = Date.parse('2026-10-09T01:05:00.000Z');
+    const after = Date.parse('2026-10-09T01:10:00.000Z');
+    const site = siteAlert('s1', { danger: 'active', dangerDeadline: deadline });
+    const base = { ...snapshot, alerts: [site], outcomes: { saved: 4, notSaved: 2, pending: 3 }, generatedAt };
+
+    it('moves a site from pending to not saved on the map scope once its deadline passes', () =>
+    {
+        expect(analyticsMetrics(base, 'map', before).outcomes).toEqual({ saved: 0, notSaved: 0, pending: 1 });
+        expect(analyticsMetrics(base, 'map', after).outcomes).toEqual({ saved: 0, notSaved: 1, pending: 0 });
+    });
+
+    it('adjusts the server whole-log outcomes for deadlines passed since the snapshot was made', () =>
+    {
+        expect(analyticsMetrics(base, 'all', before).outcomes).toEqual({ saved: 4, notSaved: 2, pending: 3 });
+        expect(analyticsMetrics(base, 'all', after).outcomes).toEqual({ saved: 4, notSaved: 3, pending: 2 });
+        // A deadline the server already counted is not moved twice.
+        expect(analyticsMetrics({ ...base, generatedAt: '2026-10-09T01:20:00.000Z' }, 'all', Date.parse('2026-10-09T01:30:00.000Z')).outcomes).toEqual({ saved: 4, notSaved: 2, pending: 3 });
+    });
+});
+
+describe('dangerStats', () =>
+{
+    it('reports open and total danger alerts from the server counts', () =>
+    {
+        expect(dangerStats({ dangerCount: 2, dangerTotal: 5 })).toEqual({ active: 2, total: 5 });
+        expect(dangerStats({})).toEqual({ active: 0, total: 0 });
     });
 });

@@ -23,7 +23,7 @@ describe('CameraVideo', () =>
         render(<CameraVideo video={video} />);
         const element = screen.getByTestId('camera-video') as HTMLVideoElement;
         element.currentTime = 12.5;
-        fireEvent.click(screen.getByRole('radio', { name: 'Motion' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion diff' }));
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=motion');
         fireEvent(element, new Event('loadedmetadata'));
         expect(element.currentTime).toBeCloseTo(12.5);
@@ -32,7 +32,7 @@ describe('CameraVideo', () =>
     it('hides the toggle when there is no motion variant', () =>
     {
         render(<CameraVideo video={{ ...video, hasMotion: false }} />);
-        expect(screen.queryByRole('radio', { name: 'Motion' })).toBeNull();
+        expect(screen.queryByRole('radio', { name: 'Motion diff' })).toBeNull();
     });
 
     it('reports the clock while playing', () =>
@@ -54,11 +54,11 @@ describe('CameraVideo', () =>
         render(<CameraVideo video={video} onTime={onTime} />);
         const element = screen.getByTestId('camera-video') as HTMLVideoElement;
         element.currentTime = 12.5;
-        fireEvent.click(screen.getByRole('radio', { name: 'Motion' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Motion diff' }));
         element.currentTime = 0;
         vi.advanceTimersByTime(600);
         expect(onTime).not.toHaveBeenCalled();
-        fireEvent.click(screen.getByRole('radio', { name: 'Raw' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Camera' }));
         fireEvent(element, new Event('loadedmetadata'));
         expect(element.currentTime).toBeCloseTo(12.5);
         vi.advanceTimersByTime(300);

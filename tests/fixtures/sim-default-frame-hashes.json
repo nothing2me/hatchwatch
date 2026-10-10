@@ -1,0 +1,12 @@
+{
+  "note": "Default-config simulator frames recorded before the seaward/humans options were added (Plan D Task 1). With layout and humans omitted, these must stay byte-identical. Hashes are SHA-256 of the PNG bytes from nestRecord.frame on this machine's Chrome/GPU; another GPU or driver may legitimately differ.",
+  "init": [
+    {"config": {"seed": 11, "scenario": "swarm", "model": "A"}, "sha256": "20c86a5b2e574d8eaadcb9ac2ec1e32db333cee31999cc2bde07dae2eaa74305"}
+  ],
+  "frames": [
+    {"config": {"seed": 11, "scenario": "swarm", "model": "A"}, "t": 20, "view": 0, "sha256": "e58cd4c26ac9f330f18a0b013fde85dcfc379caa4f1c3e6c8893912a7a1d5d23"},
+    {"config": {"seed": 11, "scenario": "swarm", "model": "A"}, "t": 20, "view": 1, "sha256": "3fc50b72444cee908db70608db46f6e5419b24bdf02a7745e5e3dd0b77296f96"},
+    {"config": {"seed": 11, "scenario": "swarm-night", "model": "A"}, "t": 20, "view": 0, "sha256": "88a2137d4c561ee5a38b3919b7964f79509a4f54cd4ec5d1b27150c1351c1849"},
+    {"config": {"seed": 11, "scenario": "swarm-night", "model": "A"}, "t": 20, "view": 1, "sha256": "5051184aa904e4ac262111f96746a176649e5610aea37dc82e8b04aac65d311a"}
+  ]
+}
