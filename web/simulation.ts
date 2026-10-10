@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ParticleSand,sandFloor,BEACH_LENGTH,BEACH_WIDTH,type SandForcing} from './sand';
 import {BeachEnvironment} from './environment';
+import {addHousingPoles} from './housing';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 export type Scenario='clean'|'multi'|'swarm'|'swarm-night'|'swarm-spread'|'travel'|'rest'|'abandoned'|'unrelated'|'no-eggs'|'weak'|'obstructed'|'low-light';
 export type SimConfig={seed:number;scenario:Scenario;model:'A'|'B';eggs?:boolean;layout?:'along'|'seaward';humans?:number};
@@ -37,6 +38,7 @@ export class Simulation{
  if(this.night){this.nightCanvas=document.createElement('canvas');this.nightCanvas.width=WIDTH;this.nightCanvas.height=HEIGHT;this.nightContext=this.nightCanvas.getContext('2d')!;this.noiseCanvas=document.createElement('canvas');this.noiseCanvas.width=320;this.noiseCanvas.height=180;this.noiseContext=this.noiseCanvas.getContext('2d')!}
  this.ambient=new THREE.HemisphereLight(0xe5f3ff,0x897c66,1.2);this.scene.add(this.ambient);this.light=new THREE.DirectionalLight(0xffefd2,2.7);this.light.position.set(-25,35,-24);this.light.castShadow=true;this.light.shadow.mapSize.set(2048,2048);this.light.shadow.camera.left=-48;this.light.shadow.camera.right=48;this.light.shadow.camera.top=28;this.light.shadow.camera.bottom=-28;this.light.shadow.camera.near=1;this.light.shadow.camera.far=120;this.light.shadow.bias=-.00008;this.scene.add(this.light);
  this.environment=new BeachEnvironment(this.scene,this.renderer);this.environment.setNight(this.night);
+  addHousingPoles(this.scene);
  this.ready=Promise.all([this.environment.ready,this.loadTurtleModel()]).then(()=>{});
  this.sand=new ParticleSand(this.random);this.scene.add(this.sand.mesh);
  for(const [x,z] of markers){const marker=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.16),new THREE.MeshStandardMaterial({color:0x354d4c}));marker.position.set(x,surface(z),z);marker.userData.calibrationMarker=true;this.scene.add(marker)}
