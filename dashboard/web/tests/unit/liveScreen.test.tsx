@@ -1,17 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-vi.mock('@/features/phones/useLiveFrame', () => ({ useLiveFrame: () => ({ url: null, state: 'loading' }) }));
+const frame = vi.hoisted(() => ({ url: null as string | null }));
+vi.mock('@/features/phones/useLiveFrame', () => ({ useLiveFrame: () => ({ url: frame.url, state: frame.url ? 'live' : 'loading' }) }));
 vi.mock('@/app/(app)/actions', () => ({ logoutAction: vi.fn() }));
 const removePhone = vi.fn();
-vi.mock('@/app/(app)/live/actions', () => ({ removePhone: (...args: unknown[]) => removePhone(...args) }));
-const { LiveScreen } = await import('@/features/phones/LiveScreen');
+const addBoardCamera = vi.fn();
+const rotateDeviceToken = vi.fn();
+vi.mock('@/app/(app)/live/actions', () => ({
+    removePhone: (...args: unknown[]) => removePhone(...args),
+    addBoardCamera: (...args: unknown[]) => addBoardCamera(...args),
+    rotateDeviceToken: (...args: unknown[]) => rotateDeviceToken(...args),
+}));
+const { LiveScreen, MotionBox } = await import('@/features/phones/LiveScreen');
 const { RecordingsPanel, formatStart } = await import('@/features/phones/RecordingsPanel');
 
 const bar = { camerasOnline: 1, camerasTotal: 2, activeSites: 0 };
 const admin = { id: 'a', email: 'a@x.y', name: 'Ad', role: 'ADMIN' as const };
 const viewer = { ...admin, id: 'v', role: 'VIEWER' as const };
 const phone = { id: 'ck1', name: 'Dune phone', kind: 'PHONE' as const, ownerName: 'Vo', cameraCode: 'B1', online: true, recording: true, lastSeenAt: '2026-10-10T20:00:00.000Z', motion: null };
+const board = { ...phone, id: 'ckb', name: 'Dune board', kind: 'BOARD' as const, ownerName: 'Ad', recording: false, motion: { percent: 4.2, active: true, box: [96, 40, 64, 72] as [number, number, number, number], at: '2026-10-10T20:00:00.000Z' } };
+const token = 'A'.repeat(43);
+const issuedResult = { ok: true, deviceId: 'ckb', name: 'Dune board', token, dashboardUrl: 'https://10.47.138.152:3443', secrets: `#define DASHBOARD_URL "https://10.47.138.152:3443"\n#define DEVICE_ID "ckb"\n#define DEVICE_TOKEN "${token}"\n` };
 
 function stubFetch(devices: unknown[])
 {
@@ -19,7 +29,7 @@ function stubFetch(devices: unknown[])
         ? Response.json({ devices })
         : Response.json({ enabled: true, convertsToMp4: true, recordings: [] })));
 }
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); frame.url = null; });
 
 describe('LiveScreen', () =>
 {
@@ -83,7 +93,122 @@ describe('LiveScreen', () =>
         stubFetch([phone]);
         render(<LiveScreen user={viewer} bar={bar} connect={null} />);
         expect(await screen.findByText('Dune phone')).toBeTruthy();
-        expect(screen.queryByRole('heading', { name: 'Phones' })).toBeNull();
+        expect(screen.queryByRole('heading', { name: 'Devices' })).toBeNull();
+    });
+});
+
+describe('camera boards', () =>
+{
+    it('shows the on-board motion badge and label on board tiles only', async () =>
+    {
+        stubFetch([board, { ...board, id: 'ckb2', name: 'Still board', motion: { ...board.motion, percent: 0.4, active: false, box: [0, 0, 0, 0] } }, phone]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        const moving = await screen.findByRole('article', { name: 'Dune board' });
+        expect(within(moving).getByText('Moving 4.2%')).toBeTruthy();
+        expect(within(moving).getByText('Motion measured on the camera board')).toBeTruthy();
+        expect(within(moving).getByText('Camera board · added by Ad')).toBeTruthy();
+        expect(within(screen.getByRole('article', { name: 'Still board' })).getByText('Still')).toBeTruthy();
+        const phoneTile = screen.getByRole('article', { name: 'Dune phone' });
+        expect(within(phoneTile).queryByText(/Moving|Still/)).toBeNull();
+        expect(within(phoneTile).queryByText('Motion measured on the camera board')).toBeNull();
+    });
+
+    it('draws the box in picture pixels with the picture\'s own letterboxing', () =>
+    {
+        const { container } = render(<MotionBox box={[96, 40, 64, 72]} width={320} height={240} />);
+        const svg = container.querySelector('svg')!;
+        expect(svg.getAttribute('viewBox')).toBe('0 0 320 240');
+        expect(svg.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
+        const rect = svg.querySelector('rect')!;
+        expect([rect.getAttribute('x'), rect.getAttribute('y'), rect.getAttribute('width'), rect.getAttribute('height')]).toEqual(['96', '40', '64', '72']);
+    });
+
+    it('draws the box on a moving board tile once the picture has loaded, and never on a still one', async () =>
+    {
+        frame.url = 'blob:frame';
+        stubFetch([board, { ...board, id: 'ckb2', name: 'Still board', motion: { ...board.motion, percent: 0.4, active: false, box: [0, 0, 0, 0] } }]);
+        render(<LiveScreen user={viewer} bar={bar} connect={null} />);
+        const moving = await screen.findByRole('article', { name: 'Dune board' });
+        const still = screen.getByRole('article', { name: 'Still board' });
+        expect(moving.querySelector('svg[preserveAspectRatio]')).toBeNull();
+        for (const tile of [moving, still])
+        {
+            const img = within(tile).getByRole('img', { name: /Live picture/ });
+            Object.defineProperty(img, 'naturalWidth', { value: 320 });
+            Object.defineProperty(img, 'naturalHeight', { value: 240 });
+            fireEvent.load(img);
+        }
+        const svg = await waitFor(() => moving.querySelector('svg[viewBox="0 0 320 240"]')!);
+        expect(svg).toBeTruthy();
+        const rect = svg.querySelector('rect')!;
+        expect([rect.getAttribute('x'), rect.getAttribute('y'), rect.getAttribute('width'), rect.getAttribute('height')]).toEqual(['96', '40', '64', '72']);
+        expect(still.querySelector('svg[preserveAspectRatio]')).toBeNull();
+    });
+
+    it('adds a board and shows the token once', async () =>
+    {
+        stubFetch([]);
+        addBoardCamera.mockResolvedValueOnce(issuedResult);
+        render(<LiveScreen user={admin} bar={bar} connect={{ url: null, qrSvg: null }} />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Add board camera' }));
+        const dialog = screen.getByRole('dialog', { name: 'Add board camera' });
+        fireEvent.change(within(dialog).getByLabelText('Board name'), { target: { value: 'Dune board' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add' }));
+        await waitFor(() => expect(addBoardCamera).toHaveBeenCalledWith('Dune board'));
+        expect((await within(dialog).findByLabelText('Device token') as HTMLInputElement).value).toBe(token);
+        expect((within(dialog).getByLabelText('Device id') as HTMLInputElement).value).toBe('ckb');
+        expect(within(dialog).getByText(/shown only once/)).toBeTruthy();
+        expect(within(dialog).getByLabelText('secrets.h lines').textContent).toContain(`#define DEVICE_TOKEN "${token}"`);
+        expect(within(dialog).getByText(/Replace the DASHBOARD_URL, DEVICE_ID and DEVICE_TOKEN lines/)).toBeTruthy();
+        expect(within(dialog).getByText('docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt')).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(document.body.textContent).not.toContain(token);
+        fireEvent.click(screen.getByRole('button', { name: 'Add board camera' }));
+        expect((screen.getByLabelText('Board name') as HTMLInputElement).value).toBe('');
+    });
+
+    it('shows an add error and keeps the form', async () =>
+    {
+        stubFetch([]);
+        addBoardCamera.mockResolvedValueOnce({ ok: false, error: 'A device with that name already exists.' });
+        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Add board camera' }));
+        const dialog = screen.getByRole('dialog', { name: 'Add board camera' });
+        fireEvent.change(within(dialog).getByLabelText('Board name'), { target: { value: 'Dune board' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add' }));
+        expect((await within(dialog).findByRole('alert')).textContent).toBe('A device with that name already exists.');
+        expect((within(dialog).getByLabelText('Board name') as HTMLInputElement).value).toBe('Dune board');
+    });
+
+    it('lists devices with their kind and rotates a board token after a confirm', async () =>
+    {
+        stubFetch([{ ...board, online: false }, { ...phone, online: false }]);
+        rotateDeviceToken.mockResolvedValueOnce({ ...issuedResult, token: 'B'.repeat(43) });
+        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        expect(await screen.findByRole('heading', { name: 'Devices' })).toBeTruthy();
+        const boardRow = await screen.findByRole('listitem', { name: 'Dune board' });
+        const phoneRow = screen.getByRole('listitem', { name: 'Dune phone' });
+        expect(within(boardRow).getByText('Camera board')).toBeTruthy();
+        expect(within(phoneRow).getByText('Phone')).toBeTruthy();
+        expect(within(phoneRow).queryByRole('button', { name: /Rotate token/ })).toBeNull();
+        fireEvent.click(within(boardRow).getByRole('button', { name: 'Rotate token for Dune board' }));
+        expect(within(boardRow).getByText(/stops sending until secrets.h has the new token/)).toBeTruthy();
+        fireEvent.click(within(boardRow).getByRole('button', { name: 'Rotate' }));
+        await waitFor(() => expect(rotateDeviceToken).toHaveBeenCalledWith('ckb'));
+        const dialog = await screen.findByRole('dialog', { name: 'New token for Dune board' });
+        expect((within(dialog).getByLabelText('Device token') as HTMLInputElement).value).toBe('B'.repeat(43));
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(document.body.textContent).not.toContain('B'.repeat(43));
+    });
+
+    it('uses the board wording when removing a board', async () =>
+    {
+        stubFetch([{ ...board, online: false }]);
+        render(<LiveScreen user={admin} bar={bar} connect={null} />);
+        const row = await screen.findByRole('listitem', { name: 'Dune board' });
+        fireEvent.click(within(row).getByRole('button', { name: 'Remove Dune board' }));
+        expect(within(row).getByText('Remove Dune board? Its camera returns to the simulation loop and the board\'s token stops working. Add it again to get a new token.')).toBeTruthy();
     });
 });
 

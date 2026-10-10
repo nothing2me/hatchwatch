@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useRef, useState, useSyncExternalStore, useTransition } from 'react';
-import { Activity, LoaderCircle, Maximize2, QrCode, Smartphone, Trash2, VideoOff, X } from 'lucide-react';
-import { removePhone } from '@/app/(app)/live/actions';
+import { Activity, Cpu, KeyRound, LoaderCircle, Maximize2, QrCode, Smartphone, Trash2, VideoOff, X } from 'lucide-react';
+import { removePhone, rotateDeviceToken, type IssuedTokenResult } from '@/app/(app)/live/actions';
 import { TopBar, type TopBarCounts } from '@/features/shell/TopBar';
 import type { SessionUser } from '@/lib/auth/session';
-import type { LiveDeviceView } from '@/lib/types';
+import type { BoardMotionView, LiveDeviceView } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import type { LiveFrameState } from './framePoller';
+import { AddBoardDialog, IssuedTokenDialog } from './BoardToken';
 import { ConnectPhone, useModal } from './ConnectPhone';
 import { RecordingsPanel } from './RecordingsPanel';
 import { useLiveDevices } from './useLiveDevices';
@@ -28,13 +29,35 @@ export function RecBadge()
     );
 }
 
+// The board's box over the picture. The SVG uses the picture's own pixels and object-contain's letterboxing (xMidYMid meet).
+export function MotionBox({ box, width, height }: { box: [number, number, number, number]; width: number; height: number })
+{
+    const [x, y, w, h] = box;
+    return (
+        <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+            <rect x={x} y={y} width={w} height={h} fill="none" stroke="#F5B544" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+        </svg>
+    );
+}
+
+export function MotionBadge({ motion }: { motion: BoardMotionView | null })
+{
+    const pill = 'inline-flex h-5 items-center rounded px-1.5 font-mono text-[10px] font-bold tracking-[0.06em]';
+    if (motion?.active)
+    {
+        return <span className={cn(pill, 'bg-amber text-night-950 shadow-[0_0_12px_rgba(245,181,68,0.4)]')}>Moving {motion.percent.toFixed(1)}%</span>;
+    }
+    return <span className={cn(pill, 'bg-night-950/80 text-ink-muted ring-1 ring-white/12')}>{motion ? 'Still' : 'No motion reading'}</span>;
+}
+
 // The picture box: the frame, a spinner before the first one, or why there is none.
-export function LivePicture({ url, state, name, className }: { url: string | null; state: LiveFrameState | 'idle'; name: string; className?: string })
+export function LivePicture({ url, state, name, className, onNaturalSize, children }: { url: string | null; state: LiveFrameState | 'idle'; name: string; className?: string; onNaturalSize?: (width: number, height: number) => void; children?: React.ReactNode })
 {
     const gone = state === 'offline' || state === 'signed-out';
     return (
         <div className={cn('relative overflow-hidden bg-black', className)}>
-            {url && <img src={url} alt={`Live picture from ${name}`} className={cn('h-full w-full object-contain', gone && 'opacity-30')} />}
+            {url && <img src={url} alt={`Live picture from ${name}`} onLoad={event => onNaturalSize?.(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)} className={cn('h-full w-full object-contain', gone && 'opacity-30')} />}
+            {children}
             {!url && !gone && (
                 <span className="absolute inset-0 grid place-items-center text-ink-muted">
                     <LoaderCircle aria-hidden className="h-6 w-6 motion-safe:animate-spin" />
@@ -80,17 +103,25 @@ function Tile({ device }: { device: LiveDeviceView })
     const { url, state } = useLiveFrame(device.id);
     const [open, setOpen] = useState(false);
     const expandRef = useRef<HTMLButtonElement>(null);
+    const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+    const board = device.kind === 'BOARD';
+    const box = device.motion?.box;
+    const showBox = board && device.motion?.active && size && box && box[2] > 0 && box[3] > 0;
     return (
         <article aria-label={device.name} className="overflow-hidden rounded-2xl border border-white/8 bg-night-900/70">
             <div className="relative">
-                <LivePicture url={url} state={state} name={device.name} className="aspect-video" />
+                <LivePicture url={url} state={state} name={device.name} className="aspect-video" onNaturalSize={(width, height) => setSize(previous => previous?.width === width && previous.height === height ? previous : { width, height })}>
+                    {showBox && <MotionBox box={box} width={size.width} height={size.height} />}
+                </LivePicture>
                 {device.recording && <span className="absolute top-2.5 left-2.5"><RecBadge /></span>}
+                {board && <span className="absolute top-2.5 right-2.5"><MotionBadge motion={device.motion} /></span>}
             </div>
             <div className="flex flex-wrap items-end gap-x-3 gap-y-3 p-4">
                 <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">{device.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-ink-muted">by {device.ownerName}</p>
+                    <p className="mt-0.5 truncate text-xs text-ink-muted">{board ? `Camera board · added by ${device.ownerName}` : `by ${device.ownerName}`}</p>
                     <p className={cn('mt-1.5 text-xs', device.cameraCode ? 'font-mono text-amber' : 'text-ink-muted')}>{device.cameraCode ? `Camera ${device.cameraCode}` : 'Not linked to a map camera'}</p>
+                    {board && <p className="mt-1 text-[11px] text-ink-muted">Motion measured on the camera board</p>}
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                     <Link href={`/live/motion?device=${encodeURIComponent(device.id)}`} className={action}>
@@ -118,11 +149,14 @@ function lastSeen(iso: string, now: number): string
     return hours < 36 ? `last seen ${hours} h ago` : `last seen ${Math.round(hours / 24)} d ago`;
 }
 
-function PhoneRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: () => void })
+function DeviceRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: () => void })
 {
-    const [confirming, setConfirming] = useState(false);
+    const [confirming, setConfirming] = useState<'remove' | 'rotate' | null>(null);
     const [problem, setProblem] = useState<string | null>(null);
+    const [issued, setIssued] = useState<Extract<IssuedTokenResult, { ok: true }> | null>(null);
     const [pending, startTransition] = useTransition();
+    const rotateRef = useRef<HTMLButtonElement>(null);
+    const board = device.kind === 'BOARD';
 
     function remove()
     {
@@ -132,8 +166,26 @@ function PhoneRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: ()
             const result = await removePhone(device.id);
             if (result.ok)
             {
-                setConfirming(false);
+                setConfirming(null);
                 onRemoved();
+            }
+            else
+            {
+                setProblem(result.error);
+            }
+        });
+    }
+
+    function rotate()
+    {
+        setProblem(null);
+        startTransition(async () =>
+        {
+            const result = await rotateDeviceToken(device.id);
+            if (result.ok)
+            {
+                setConfirming(null);
+                setIssued(result);
             }
             else
             {
@@ -145,25 +197,47 @@ function PhoneRow({ device, onRemoved }: { device: LiveDeviceView; onRemoved: ()
     return (
         <li aria-label={device.name} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
             <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-ink">{device.name}</p>
+                <p className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium text-ink">{device.name}</span>
+                    <span className={cn('inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[10px] font-semibold tracking-[0.04em]', board ? 'bg-amber/15 text-amber' : 'bg-white/8 text-ink-muted')}>{board ? 'Camera board' : 'Phone'}</span>
+                </p>
                 <p className="mt-0.5 truncate text-xs text-ink-muted">by {device.ownerName} · {device.online ? <span className="text-ok">online</span> : lastSeen(device.lastSeenAt, Date.now())}</p>
             </div>
             <p className={cn('text-xs', device.cameraCode ? 'font-mono text-amber' : 'text-ink-muted')}>{device.cameraCode ? `Camera ${device.cameraCode}` : 'Not linked'}</p>
-            {confirming
-                ? (
-                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                        <span className="text-xs text-ink">Remove {device.name}? Its camera returns to the simulation loop. The person can start again with a new phone name; to block a person, disable their account on the Users page.</span>
-                        <button type="button" disabled={pending} onClick={remove} className={cn(action, 'border-danger/40 text-[#F2865A] hover:bg-danger/15 disabled:opacity-50')}>Remove</button>
-                        <button type="button" disabled={pending} onClick={() => setConfirming(false)} className={action}>Cancel</button>
-                    </div>
-                )
-                : (
-                    <button type="button" onClick={() => setConfirming(true)} aria-label={`Remove ${device.name}`} className={action}>
+            {confirming === 'remove' && (
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <span className="text-xs text-ink">
+                        {board
+                            ? `Remove ${device.name}? Its camera returns to the simulation loop and the board's token stops working. Add it again to get a new token.`
+                            : `Remove ${device.name}? Its camera returns to the simulation loop. The person can start again with a new phone name; to block a person, disable their account on the Users page.`}
+                    </span>
+                    <button type="button" disabled={pending} onClick={remove} className={cn(action, 'border-danger/40 text-[#F2865A] hover:bg-danger/15 disabled:opacity-50')}>Remove</button>
+                    <button type="button" disabled={pending} onClick={() => setConfirming(null)} className={action}>Cancel</button>
+                </div>
+            )}
+            {confirming === 'rotate' && (
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <span className="text-xs text-ink">Rotate the token for {device.name}? The board stops sending until secrets.h has the new token and the firmware is uploaded again.</span>
+                    <button type="button" disabled={pending} onClick={rotate} className={cn(action, 'border-amber/40 text-amber hover:bg-amber/15 disabled:opacity-50')}>Rotate</button>
+                    <button type="button" disabled={pending} onClick={() => setConfirming(null)} className={action}>Cancel</button>
+                </div>
+            )}
+            {confirming === null && (
+                <div className="flex shrink-0 gap-1.5">
+                    {board && (
+                        <button ref={rotateRef} type="button" onClick={() => setConfirming('rotate')} aria-label={`Rotate token for ${device.name}`} className={action}>
+                            <KeyRound aria-hidden className="h-3.5 w-3.5" />
+                            Rotate token
+                        </button>
+                    )}
+                    <button type="button" onClick={() => setConfirming('remove')} aria-label={`Remove ${device.name}`} className={action}>
                         <Trash2 aria-hidden className="h-3.5 w-3.5" />
                         Remove
                     </button>
-                )}
+                </div>
+            )}
             {problem && <p role="alert" className="w-full text-xs text-[#F2865A]">{problem}</p>}
+            {issued && <IssuedTokenDialog issued={issued} title={`New token for ${device.name}`} onClose={() => setIssued(null)} returnTo={rotateRef} />}
         </li>
     );
 }
@@ -172,6 +246,8 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
 {
     const { devices, error, refresh } = useLiveDevices(3000);
     const [connecting, setConnecting] = useState(false);
+    const [adding, setAdding] = useState(false);
+    const addRef = useRef<HTMLButtonElement>(null);
     const host = useSyncExternalStore(noSubscribe, () => window.location.hostname, () => null);
     const isAdmin = user.role === 'ADMIN';
     const online = devices.filter(device => device.online);
@@ -199,10 +275,16 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                         <p className="mt-1.5 text-sm text-ink-muted">Phones sending over the local Wi-Fi. Pictures refresh about five times a second.</p>
                     </div>
                     {isAdmin && (
-                        <button type="button" onClick={() => setConnecting(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-night-950 transition-colors hover:bg-amber/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber max-sm:w-full">
-                            <QrCode aria-hidden className="h-4 w-4" />
-                            Connect phone
-                        </button>
+                        <div className="flex shrink-0 flex-wrap gap-2 max-sm:w-full">
+                            <button ref={addRef} type="button" onClick={() => setAdding(true)} className={cn(action, 'h-10 justify-center px-4 text-sm max-sm:flex-1')}>
+                                <Cpu aria-hidden className="h-4 w-4" />
+                                Add board camera
+                            </button>
+                            <button type="button" onClick={() => setConnecting(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-night-950 transition-colors hover:bg-amber/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber max-sm:flex-1">
+                                <QrCode aria-hidden className="h-4 w-4" />
+                                Connect phone
+                            </button>
+                        </div>
                     )}
                 </header>
 
@@ -229,18 +311,19 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                     )}
 
                 {isAdmin && (
-                    <section aria-labelledby="phones-heading" className="mt-10 rounded-2xl border border-white/8 bg-night-900/70 p-4 sm:p-5">
-                        <h2 id="phones-heading" className="text-sm font-semibold text-ink">Phones</h2>
-                        <p className="mt-1 text-xs text-ink-muted">Every phone that has signed up to send. Link one to a map camera from Setup or the camera panel.</p>
+                    <section aria-labelledby="devices-heading" className="mt-10 rounded-2xl border border-white/8 bg-night-900/70 p-4 sm:p-5">
+                        <h2 id="devices-heading" className="text-sm font-semibold text-ink">Devices</h2>
+                        <p className="mt-1 text-xs text-ink-muted">Every phone and camera board that can send. Link one to a map camera from Setup or the camera panel.</p>
                         {devices.length > 0
-                            ? <ul className="mt-3 divide-y divide-white/8 rounded-xl border border-white/8">{devices.map(device => <PhoneRow key={device.id} device={device} onRemoved={refresh} />)}</ul>
-                            : <p className="mt-3 text-sm text-ink-muted">No phones yet.</p>}
+                            ? <ul className="mt-3 divide-y divide-white/8 rounded-xl border border-white/8">{devices.map(device => <DeviceRow key={device.id} device={device} onRemoved={refresh} />)}</ul>
+                            : <p className="mt-3 text-sm text-ink-muted">No devices yet.</p>}
                     </section>
                 )}
 
                 {isAdmin && <RecordingsPanel />}
             </div>
 
+            {adding && <AddBoardDialog onClose={() => setAdding(false)} onAdded={refresh} returnTo={addRef} />}
             {connecting && connect && <ConnectPhone url={connect.url} qrSvg={connect.qrSvg} onClose={() => setConnecting(false)} />}
         </main>
     );
