@@ -3,11 +3,33 @@
 // opens /camera and picks a position shows up here within a few seconds.
 
 import { useEffect, useState } from 'react';
-import { AccessKeyError, fetchLiveCameras, loadAccessKey, saveAccessKey, streamUrl } from '../data/liveCameraClient.js';
+import { AccessKeyError, fetchLiveCameras, loadAccessKey, saveAccessKey } from '../data/liveCameraClient.js';
+import { useLiveFrame } from '../data/useLiveFrame.js';
 import { formatDateTime } from '../utils/formatTime.js';
 import RecordingsPanel from './RecordingsPanel.jsx';
 
 const refreshMilliseconds = 3000;
+// Tiles are small, so a few frames a second is plenty.
+const tileFramesPerSecond = 3;
+
+// One live tile's picture, refreshed with short requests (see useLiveFrame).
+function LiveFeedImage({ cameraIdentifier, accessKey })
+{
+    const frameUrl = useLiveFrame(cameraIdentifier, accessKey, { framesPerSecond: tileFramesPerSecond });
+
+    if (!frameUrl)
+    {
+        return <div className="camera-feed__screen">Connecting…</div>;
+    }
+
+    return (
+        <img
+            className="camera-feed__screen camera-feed__video"
+            src={frameUrl}
+            alt={`Live feed from camera ${cameraIdentifier}`}
+        />
+    );
+}
 
 export default function CamerasView({ cameraPairs })
 {
@@ -132,11 +154,7 @@ export default function CamerasView({ cameraPairs })
                                         {live?.online ? (
                                             <div className="camera-feed__live">
                                                 {live.recording && <span className="camera-feed__recording">REC</span>}
-                                                <img
-                                                    className="camera-feed__screen camera-feed__video"
-                                                    src={streamUrl(camera.cameraIdentifier, accessKey)}
-                                                    alt={`Live feed from camera ${camera.cameraIdentifier}`}
-                                                />
+                                                <LiveFeedImage cameraIdentifier={camera.cameraIdentifier} accessKey={accessKey} />
                                             </div>
                                         ) : (
                                             <div className="camera-feed__screen">
@@ -147,6 +165,12 @@ export default function CamerasView({ cameraPairs })
                                             <span className={`status-dot status-dot--${live?.online ? 'good' : 'bad'}`} aria-hidden="true" />
                                             {' '}{camera.cameraIdentifier}, {camera.facingDescription}
                                             {live && !live.online && ` · last frame ${formatDateTime(live.lastFrameTime)}`}
+                                            {live?.online && (
+                                                <>
+                                                    {' · '}
+                                                    <a href={`/motion?camera=${encodeURIComponent(camera.cameraIdentifier)}`}>Motion view</a>
+                                                </>
+                                            )}
                                         </span>
                                     </div>
                                 );

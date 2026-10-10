@@ -1,8 +1,9 @@
 // Vite build configuration for the NestTrace dashboard.
 // The React plugin enables JSX and fast refresh during development.
 //
-// Two pages: index.html (the dashboard) and camera.html (the phone camera,
-// served at /camera). /api calls go to the camera relay in server/server.mjs.
+// Three pages: index.html (the dashboard), camera.html (the phone camera,
+// served at /camera) and motion.html (live feed beside its motion
+// difference, at /motion). /api calls go to the camera relay in server/server.mjs.
 //
 // `npm run dev:phone` uses mode "phone": a self-signed HTTPS certificate on
 // the local network so a phone browser is allowed to open its camera.
@@ -21,7 +22,7 @@ export default defineConfig(function buildConfig({ mode })
         {
             rollupOptions:
             {
-                input: { main: 'index.html', camera: 'camera.html' },
+                input: { main: 'index.html', camera: 'camera.html', motion: 'motion.html' },
             },
         },
 

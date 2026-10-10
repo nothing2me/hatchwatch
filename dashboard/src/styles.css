@@ -1330,3 +1330,143 @@ button.app-bar__link--active:hover
     display: flex;
     gap: 16px;
 }
+
+/* ---- Motion page (/motion) ---- */
+.motion-view
+{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 16px 24px 24px;
+}
+
+.motion-view__header
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+}
+
+.motion-view__header .text-button
+{
+    align-self: center;
+}
+
+.motion-view__key-form
+{
+    align-self: center;
+    width: min(100%, 420px);
+}
+
+.motion-view__control
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.motion-view__control select
+{
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+}
+
+/* Two screens side by side, stacked on narrow windows */
+.motion-view__screens
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+    gap: 16px;
+}
+
+.motion-view__screen
+{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.motion-view__screen-title
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 15px;
+}
+
+.motion-view__picture
+{
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    border-radius: var(--radius-card);
+    background: #000000;
+}
+
+.motion-view__placeholder
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #16323F;
+    color: #B9CEDB;
+}
+
+.motion-view__controls
+{
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 32px;
+}
+
+.motion-view__meter
+{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.motion-view__meter-track
+{
+    display: block;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-border);
+}
+
+.motion-view__meter-fill
+{
+    display: block;
+    height: 100%;
+    background: var(--color-selected);
+    transition: width 0.15s;
+}
+
+.motion-view__slider
+{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 240px;
+}
+
+.motion-view__slider .patrol-form__hint
+{
+    font-weight: 400;
+    font-size: 13px;
+}

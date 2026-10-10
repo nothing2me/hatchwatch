@@ -53,9 +53,36 @@ export async function fetchLiveCameras(accessKey)
     return (await response.json()).cameras;
 }
 
-export function streamUrl(cameraIdentifier, accessKey)
+// Fetches a camera's newest frame. Pass the frameTag from the previous call
+// to get null back (cheaply) when no new frame has arrived since. viewerId
+// lets the relay count how many people are watching.
+export async function fetchLatestFrame(cameraIdentifier, accessKey, previousFrameTag, viewerId)
 {
-    return `/api/cameras/${encodeURIComponent(cameraIdentifier)}/stream.mjpg?key=${encodeURIComponent(accessKey)}`;
+    const headers = { 'X-NestTrace-Key': accessKey, 'X-NestTrace-Viewer': viewerId };
+
+    if (previousFrameTag)
+    {
+        headers['If-None-Match'] = previousFrameTag;
+    }
+
+    const response = await fetch(`/api/cameras/${encodeURIComponent(cameraIdentifier)}/latest.jpg`, { headers, cache: 'no-store' });
+
+    if (response.status === 304)
+    {
+        return null;
+    }
+
+    if (response.status === 401)
+    {
+        throw new AccessKeyError('Wrong access key');
+    }
+
+    if (!response.ok)
+    {
+        throw new Error(`Camera relay returned ${response.status}`);
+    }
+
+    return { jpeg: await response.blob(), frameTag: response.headers.get('ETag') };
 }
 
 // Sends one JPEG frame. Resolves with the number of people watching.

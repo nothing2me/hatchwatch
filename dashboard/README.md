@@ -52,6 +52,17 @@ position, with a live feed for each one that is sending.
 - Phone browsers only allow the camera on **HTTPS** pages.
 - The map, the app bar's camera count, and the nest log still use sample data.
 
+### Motion view
+
+`/motion?camera=B1` shows one camera's live feed next to its motion
+difference (also linked as **Motion view** under each live tile). The
+difference is worked out in the browser from the live frames: **Against
+background** compares with a slowly updated picture of the scene, so
+something that stops moving fades out over a few seconds; **Since last
+frame** shows only what changed between frames. The threshold slider sets
+how big a brightness change counts as motion. This is a viewing aid, not
+the detector, and it does not affect recording.
+
 ### Try it on your local network
 
 ```powershell

@@ -39,6 +39,8 @@ const distDirectory = resolve(fileURLToPath(new URL('../dist', import.meta.url))
 const maximumFrameBytes = 2 * 1024 * 1024;
 // A camera counts as online if it sent a frame this recently.
 const onlineWindowMilliseconds = 10_000;
+// A viewer polling latest.jpg counts as watching for this long after its last request.
+const pollingViewerWindowMilliseconds = 5_000;
 // Skip frames for a viewer whose connection has this much unsent data queued.
 const maximumViewerBacklogBytes = 4 * 1024 * 1024;
 const cameraIdentifierPattern = /^[A-Za-z0-9-]{1,32}$/;
@@ -61,7 +63,7 @@ const recorder = process.env.NESTTRACE_RECORDING === 'off' ? null : await create
     ffmpegPath: process.env.FFMPEG_PATH ?? 'ffmpeg',
 });
 
-// cameraIdentifier -> { frame: Buffer, receivedAt: number, viewers: Set<ServerResponse> }
+// cameraIdentifier -> { frame: Buffer, receivedAt: number, viewers: Set<ServerResponse>, pollingViewers: Map<viewerId, lastSeen> }
 const cameras = new Map();
 
 const contentTypes =
@@ -103,11 +105,27 @@ function getCamera(cameraIdentifier)
 
     if (!camera)
     {
-        camera = { frame: null, receivedAt: 0, viewers: new Set() };
+        camera = { frame: null, receivedAt: 0, viewers: new Set(), pollingViewers: new Map() };
         cameras.set(cameraIdentifier, camera);
     }
 
     return camera;
+}
+
+// People watching a camera: open MJPEG streams plus viewers that polled latest.jpg recently.
+function countViewers(camera)
+{
+    const cutoff = Date.now() - pollingViewerWindowMilliseconds;
+
+    for (const [viewerId, lastSeen] of camera.pollingViewers)
+    {
+        if (lastSeen < cutoff)
+        {
+            camera.pollingViewers.delete(viewerId);
+        }
+    }
+
+    return camera.viewers.size + camera.pollingViewers.size;
 }
 
 function writeFrame(viewer, frame)
@@ -184,7 +202,7 @@ async function receiveFrame(request, response, cameraIdentifier)
         }
     }
 
-    sendJson(response, 200, { ok: true, viewers: camera.viewers.size });
+    sendJson(response, 200, { ok: true, viewers: countViewers(camera) });
 }
 
 function streamCamera(request, response, cameraIdentifier)
@@ -229,7 +247,7 @@ function listCameras(response)
             cameraIdentifier,
             online: now - camera.receivedAt < onlineWindowMilliseconds,
             lastFrameTime: new Date(camera.receivedAt).toISOString(),
-            viewerCount: camera.viewers.size,
+            viewerCount: countViewers(camera),
             recording: recorder?.isRecording(cameraIdentifier) ?? false,
         });
     }
@@ -356,7 +374,23 @@ async function handleApi(request, response, url)
             return sendJson(response, 404, { error: 'No frame yet' });
         }
 
-        response.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
+        const viewerId = String(request.headers['x-nesttrace-viewer'] ?? '').slice(0, 64);
+
+        if (viewerId)
+        {
+            camera.pollingViewers.set(viewerId, Date.now());
+        }
+
+        // Viewers poll this several times a second; answer 304 when they already have this frame.
+        const frameTag = `"${camera.receivedAt}"`;
+
+        if (request.headers['if-none-match'] === frameTag)
+        {
+            response.writeHead(304, { 'ETag': frameTag, 'Cache-Control': 'no-store' });
+            return response.end();
+        }
+
+        response.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', 'ETag': frameTag });
         return response.end(camera.frame);
     }
 
@@ -371,7 +405,7 @@ async function serveStatic(request, response, url)
     }
 
     // The phone page is its own entry; everything else falls back to the dashboard.
-    const pageAliases = { '/': '/index.html', '/camera': '/camera.html', '/camera/': '/camera.html' };
+    const pageAliases = { '/': '/index.html', '/camera': '/camera.html', '/camera/': '/camera.html', '/motion': '/motion.html', '/motion/': '/motion.html' };
     let pathname = pageAliases[url.pathname];
 
     try
