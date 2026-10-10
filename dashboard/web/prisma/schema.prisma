@@ -71,6 +71,7 @@ model User {
   notes         AlertNote[]
   statusChanges AlertStatusChange[]
   auditLogs     AuditLog[]
+  liveDevices   LiveDevice[]
 }
 
 model Zone {
@@ -87,22 +88,25 @@ model Zone {
 }
 
 model Camera {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  zoneId      String
-  zone        Zone         @relation(fields: [zoneId], references: [id])
-  lng         Float
-  lat         Float
+  id           String       @id @default(cuid())
+  code         String       @unique
+  zoneId       String
+  zone         Zone         @relation(fields: [zoneId], references: [id])
+  lng          Float
+  lat          Float
   /// Compass bearing in degrees, 0 = north, clockwise.
-  headingDeg  Float
-  fovDeg      Float        @default(44)
+  headingDeg   Float
+  fovDeg       Float        @default(44)
   /// Length of the drawn view cone in metres.
-  rangeM      Float        @default(250)
-  status      CameraStatus @default(ONLINE)
+  rangeM       Float        @default(250)
+  status       CameraStatus @default(ONLINE)
   /// { pairs: [{ px: [x, y], lngLat: [lng, lat] }] (4), frameWidth, frameHeight, rmseM }
-  calibration Json?
-  videos      Video[]
-  alerts      Alert[]
+  calibration  Json?
+  videos       Video[]
+  alerts       Alert[]
+  /// Phone whose live picture this camera shows; a phone feeds at most one camera.
+  liveDeviceId String?      @unique
+  liveDevice   LiveDevice?  @relation(fields: [liveDeviceId], references: [id], onDelete: SetNull)
 }
 
 model Video {
@@ -274,4 +278,18 @@ model LiveChunk {
   importedAt  DateTime @default(now())
   mediaPruned Boolean  @default(false)
   videos      Video[]
+}
+
+model LiveDevice {
+  id         String    @id @default(cuid())
+  name       String
+  ownerId    String
+  owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  /// Set when an admin removes the phone; it then takes no frames and is hidden from lists.
+  disabledAt DateTime?
+  camera     Camera?
+
+  @@index([ownerId])
 }

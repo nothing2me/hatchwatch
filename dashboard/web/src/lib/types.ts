@@ -134,3 +134,14 @@ export interface MapSnapshot
     /** ISO time the server built this snapshot; the client re-applies time rules (30-min Not saved) from here. */
     generatedAt?: string;
 }
+
+export interface LiveDeviceView
+{
+    id: string;
+    name: string;
+    ownerName: string;
+    cameraCode: string | null;
+    online: boolean;
+    recording: boolean;
+    lastSeenAt: string;
+}
