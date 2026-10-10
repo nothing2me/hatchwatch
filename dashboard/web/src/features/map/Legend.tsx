@@ -91,7 +91,7 @@ export function Legend({ className, fadeMinutes = 5 }: { className?: string; fad
                                 <circle cx="10" cy="8" r="2.4" fill="#4ADE80" fillOpacity="0.3" stroke="#4ADE80" strokeWidth="1.25" />
                             </svg>
                         </span>
-                        Secured area (3 m)
+                        Secured area (20 m)
                     </p>
                     <p className="flex items-center gap-2">
                         <span className={symbol}>

@@ -119,7 +119,7 @@ describe('securedAreaFeatures', () =>
         {
             expect(distanceBetween(origin, point as [number, number])).toBeCloseTo(SECURED_RADIUS_M, 3);
         }
-        expect(SECURED_RADIUS_M).toBe(3);
+        expect(SECURED_RADIUS_M).toBe(20);
     });
 });
 
@@ -129,16 +129,16 @@ describe('securedLabels', () =>
     {
         const secured = { by: 'Ada', at: '2026-10-09T00:30:00.000Z' };
         const a: [number, number] = [-97.0635, 27.8165];
-        const near = destinationPoint(a, 90, 4);
-        const far = destinationPoint(a, 90, 20);
+        const near = destinationPoint(a, 90, 30);
+        const far = destinationPoint(a, 90, 60);
         const labels = securedLabels(securedAreaFeatures([
             siteAlert('a', { secured }, { position: a }),
             siteAlert('b', { secured }, { position: near }),
             siteAlert('c', { secured }, { position: far }),
         ]));
         expect(labels.map(label => label.id)).toEqual(['a', 'c']);
-        // Anchored at the circle's south edge, 3 m below its centre.
-        expect(distanceBetween(a, labels[0].position)).toBeCloseTo(3, 3);
+        // Anchored at the circle's south edge, 20 m below its centre.
+        expect(distanceBetween(a, labels[0].position)).toBeCloseTo(20, 3);
         expect(labels[0].position[1]).toBeLessThan(a[1]);
     });
 });

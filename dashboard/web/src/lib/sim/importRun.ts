@@ -31,7 +31,7 @@ const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'
 const sha256 = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
 export async function importSimRun({ runDir, pair, mediaRoot, prisma }: {
-    runDir: string; pair: 'A' | 'B' | 'C' | 'D'; mediaRoot: string; prisma: PrismaClient;
+    runDir: string; pair: string; mediaRoot: string; prisma: PrismaClient;
 }): Promise<ImportResult>
 {
     const dir = resolve(runDir);

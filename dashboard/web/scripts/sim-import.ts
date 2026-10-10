@@ -14,16 +14,16 @@ const args = Object.fromEntries(process.argv.slice(2).reduce<[string, string][]>
 }, []));
 
 const pair = String(args.pair ?? '').toUpperCase();
-if (!args.run || !['A', 'B', 'C', 'D'].includes(pair))
+if (!args.run || !/^[A-Z]$/.test(pair))
 {
-    console.error('Usage: npm run sim:import -- --run <artifacts/public/RUN> --pair <A|B|C|D>');
+    console.error('Usage: npm run sim:import -- --run <artifacts/public/RUN> --pair <zone letter, e.g. A>');
     process.exit(2);
 }
 
 const prisma = createPrismaClient();
 try
 {
-    const result = await importSimRun({ runDir: args.run, pair: pair as 'A' | 'B' | 'C' | 'D', mediaRoot: mediaRoot(), prisma });
+    const result = await importSimRun({ runDir: args.run, pair, mediaRoot: mediaRoot(), prisma });
     console.log(`Imported ${result.runId} onto ${pair}1/${pair}2 with ${result.alertCount} site(s), ${result.trackCount} trail(s) and ${result.dangerCount} danger alert(s).`);
 }
 finally

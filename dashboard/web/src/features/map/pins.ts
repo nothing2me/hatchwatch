@@ -61,13 +61,13 @@ export function dangerPins(alerts: AlertView[]): DangerPin[]
 }
 
 /** Real radius of the secured-area circle around a protected nest site. */
-export const SECURED_RADIUS_M = 3;
+export const SECURED_RADIUS_M = 20;
 /** Fill and outline colour of a secured area. */
 export const SECURED_GREEN = '#34D399';
 
 export interface SecuredAreaProperties { id: string; by: string; at: string }
 
-// Active nest sites someone secured (protection set up or its danger resolved): a 3 m circle on the ground.
+// Active nest sites someone secured (protection set up or its danger resolved): a 20 m circle on the ground.
 export function securedAreaFeatures(alerts: AlertView[]): Feature<Polygon, SecuredAreaProperties>[]
 {
     return alerts.filter(alert => isNestSite(alert) && alert.site.active && alert.site.secured && alert.position !== null).map(alert => ({
