@@ -6,7 +6,7 @@ static const char WEB_PAGE[] = R"HTML(<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NestTrace ESP32-S3 camera</title>
+<title>HatchWatch ESP32-S3 camera</title>
 <style>
   :root { --bg:#0b1016; --panel:#121a23; --line:#1f2b38; --text:#e6edf3; --muted:#8b98a5;
           --accent:#f5b84a; --live:#ff4d5e; --ok:#34d399; }
@@ -49,7 +49,7 @@ static const char WEB_PAGE[] = R"HTML(<!doctype html>
 <main>
   <header>
     <div>
-      <div class="eyebrow">NestTrace</div>
+      <div class="eyebrow">HatchWatch</div>
       <h1>ESP32-S3 camera</h1>
     </div>
     <span id="badge" class="badge">Stopped</span>

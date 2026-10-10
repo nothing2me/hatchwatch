@@ -1,4 +1,4 @@
-// NestTrace ESP32-S3 camera for the Freenove ESP32-S3 WROOM board.
+// HatchWatch ESP32-S3 camera for the Freenove ESP32-S3 WROOM board.
 // Arduino IDE > Tools: Board "ESP32S3 Dev Module", PSRAM "OPI PSRAM", Flash Size matching your module.
 // Copy secrets.example.h to secrets.h and set your Wi-Fi before uploading. See README.md.
 
@@ -80,7 +80,7 @@ void setup()
 {
     Serial.begin(115200);
     delay(1500);
-    CONSOLE("\nNestTrace ESP32-S3 camera starting\n");
+    CONSOLE("\nHatchWatch ESP32-S3 camera starting\n");
     uplink::useTlsMemoryInPsram();  // before Wi-Fi: TLS must not take the internal RAM the camera and Wi-Fi need
 
     // Camera first: the raw-mode frame buffer needs a large block of internal RAM before Wi-Fi takes its share.

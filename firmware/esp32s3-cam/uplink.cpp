@@ -140,7 +140,7 @@ namespace
             http.begin(tls, url);
             http.addHeader("Authorization", authorization);
             http.addHeader("Content-Type", "image/jpeg");
-            http.addHeader("X-NestTrace-Motion", motionValue);
+            http.addHeader("X-HatchWatch-Motion", motionValue);
             const int code = http.POST(const_cast<uint8_t *>(frame.data()), frame.length());
             if (code > 0)
             {

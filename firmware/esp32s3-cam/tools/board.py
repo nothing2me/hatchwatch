@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NestTrace ESP32-S3 camera helper: restart, log, flash, status and secrets setup.
+"""HatchWatch ESP32-S3 camera helper: restart, log, flash, status and secrets setup.
 
 Run from anywhere:  firmware/esp32s3-cam/tools/board.py <command> [options]
 Needs pyserial for restart/log (see firmware README, "Quick setup with the board helper").
@@ -149,7 +149,7 @@ def cmd_flash(args) -> None:
         fail(f'{SECRETS} is missing; run: board.py init')
     port = find_port(args.port)
     free_port(port)
-    build = Path(os.environ.get('TMPDIR', '/tmp')) / 'nesttrace-esp32-build'
+    build = Path(os.environ.get('TMPDIR', '/tmp')) / 'hatchwatch-esp32-build'
     subprocess.run([cli, 'compile', '-b', FQBN, '--build-path', str(build), str(SKETCH)], check=True)
     subprocess.run([cli, 'upload', '-b', FQBN, '-p', port, '--input-dir', str(build), str(SKETCH)], check=True)
     print('flashed; boot log:')
@@ -209,7 +209,7 @@ def cmd_dashboard(args) -> None:
     device_id = args.device_id or input('DEVICE_ID (from Add board camera / Rotate token): ').strip()
     token = getpass.getpass('DEVICE_TOKEN (input hidden): ').strip()
     if not re.fullmatch(r'[A-Za-z0-9_-]{43}', token):
-        fail('that does not look like a NestTrace device token (43 characters)')
+        fail('that does not look like a HatchWatch device token (43 characters)')
     ca = subprocess.run(['docker', 'compose', 'exec', '-T', 'caddy', 'cat', '/data/caddy/pki/authorities/local/root.crt'],
                         cwd=DASHBOARD, capture_output=True, text=True)
     if ca.returncode != 0 or 'BEGIN CERTIFICATE' not in ca.stdout:
