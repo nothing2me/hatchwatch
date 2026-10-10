@@ -1,74 +1,97 @@
-# Real dashboard workspace
+# NestTrace dashboard
 
-This is the team’s NestTrace dashboard. It shows a live, continuously updated beach fed by the synthetic simulator, or fixed sample data when run on its own. The `web/` application is a separate synthetic research simulator and evidence viewer. Keep the dashboard as a separate application with its own package, runtime, tests, deployment, credentials, and real-data storage.
+Monitoring app for sea turtle crawl and digging activity on the Holiday Beach stretch of Port Aransas. It is separate from the research simulator in the repository root and never reads simulator state, the research API, or private evaluator truth (see `../agent.md`).
 
-The dashboard reads simulator output only through the versioned live-chunk contract (`../schemas/live-chunk.v1.json`) and the adapter in `server/liveChunkAdapter.js`. It never depends on simulator objects, seeds, private evaluator truth, or the local research API. See the repository’s [`agent.md`](../agent.md) for the boundary and alert wording.
+## Run
 
-## Live demo: an endless synthetic night shift
+Requires Docker Desktop (running) and, for development outside Docker, Node 24.
 
-Four processes, each in its own terminal, from the repository root:
-
-```powershell
-# 1. Simulator renderer (the recorder drives it in a headless browser)
-npm run dev
-
-# 2. Continuous simulator: records, analyzes, and publishes a six-turtle chunk about every 1.5-2 min
-node scripts/live-runner.mjs
-
-# 3. Dashboard backend on 127.0.0.1:5182 (drop ":demo" to turn the simulated patrol off)
-npm --prefix dashboard run server:demo
-
-# 4. Dashboard UI on http://localhost:5180
-npm --prefix dashboard run dev
-```
-
-The simulator's research API (`npm start`, port 5174) is not needed for the live demo.
-
-What happens:
-
-1. `scripts/live-runner.mjs` records 40 s chunks of six turtles crawling up, digging, and leaving, each on a fresh seed (registered experiment seeds are skipped) and a fresh beach, so older disturbances vanish from the simulation. Recording the next chunk overlaps with analysis of the previous one through the unchanged blind pipeline (extract → detect → two-camera pin grouping). When a chunk is complete it writes `artifacts/public/<chunk>/live-chunk.json` last. It keeps the newest 40 chunks (`--keep`).
-2. The backend polls for new manifests every 3 s. Each chunk is assigned to the next zone (A → B → C → D → A…), so every camera pair gets footage. Each pin becomes a nest site: map position inside the zone, arrival and departure times, which cameras saw it, and an automatic **Unprotected** flag.
-3. Connected dashboards get a live **alert** per new site ("Digging activity detected; nesting unresolved.") and a fresh snapshot. The selected pair's panel plays both cameras' latest clips.
-4. Sites fade after 5 minutes and leave the live map after 20 minutes. Leaving is itself a logged "Faded from live map" entry, and the site stays under **Archived** in the Nest log.
-5. With `server:demo`, a clearly labeled **Demo patrol (simulated)** answers each alert with a visit and then precautionary protection. It never confirms or rules out a nest, because it has no access to the simulator's truth. It stands down for any site a real patrol member has already visited. Real patrol updates entered in the dashboard go to the backend and are shared by every viewer.
-
-The renderer is daylight. The very-dark mode currently places no pins (see `../SWARM_RESULTS.md`), so a literally dark night would never raise an alert. The `swarm-spread` layout used by the live runner is not a registered experiment; don't quote accuracy from it.
-
-### Backend settings (environment variables)
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `NESTTRACE_DASHBOARD_API_PORT` | `5182` | Backend port (loopback only) |
-| `NESTTRACE_PUBLIC_ARTIFACTS` | `../artifacts/public` | Where live chunks are read from |
-| `NESTTRACE_DASHBOARD_DATA` | `server-data/` | Dashboard state and audit trail (git-ignored) |
-| `NESTTRACE_FADE_START_MINUTES` | `5` | When a site starts fading |
-| `NESTTRACE_ARCHIVE_AFTER_MINUTES` | `20` | When a site leaves the live map |
-| `NESTTRACE_CAMERA_STALE_MINUTES` | `15` | When a pair with no new footage shows offline |
-| `NESTTRACE_DEMO_PATROL` | off | `1` (or `--demo-patrol`) turns the simulated patrol on |
-
-`server-data/state.json` is replaced atomically on every change. `server-data/audit.jsonl` gets one line per log entry and is only ever appended to. Delete the folder to start a fresh night.
-
-## Sample mode
-
-To run the UI without the backend, on made-up data:
-
-```powershell
+```bash
 cd dashboard
-$env:VITE_DATA_SOURCE = "sample"; npm run dev
+cp .env.example .env            # then set AUTH_SECRET (openssl rand -base64 32), SEED_ADMIN_PASSWORD and optionally SEED_VIEWER_PASSWORD
+docker compose up --build
 ```
 
-Sample-mode patrol entries are saved in that browser's localStorage only.
+Open http://localhost:3000 and sign in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. The first start creates zones A–D, cameras A1–D2 and a read-only `viewer@nesttrace.local` account. Under Docker the viewer password is never printed: set `SEED_VIEWER_PASSWORD` in `.env` before the first start and it is used when the viewer is created (an existing viewer is never overwritten). To set or change it later, put the new value in `SEED_VIEWER_PASSWORD` and run `npm run db:reset-viewer` from `web/` (it updates the dev database named by `DATABASE_URL` and refuses if the variable is unset). The app refuses to start with `change-me` placeholder secrets.
 
-## Nest log
+The Compose file binds web (3000) and Postgres (5433) to 127.0.0.1 and sets `INSECURE_COOKIES=1` so the session cookie works over plain HTTP. That setup is for localhost-only use; put TLS in front and drop `INSECURE_COOKIES` before exposing it to a network.
 
-The **Nest log** tab tracks every nest site in its own log: when activity arrived and left (camera entries), where the site is, and every patrol update. Each new site is flagged **Unprotected** automatically. The flag clears only when a patrol logs "Protection set up" (or "No nest found"). Statuses are always worked out from the log (`src/utils/nestStatus.js`, shared by the UI and the backend), and patrol entries are append-only.
+## Develop
 
-Camera entries never confirm a nest. They use the required wording "Digging activity detected; nesting unresolved." Only a patrol entry can mark a nest as confirmed. Sites seen by only one camera of the pair are tagged **One camera** and get a dashed pin: review the clips before acting on them.
-
-## Tests
-
-```powershell
-npm --prefix dashboard test
+```bash
+docker compose up -d db          # Postgres on localhost:5433
+cd web && cp ../.env .env && npm install
+npx prisma migrate dev           # apply migrations, generate client
+npm run db:seed
+npm run dev                      # http://localhost:3000
+npm run db:test:prepare          # creates and migrates the nesttrace_test database named by TEST_DATABASE_URL
+npm test                         # unit + integration + boundary (needs the db container)
+npx vitest run tests/unit/geo.test.ts   # one file
 ```
 
-The tests cover the adapter contract (including manifests that try to point at private files), map placement, the store's logging, fading, archiving and persistence, the demo patrol, and an integration check that runs the real backend against a fixture chunk built from real pipeline output.
+## Simulation feeds
+
+Camera feeds loop footage recorded by the research simulator and imported through the `sim-import-v1` adapter. The adapter reads only a run's public outputs and refuses `private/` paths.
+
+```bash
+# repo root: record the four demo runs (needs `npm run dev` on port 5173)
+.venv/bin/python scripts/demo_runs.py
+# dashboard/web: import one run per zone pair
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-901 --pair A
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-907 --pair B
+npm run sim:import -- --run ../../artifacts/public/A-swarm-demo-911 --pair C
+npm run sim:import -- --run ../../artifacts/public/A-swarm-night-demo-919 --pair D
+```
+
+If Playwright's bundled browser is missing, `scripts/demo_runs.py` needs `NESTTRACE_BROWSER` pointing at a Chrome binary, for example `export NESTTRACE_BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
+
+Media lands in `dashboard/media/` (git-ignored, bind-mounted into the container). Pins are placed at true scale around each zone's centre and labelled "Simulated · approximate position"; they mark digging activity for inspection, never a confirmed nest.
+
+## 24-hour live feed
+
+The root simulator can run as a continuous beach feed. In one terminal at the repo root run `npm run dev` (Vite on 127.0.0.1:5173), and in another run `node scripts/live-runner.mjs` (add `--chunks 2` to stop after two chunks; on macOS set `NESTTRACE_BROWSER` if Playwright's browser is missing). The runner records six-turtle chunks, runs the blind pipeline on each and writes `artifacts/public/live-<n>-<id>/live-chunk.json` last, so a chunk is either complete or invisible.
+
+The dashboard never talks to the runner. Compose mounts `artifacts/public` read-only at `/sim-public`, and a watcher inside the web container polls for `live-*/live-chunk.json` every 3 seconds. It reads only public files named by the `live-chunk.v1` schema (`schemas/live-chunk.v1.json`) and copies the chunk's media to `MEDIA_ROOT/live/<chunk_id>/`. It never reads `private/`, seeds, scenario names or truth. New pins and alerts reach open browsers without a reload. Each chunk's cameras map onto the dashboard zones in rotation: a manifest camera at `x_min` becomes the zone's `1` camera (north end) and `x_max` the `2` camera.
+
+Timings (all server side):
+
+- A site fades on the map 5 minutes after detection while nobody has logged an entry on it (`LIVE_FADE_MINUTES`). Any person entry keeps it at full strength.
+- 20 minutes after detection it moves to Inactive as archived (`LIVE_ARCHIVE_MINUTES`), unless a person has logged any entry on it, in which case it stays until the person closes it with an outcome.
+- Media of the newest 40 chunks is kept (`LIVE_KEEP`). Older media is pruned but the database rows stay, and the UI falls back to the status card.
+
+Environment variables: `LIVE_FEED` (`1` starts the watcher; Compose always sets `1` for the web container, and a host `npm run dev` leaves it off unless you start it with `LIVE_FEED=1`, after stopping Compose web, because two watchers on one database would race), `LIVE_ROOT` (`/sim-public` in Compose, `../../artifacts/public` outside Docker), `LIVE_FADE_MINUTES`, `LIVE_ARCHIVE_MINUTES`, `LIVE_KEEP`.
+
+## People and roles
+
+There are three roles, each including the one before: viewer, volunteer, admin.
+
+- Viewer: view-only. Sees the map, feeds, alerts, site logs and analytics.
+- Volunteer: also adds site log entries (patrol visited, protection set up, nest confirmed, no nest found, hatched, lost, note).
+- Admin: also manages users, cameras and zones.
+
+Every request checks the database-backed role, so a role change or a disabled account takes effect on the next request. Admins manage people on the Users page: create an account with a role and an initial password, change a role, reset a password, or disable an account. Disable is how to cut a person off immediately: a password reset does not end sessions that already exist, while a disabled user is treated as signed out on their next request. Admins cannot change their own role or disable themselves.
+
+## Nest lifecycle and statistics
+
+Detector alerts always read "Digging activity detected; nesting unresolved." Only a person can record that a nest was found. Site events: `detected` and `departed` (from the footage), `archived` (system, when a site reaches the archive time with nobody logging anything), and person entries `patrolVisit`, `protectionInstalled`, `nestConfirmed`, `noNestFound`, `hatched`, `lost` and `note`. `hatched` requires an earlier `nestConfirmed` on the same site; the server rejects it otherwise.
+
+Active sites are open ones still on the live map. Inactive sites have an outcome (hatched or lost), a no-nest finding, or were archived.
+
+Saved and not saved, shown on Analytics ("Everything logged"):
+
+- Saved: the site was logged as hatched, with or without logged protection.
+- Not saved: logged as lost, or archived while unprotected with no person entry.
+- Pending: everything else, including sites still open and sites archived after protection was logged.
+
+Pre-log sites (created before the site log existed) get a `detected` entry automatically when the container starts (the seed step runs `backfillSiteEvents`; `npm run db:backfill-site-events` does the same by hand). It is safe to run repeatedly.
+- No-nest sites are excluded from all three.
+
+## Editing cameras
+
+Admins click the pencil on the map to enter edit mode, then click the dune line to add a camera pair. Esc or Done leaves edit mode. A click creates a zone 120 m along the beach and 60 m seaward with its land edge centred on the click, plus two cameras at the ends of that edge facing the zone centre (fov 60 degrees, range 90 m). Codes continue after the highest existing letter (E, F, ...). In edit mode a cross on a zone removes it, which asks for confirmation and removes its cameras. Only zones added on the map can be removed, and only while they have no live chunks, footage or alerts; the four original zones never can. Volunteers and viewers do not see the edit button.
+
+Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
+
+## Limits
+
+Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.

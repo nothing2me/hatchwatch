@@ -1,0 +1,88 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const currentUserOrNull = vi.fn();
+const addSiteEvent = vi.fn();
+const findUnique = vi.fn();
+
+class FakeSiteEventError extends Error
+{
+    constructor(public code: string, message: string) { super(message); }
+}
+
+vi.mock('@/lib/auth/guard', async () =>
+{
+    const rank: Record<string, number> = { VIEWER: 1, VOLUNTEER: 2, ADMIN: 3 };
+    return { currentUserOrNull, hasRole: (user: { role: string } | null, role: string) => user !== null && rank[user.role] >= rank[role] };
+});
+vi.mock('@/lib/sites/events', () => ({ addSiteEvent, SiteEventError: FakeSiteEventError }));
+vi.mock('@/lib/db', () => ({ prisma: { alert: { findUnique } } }));
+
+const { GET } = await import('@/app/api/sites/[alertId]/route');
+const { POST } = await import('@/app/api/sites/[alertId]/events/route');
+
+const ctx = { params: Promise.resolve({ alertId: 'a1' }) };
+const post = (body: unknown) => POST(new Request('http://x/api/sites/a1/events', { method: 'POST', body: JSON.stringify(body) }), ctx);
+const user = (role: string) => ({ id: 'u1', email: 'u@x.y', name: 'Una', role });
+
+beforeEach(() =>
+{
+    vi.clearAllMocks();
+    currentUserOrNull.mockResolvedValue(user('VOLUNTEER'));
+    addSiteEvent.mockResolvedValue({ outcome: 'open' });
+});
+
+describe('POST /api/sites/[alertId]/events', () =>
+{
+    it('401 without a user, 403 for viewers', async () =>
+    {
+        currentUserOrNull.mockResolvedValue(null);
+        expect((await post({ type: 'note' })).status).toBe(401);
+        currentUserOrNull.mockResolvedValue(user('VIEWER'));
+        expect((await post({ type: 'note' })).status).toBe(403);
+        expect(addSiteEvent).not.toHaveBeenCalled();
+    });
+    it('400 for bad bodies and camera-only types', async () =>
+    {
+        expect((await post({ type: 'archived' })).status).toBe(400);
+        expect((await post({ type: 'note', note: 'x'.repeat(1001) })).status).toBe(400);
+    });
+    it('records the entry as the signed-in user', async () =>
+    {
+        const response = await post({ type: 'patrolVisit', note: 'looked' });
+        expect(response.status).toBe(200);
+        expect(addSiteEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ alertId: 'a1', type: 'patrolVisit', userId: 'u1', author: 'Una', note: 'looked' }));
+    });
+    it('maps domain errors to 404, 409 and 400', async () =>
+    {
+        addSiteEvent.mockRejectedValueOnce(new FakeSiteEventError('NOT_FOUND', 'n'));
+        expect((await post({ type: 'note' })).status).toBe(404);
+        addSiteEvent.mockRejectedValueOnce(new FakeSiteEventError('NEEDS_CONFIRMED', 'n'));
+        expect((await post({ type: 'hatched' })).status).toBe(409);
+        addSiteEvent.mockRejectedValueOnce(new FakeSiteEventError('NOT_PERSON_EVENT', 'n'));
+        expect((await post({ type: 'note' })).status).toBe(400);
+    });
+});
+
+describe('GET /api/sites/[alertId]', () =>
+{
+    it('401 without a user and 404 for unknown sites', async () =>
+    {
+        currentUserOrNull.mockResolvedValue(null);
+        expect((await GET(new Request('http://x'), ctx)).status).toBe(401);
+        currentUserOrNull.mockResolvedValue(user('VIEWER'));
+        findUnique.mockResolvedValue(null);
+        expect((await GET(new Request('http://x'), ctx)).status).toBe(404);
+    });
+    it('returns the site, summary and newest-first events', async () =>
+    {
+        findUnique.mockResolvedValue({
+            id: 'a1', kind: 'DIGGING', message: 'm', status: 'NEW', zone: { code: 'B' }, camera: { code: 'B1' }, lng: 1, lat: 2,
+            createdAt: new Date('2026-10-09T20:00:00Z'), videoId: 'v', simulated: true,
+            events: [{ id: 'e1', type: 'detected', author: 'Camera', note: null, at: new Date('2026-10-09T20:00:00Z') }],
+        });
+        const body = await (await GET(new Request('http://x'), ctx)).json();
+        expect(body.site).toMatchObject({ id: 'a1', zoneCode: 'B', position: [1, 2] });
+        expect(body.summary.detectedAt).toBe('2026-10-09T20:00:00.000Z');
+        expect(body.events[0]).toMatchObject({ id: 'e1', author: 'Camera' });
+    });
+});

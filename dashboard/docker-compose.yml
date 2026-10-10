@@ -1,0 +1,40 @@
+name: nesttrace-dashboard
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: nesttrace
+      POSTGRES_PASSWORD: nesttrace
+      POSTGRES_DB: nesttrace
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nesttrace -d nesttrace"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  web:
+    build: ./web
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://nesttrace:nesttrace@db:5432/nesttrace
+      MEDIA_ROOT: /media
+      INSECURE_COOKIES: "1"
+      # The container is the one live watcher; host dev (`npm run dev`) stays off unless LIVE_FEED=1 there.
+      LIVE_FEED: "1"
+      LIVE_ROOT: /sim-public
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./media:/media
+      - ../artifacts/public:/sim-public:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,34 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@theme {
+    --color-night-950: #070D13;
+    --color-night-900: #0A1118;
+    --color-night-800: #111C25;
+    --color-night-700: #1B2833;
+    --color-ink: #D7E3EA;
+    --color-ink-muted: #8A9BA6;
+    --color-amber: #FFB547;
+    --color-danger: #E2581F;
+    --color-ok: #4ADE80;
+    --color-level-low: #4C8DD6;
+    --color-level-medium: #FFB547;
+    --color-level-high: #E2581F;
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html, body { height: 100%; }
+body { background: var(--color-night-950); color: var(--color-ink); }
+
+/* MapLibre's attribution control, restyled for the dark theme. */
+.maplibregl-ctrl-attrib { background: rgba(8, 14, 20, 0.7) !important; color: var(--color-ink-muted); }
+.maplibregl-ctrl-attrib a { color: var(--color-ink-muted); }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { margin: 0 12px 8px 0; border-radius: 999px; font-size: 10px; }
+.maplibregl-ctrl-attrib.maplibregl-compact { min-height: 22px; }
+.maplibregl-ctrl.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib .maplibregl-ctrl-attrib-inner { color: var(--color-ink-muted); }
+.maplibregl-ctrl-attrib-button { filter: invert(0.85); opacity: 0.7; background-color: transparent !important; }
+
+/* Site drawer entrances (skipped under prefers-reduced-motion via motion-safe). */
+@keyframes sheet-in-right { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes sheet-in-up { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
