@@ -71,6 +71,7 @@ model User {
   notes         AlertNote[]
   statusChanges AlertStatusChange[]
   auditLogs     AuditLog[]
+  liveDevices   LiveDevice[]
 }
 
 model Zone {
@@ -103,6 +104,22 @@ model Camera {
   calibration Json?
   videos      Video[]
   alerts      Alert[]
+  /// Phone or laptop streaming live to this camera (WebRTC, view only). One device feeds at most one camera.
+  liveDeviceId String?     @unique
+  liveDevice   LiveDevice? @relation(fields: [liveDeviceId], references: [id], onDelete: SetNull)
+}
+
+/// A browser that opened /cam and streams its camera over WebRTC. Online while it heartbeats.
+model LiveDevice {
+  id         String   @id @default(cuid())
+  name       String
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  camera     Camera?
+
+  @@index([ownerId])
 }
 
 model Video {

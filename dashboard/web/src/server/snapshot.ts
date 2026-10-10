@@ -17,7 +17,7 @@ export interface CameraRow
 {
     id: string; code: string; zone: { code: string };
     lng: number; lat: number; headingDeg: number; fovDeg: number; rangeM: number;
-    status: CameraStatus; calibration: unknown; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown; placementOffsetM?: number | null } | null }[];
+    status: CameraStatus; calibration: unknown; liveDeviceId?: string | null; videos: { id: string; source: VideoSource; durationS: number | null; pureMotionPath: string | null; simRunId: string | null; motionMapPath?: string | null; motionFitRmseM?: number | null; motionCandidates?: unknown; maskPolygon?: unknown; liveChunk?: { groundBounds: unknown; placementOffsetM?: number | null } | null }[];
 }
 
 export interface AlertRow
@@ -167,6 +167,7 @@ export function toMapSnapshot(rows: SnapshotRows): MapSnapshot
                 ...(Array.isArray(camera.videos[0].maskPolygon) ? { maskPolygon: camera.videos[0].maskPolygon } : {}),
             }
             : null,
+        liveDeviceId: camera.liveDeviceId ?? null,
         };
     });
 

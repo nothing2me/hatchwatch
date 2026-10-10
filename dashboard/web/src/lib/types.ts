@@ -80,6 +80,16 @@ export interface CameraView
     status: CameraStatus;
     calibrated: boolean;
     video: FeedVideo | null;
+    /// Device assigned to stream live to this camera (it may be offline).
+    liveDeviceId: string | null;
+}
+
+export interface LiveDeviceView
+{
+    id: string;
+    name: string;
+    online: boolean;
+    cameraCode: string | null;
 }
 
 export interface AlertView
