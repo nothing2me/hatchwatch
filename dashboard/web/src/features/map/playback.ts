@@ -26,9 +26,9 @@ export function isActive(alert: AlertView, playback: Playback | null): boolean
         && playback.t <= alert.endT + SLACK_S;
 }
 
-// Without playback every positioned alert is shown; while a feed plays only its active pins are.
+// Nest-site pins are operational records and stay on the map while footage plays.
 export function visibleAlerts(alerts: AlertView[], playback: Playback | null): AlertView[]
 {
-    const positioned = alerts.filter(alert => alert.position !== null);
-    return playback ? positioned.filter(alert => isActive(alert, playback)) : positioned;
+    void playback;
+    return alerts.filter(alert => alert.position !== null);
 }

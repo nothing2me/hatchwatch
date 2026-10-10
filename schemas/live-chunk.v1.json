@@ -15,7 +15,7 @@
     "published_at": { "type": "string", "format": "date-time" },
     "clip_seconds": { "type": "number", "exclusiveMinimum": 0 },
     "fps": { "type": "number", "exclusiveMinimum": 0 },
-    "rendering": { "enum": ["synthetic-daylight", "synthetic-very-dark"] },
+    "rendering": { "enum": ["synthetic-daylight", "synthetic-very-dark", "synthetic-active-nir"] },
     "ground_bounds_m": {
       "type": "array",
       "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }, { "type": "number" }],

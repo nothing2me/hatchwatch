@@ -18,6 +18,10 @@ export const validManifest = () => ({
 describe('liveManifestSchema', () =>
 {
     it('accepts a valid manifest', () => { expect(liveManifestSchema.safeParse(validManifest()).success).toBe(true); });
+    it('accepts the live night development rendering label', () =>
+    {
+        expect(liveManifestSchema.safeParse({ ...validManifest(), rendering: 'synthetic-active-nir' }).success).toBe(true);
+    });
     it('accepts paired public motion maps and rejects a mismatched view', () =>
     {
         const manifest = validManifest();

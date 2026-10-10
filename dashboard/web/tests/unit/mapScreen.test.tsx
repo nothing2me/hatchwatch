@@ -155,18 +155,18 @@ describe('MapScreen', () =>
         expect(element.getAttribute('src')).toBe('/api/media/video/v1?variant=raw');
         fireEvent(element, new Event('loadedmetadata'));
         expect(element.currentTime).toBeCloseTo(8);
-        expect(screen.getByTestId('visible-pins').textContent).toBe('a1');
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         const [first, second] = screen.getAllByRole('button', { name: /Digging activity detected/ });
         expect(first.getAttribute('aria-current')).toBe('true');
         expect(second.getAttribute('aria-current')).toBeNull();
     });
 
-    it('never shows other runs\' pins when a camera opens', () =>
+    it('keeps every site pin visible when a camera opens', () =>
     {
         render(<MapScreen snapshot={twoRuns} user={user} />);
         expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         fireEvent.click(screen.getByText('cam C1'));
-        expect(screen.getByTestId('visible-pins').textContent).toBe('');
+        expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
         fireEvent.click(screen.getByLabelText('Close camera panel'));
         expect(screen.getByTestId('visible-pins').textContent).toBe('a1,a2');
     });

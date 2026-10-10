@@ -9,6 +9,8 @@ export const WIDTH=1280,HEIGHT=720,DURATION=40,FPS=8;
 function rng(seed:number){return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296}}
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
 const markers=[[-10,-6],[0,-6],[10,-6],[-10,6],[0,6],[10,6]];
+const liveMarkers=[[-35,-10],[-12,-10],[12,-10],[35,-10],[-35,9],[-12,9],[12,9],[35,9]];
+const liveGroundBounds:[number,number,number,number]=[-39,39,-13,12];
 const surface=(z:number)=>sandFloor(z)+.44;
 // Walkers (opt-in via config.humans) are visual only: they never enter forcing(), so the sand is untouched.
 type Walker={id:number;group:THREE.Group;hips:THREE.Group[];knees:THREE.Group[];shoulders:THREE.Group[];elbows:THREE.Group[];height:number;speed:number;through:THREE.Vector2;dir:THREE.Vector2;passAt:number;start:number;end:number};
@@ -20,16 +22,27 @@ export class Simulation{
  constructor(canvas:HTMLCanvasElement,config:SimConfig){
  this.config=config;this.random=rng(config.seed);this.nir=config.scenario==='swarm-nir'||config.scenario==='nir-travel';this.night=config.scenario==='swarm-night'||config.scenario==='low-light'||this.nir;
  canvas.style.filter=this.nir?'grayscale(1) contrast(1.2)':'';
- const spread=config.scenario==='swarm-spread'||this.nir,swarm=config.scenario==='swarm'||config.scenario==='swarm-night'||spread,multi=config.scenario==='multi'||swarm;
- // Spread layout: every turtle gets its own dune-to-water lane (shuffled per seed) so the end cameras never
- // see two turtles stacked, plus a seeded along-shore position at least 3.5 m from every other site.
+ const liveSpread=config.scenario==='swarm-spread',spread=liveSpread||this.nir,swarm=config.scenario==='swarm'||config.scenario==='swarm-night'||spread,multi=config.scenario==='multi'||swarm;
+ // Live demo: jittered, seeded strata span most of the 84 × 32 m beach.
+ // The NIR development scene retains its six-turtle layout and independent settings.
  const spreadSites:number[][]=[];
- if(spread){const lanes=[-5,-3,-1,1,3,5];for(let i=lanes.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[lanes[i],lanes[j]]=[lanes[j],lanes[i]]}
+ if(liveSpread){for(const x of [-30,-18,-6,6,18,30])for(let n=0;n<3;n++){
+  let candidate:number[]=[x,0],bestDistance=-1;
+  for(let attempt=0;attempt<120;attempt++){
+   const point=[x+(this.random()-.5)*10,-11+this.random()*22];
+   const distance=Math.min(...spreadSites.map(([sx,sz])=>Math.hypot(sx-point[0],sz-point[1])),Infinity);
+   if(distance>bestDistance){candidate=point;bestDistance=distance}
+   if(distance>=4.5)break;
+  }
+  spreadSites.push(candidate);
+ }
+  for(let i=spreadSites.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[spreadSites[i],spreadSites[j]]=[spreadSites[j],spreadSites[i]]}}
+ else if(spread){const lanes=[-5,-3,-1,1,3,5];for(let i=lanes.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[lanes[i],lanes[j]]=[lanes[j],lanes[i]]}
   for(const z of lanes){let x=0;for(let attempt=0;attempt<200;attempt++){x=-10.5+this.random()*21;if(spreadSites.every(([sx,sz])=>Math.hypot(sx-x,sz-z)>=3.5))break}spreadSites.push([x,z])}}
- const specs=Array.from({length:swarm?6:multi?3:1},(_,id)=>{
- const targetX=spread?spreadSites[id][0]+(this.random()-.5)*.6:swarm?-10+id*4+(this.random()-.5)*.6:multi?-5+id*5+(this.random()-.5)*.8:(this.random()-.5)*6;
- const startX=multi?targetX+(this.random()-.5)*1.4:(this.random()-.5)*7;
- const target=new THREE.Vector2(targetX,spread?spreadSites[id][1]+(this.random()-.5)*.6:-.8+this.random()*3);
+ const specs=Array.from({length:liveSpread?18:swarm?6:multi?3:1},(_,id)=>{
+ const targetX=spread?spreadSites[id][0]:swarm?-10+id*4+(this.random()-.5)*.6:multi?-5+id*5+(this.random()-.5)*.8:(this.random()-.5)*6;
+ const startX=liveSpread||multi?targetX+(this.random()-.5)*1.4:(this.random()-.5)*7;
+ const target=new THREE.Vector2(targetX,spread?spreadSites[id][1]:-.8+this.random()*3);
  const size=.85+this.random()*.25,speed=.9+this.random()*.2,startAt=3+(spread?id*.4:swarm?id*1.5:multi?id*3.5:0);
  const digStart=startAt+(swarm?9:8)/speed,digEnd=digStart+(swarm?6+this.random()*1.5:multi?6.5+this.random()*1.5:8+this.random()*3);
  const coverEnd=digEnd+(swarm?2.5+this.random()*.5:multi?2.6+this.random()*.5:3.5+this.random());
@@ -42,7 +55,7 @@ export class Simulation{
   addHousingPoles(this.scene);
  this.ready=Promise.all([this.environment.ready,this.loadTurtleModel()]).then(()=>{});
  this.sand=new ParticleSand(this.random);this.scene.add(this.sand.mesh);
- for(const [x,z] of markers){const marker=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.16),new THREE.MeshStandardMaterial({color:0x354d4c}));marker.position.set(x,surface(z),z);marker.userData.calibrationMarker=true;this.scene.add(marker)}
+ for(const [x,z] of liveSpread?liveMarkers:markers){const marker=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,.16),new THREE.MeshStandardMaterial({color:0x354d4c}));marker.position.set(x,surface(z),z);marker.userData.calibrationMarker=true;this.scene.add(marker)}
  for(const spec of specs){const group=new THREE.Group(),flippers:THREE.Mesh[]=[];
  const mat=new THREE.MeshStandardMaterial({color:0x586b45,roughness:.9});const shell=new THREE.Mesh(new THREE.SphereGeometry(1,32,16),mat);shell.scale.set(.43,.25,.62);shell.position.y=.25;group.add(shell);
  for(const x of [-.21,0,.21])for(const z of [-.3,0,.3]){const scute=new THREE.Mesh(new THREE.SphereGeometry(1,5,3),new THREE.MeshStandardMaterial({color:x===0?0x758358:0x65794f}));scute.scale.set(.13,.035,.16);scute.position.set(x,.48-Math.abs(x)*.28-Math.abs(z)*.16,z);group.add(scute)}
@@ -51,7 +64,8 @@ export class Simulation{
  for(const x of [-1,1])for(const z of [-1,1]){const f=new THREE.Mesh(new THREE.SphereGeometry(1,12,6),new THREE.MeshStandardMaterial({color:0x78845c}));f.scale.set(z>0?.36:.26,.045,z>0?.13:.16);f.position.set(x*.46,.1,z*.36);f.rotation.y=x*z*.4;group.add(f);flippers.push(f)}group.traverse(obj=>{if(obj instanceof THREE.Mesh)obj.castShadow=true});group.scale.setScalar(spec.size);this.scene.add(group);this.actors.push({...spec,group,flippers});}
  // Shoreline runs along X. Cameras face along its length, perpendicular to inland travel.
  // Opt-in seaward layout: dune-mounted cameras behind the nesting area looking out over it toward the water.
- if(config.layout==='seaward'){this.addSandUnderlay();for(const x of [-9,9]){const c=new THREE.PerspectiveCamera(52,WIDTH/HEIGHT,.1,250);c.position.set(x,5.6,14);c.lookAt(x+Math.sign(x)*-12,0,-8);c.updateMatrixWorld();this.cameras.push(c)}}
+ if(liveSpread){for(const x of [-15,15]){const c=new THREE.PerspectiveCamera(65,WIDTH/HEIGHT,.1,250);c.position.set(x,19,29);c.lookAt(0,0,-2);c.updateMatrixWorld();this.cameras.push(c)}}
+ else if(config.layout==='seaward'){this.addSandUnderlay();for(const x of [-9,9]){const c=new THREE.PerspectiveCamera(52,WIDTH/HEIGHT,.1,250);c.position.set(x,5.6,14);c.lookAt(x+Math.sign(x)*-12,0,-8);c.updateMatrixWorld();this.cameras.push(c)}}
  else for(const x of [-28,28]){const c=new THREE.PerspectiveCamera(48,WIDTH/HEIGHT,.1,250);c.position.set(x,5.6,0);c.lookAt(-Math.sign(x)*20,2.3,0);c.updateMatrixWorld();this.cameras.push(c)}
  // Active near-IR proxy: camera-mounted emitters illuminate only this opt-in night scene.
  // Three.js has no wavelength-dependent material response, so recorded frames are monochrome
@@ -164,7 +178,7 @@ this.sand.advance(t,tt=>this.forcing(tt));const forces=this.forcing(t);
  captureNight(t:number,view:number){const ctx=this.nightContext!,noise=this.noiseContext!,image=noise.createImageData(320,180);let state=(this.config.seed^Math.imul(Math.round(t*FPS)+1,2654435761)^Math.imul(view+1,2246822519))>>>0;
  for(let i=0;i<image.data.length;i+=4){state=(Math.imul(state,1664525)+1013904223)>>>0;const value=state>>>24;image.data[i]=value;image.data[i+1]=value;image.data[i+2]=value;image.data[i+3]=255}
  noise.putImageData(image,0,0);ctx.filter=this.nir?'grayscale(1) contrast(1.2) brightness(1.15)':'none';ctx.drawImage(this.renderer.domElement,0,0);ctx.filter='none';ctx.globalAlpha=this.nir ? .018 : .045;ctx.imageSmoothingEnabled=false;ctx.drawImage(this.noiseCanvas!,0,0,WIDTH,HEIGHT);ctx.globalAlpha=1;return this.nightCanvas!.toDataURL('image/png').split(',')[1]}
- calibration(view:number){const c=this.cameras[view];return {camera:view,width:WIDTH,height:HEIGHT,mount_position_m:c.position.toArray(),orientation_quaternion_xyzw:c.quaternion.toArray(),vertical_fov_degrees:c.fov,ground_bounds:[-12,12,-8,8],beach_bounds:[-BEACH_LENGTH/2,BEACH_LENGTH/2,-BEACH_WIDTH/2,BEACH_WIDTH/2],plane_slope:.018,reference_points:markers.map(([x,z])=>{const v=new THREE.Vector3(x,surface(z),z).project(c);return {world:[x,z],pixel:[(v.x+1)*WIDTH/2,(1-v.y)*HEIGHT/2]}}),note:this.config.layout==='seaward'?'Dune-mounted seaward cameras at 5.6m mounting height, 14m inland at x=±9, pitched down toward the water and overlapping the central 24 × 16m region. Planar initial particle surface; particle relief and elevated turtle motion add parallax.':'Opposed down-beach side cameras at 5.6m mounting height with about 4 degree downward pitch, overlapping the central 24 × 16m region. Planar initial particle surface; particle relief and elevated turtle motion add parallax.'}}
+ calibration(view:number){const c=this.cameras[view],liveSpread=this.config.scenario==='swarm-spread';return {camera:view,width:WIDTH,height:HEIGHT,mount_position_m:c.position.toArray(),orientation_quaternion_xyzw:c.quaternion.toArray(),vertical_fov_degrees:c.fov,ground_bounds:liveSpread?liveGroundBounds:[-12,12,-8,8],beach_bounds:[-BEACH_LENGTH/2,BEACH_LENGTH/2,-BEACH_WIDTH/2,BEACH_WIDTH/2],plane_slope:.018,reference_points:(liveSpread?liveMarkers:markers).map(([x,z])=>{const v=new THREE.Vector3(x,surface(z),z).project(c);return {world:[x,z],pixel:[(v.x+1)*WIDTH/2,(1-v.y)*HEIGHT/2]}}),note:liveSpread?'Two elevated dune-side cameras at 19m mounting height overlooking the 78 × 25m live recording footprint. Planar initial particle surface; particle relief and elevated turtle motion add parallax.':this.config.layout==='seaward'?'Dune-mounted seaward cameras at 5.6m mounting height, 14m inland at x=±9, pitched down toward the water and overlapping the central 24 × 16m region. Planar initial particle surface; particle relief and elevated turtle motion add parallax.':'Opposed down-beach side cameras at 5.6m mounting height with about 4 degree downward pitch, overlapping the central 24 × 16m region. Planar initial particle surface; particle relief and elevated turtle motion add parallax.'}}
  truth(){const eggs=this.hasDig()&&!['abandoned','unrelated','no-eggs'].includes(this.config.scenario)&&this.config.eggs!==false;return {seed:this.config.seed,scenario:this.config.scenario,model:this.config.model,sites:this.hasDig()&&this.config.scenario!=='unrelated'?this.actors.map(actor=>({turtle_id:actor.id,point:[actor.target.x,actor.target.y-.3],interval:[actor.digStart,actor.coverEnd],radius:1.2,kind:'digging'})):[],eggs:eggs?this.actors.map(actor=>({turtle_id:actor.id,point:[actor.target.x,actor.target.y-.3],interval:[actor.digEnd,actor.coverEnd]})):[],body_footprint_m2:Math.PI*.43*.62*this.actors[0].size*this.actors[0].size,...(this.walkers.length?{people:this.walkers.map(w=>({id:w.id,height_m:+w.height.toFixed(3),path:Array.from({length:81},(_,i)=>i/2).filter(t=>t>=w.start&&t<=w.end).map(t=>{const {x,z}=this.walkerPosition(w,t);return [t,+x.toFixed(3),+z.toFixed(3)]})}))}:{})}}
  dispose(){this.renderer.domElement.style.filter='';this.scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(x=>x.dispose());else m.dispose()}});this.renderer.dispose()}
 }

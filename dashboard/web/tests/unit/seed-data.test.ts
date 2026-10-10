@@ -20,14 +20,14 @@ describe('seed data', () =>
         }
     });
 
-    it('has two cameras per zone, A2 offline', () =>
+    it('has two online cameras per zone', () =>
     {
         expect(SEED_CAMERAS).toHaveLength(8);
         for (const code of ['A', 'B', 'C', 'D'])
         {
             expect(SEED_CAMERAS.filter(camera => camera.zoneCode === code)).toHaveLength(2);
         }
-        expect(SEED_CAMERAS.find(camera => camera.code === 'A2')?.status).toBe('OFFLINE');
+        expect(SEED_CAMERAS.find(camera => camera.code === 'A2')?.status).toBe('ONLINE');
         SEED_CAMERAS.forEach(camera => expect(inPortAransas([camera.lng, camera.lat])).toBe(true));
     });
 

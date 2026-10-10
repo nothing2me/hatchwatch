@@ -1,6 +1,6 @@
 // Continuous synthetic beach feed for the live demo.
 //
-// Records back-to-back six-turtle chunks on fresh seeds, runs the unchanged blind pipeline on each
+// Records back-to-back live chunks on fresh seeds, runs the unchanged blind pipeline on each
 // (extract -> detect -> two-camera pin grouping), then publishes a versioned manifest
 // (schemas/live-chunk.v1.json) as artifacts/public/<chunk>/live-chunk.json. The manifest is written
 // last, so a chunk is either complete or invisible to consumers. Each chunk is a fresh beach, so
@@ -51,7 +51,7 @@ const python = process.platform === 'win32' ? resolve('.venv/Scripts/python.exe'
 const chunkPattern = /^live-(\d{6})-([A-Za-z0-9]+)$/;
 const clipSeconds = 40;
 const fps = 8;
-const groundBounds = [-12, 12, -8, 8];
+const groundBounds = scenario === 'swarm-spread' ? [-39, 39, -13, 12] : [-12, 12, -8, 8];
 // Camera masks are operator config, shared with the dashboard through the PUBLIC
 // artifacts dir: the dashboard (admin) edits artifacts/public/camera-masks.json
 // and the runner seeds it from config/ and applies it at extraction.
@@ -171,12 +171,18 @@ async function analyzeAndPublish(chunk)
 {
     const publicRun = resolve(publicRoot, chunk.chunkId);
     log(`Analyzing ${chunk.chunkId}`);
-    await run(python, ['scripts/analyze.py', chunk.chunkId, '--both', '--settings', scenario === 'swarm-nir' ? 'config/settings-nir-dev.json' : 'config/settings-swarm.json', '--no-evaluate']);
+    const detectorSettings = scenario === 'swarm-nir' ? 'config/settings-nir-dev.json' : scenario === 'swarm-spread' ? 'config/settings-live-dev.json' : 'config/settings-swarm.json';
+    await run(python, ['scripts/analyze.py', chunk.chunkId, '--both', '--settings', detectorSettings, '--no-evaluate', ...(scenario === 'swarm-spread' ? ['--no-mask'] : [])]);
     await run(python, ['pipeline/pin_fuse.py',
         '--camera-0', resolve(publicRun, 'view-0/detection/predictions.json'),
         '--camera-1', resolve(publicRun, 'view-1/detection/predictions.json'),
-        '--registration', 'config/pin-settings.json',
+        '--registration', scenario === 'swarm-spread' ? 'config/pin-settings-live-dev.json' : 'config/pin-settings.json',
         '--output', resolve(publicRun, 'pins/predictions.json')]);
+    if (scenario === 'swarm-spread')
+    {
+        await run(python, ['scripts/filter-live-pins.py', '--predictions', resolve(publicRun, 'pins/predictions.json'), '--settings', 'config/pin-settings-live-dev.json',
+            '--camera-0', resolve(publicRun, 'view-0/detection/predictions.json'), '--camera-1', resolve(publicRun, 'view-1/detection/predictions.json')]);
+    }
 
     for (const script of ['track_paths.py', 'people_detect.py'])
     {
@@ -192,7 +198,7 @@ async function analyzeAndPublish(chunk)
         }
     }
 
-    const masksFile = existsSync(publicMasks) ? publicMasks : (existsSync(masksFallback) ? masksFallback : null);
+    const masksFile = scenario === 'swarm-spread' ? null : (existsSync(publicMasks) ? publicMasks : (existsSync(masksFallback) ? masksFallback : null));
     if (masksFile)
     {
         await copyFile(masksFile, resolve(publicRun, 'mask.json'));

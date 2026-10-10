@@ -3,12 +3,12 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as maplibre from 'maplibre-gl';
 import { GripVertical, ImageOff, X } from 'lucide-react';
-import { forwardRef, useMemo, useState } from 'react';
-import Map, { Layer, Marker, Source, type MapRef } from 'react-map-gl/maplibre';
+import { forwardRef, useEffect, useMemo, useState } from 'react';
+import Map, { Layer, Marker, Popup, Source, type MapRef } from 'react-map-gl/maplibre';
 import type { FeatureCollection } from 'geojson';
 import { cn } from '@/lib/cn';
 import { boundsOf, destinationPoint, viewCone } from '@/lib/geo';
-import type { LngLat, MapSnapshot } from '@/lib/types';
+import type { FeedVideo, LngLat, MapSnapshot } from '@/lib/types';
 import { fitPadding, initialBounds } from './bounds';
 import { buildMapStyle } from './mapStyle';
 import { isMarkerClick } from './markerClick';
@@ -34,6 +34,7 @@ interface MapViewProps
     now?: number;
     selectedAlertId?: string | null;
     onSelectAlert?: (alertId: string) => void;
+    onPlayRecording?: (cameraId: string, video: FeedVideo) => void;
     // Admin edit mode: a click joins a zone within 150 m or starts a new zone there; camera markers can be dragged.
     editing?: boolean;
     onMapClick?: (at: LngLat) => void;
@@ -67,10 +68,25 @@ const ALARM = '#FF4D5E';
 // "Secured" labels appear once a 20 m circle is big enough on screen to carry one.
 const SECURED_LABEL_ZOOM = 16.5;
 
-export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
+type ZoneRecording = { cameraId: string; cameraCode: string; recordedAt: string; video: FeedVideo };
+const recordingTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+export const MapView = forwardRef<MapRef, MapViewProps>(function MapView({ snapshot, layers, selectedCameraId, onSelectCamera, playback, now = Date.now(), selectedAlertId = null, onSelectAlert, onPlayRecording, editing = false, onMapClick, onMoveCamera, onMoveZone, onDeleteZone }, ref)
 {
     const [imageryOffline, setImageryOffline] = useState(false);
     const [pinHover, setPinHover] = useState(false);
+    const [zoneMenu, setZoneMenu] = useState<{ code: string; position: LngLat } | null>(null);
+    const [history, setHistory] = useState<{ loading: boolean; recordings: ZoneRecording[]; error: string | null }>({ loading: false, recordings: [], error: null });
+    useEffect(() =>
+    {
+        if (!zoneMenu) return;
+        const controller = new AbortController();
+        fetch(`/api/zones/${zoneMenu.code}/recordings`, { cache: 'no-store', signal: controller.signal })
+            .then(async response => { if (!response.ok) throw new Error('Could not load recordings.'); return response.json() as Promise<ZoneRecording[]>; })
+            .then(recordings => setHistory({ loading: false, recordings, error: null }))
+            .catch(error => { if (!controller.signal.aborted) setHistory({ loading: false, recordings: [], error: error instanceof Error ? error.message : 'Could not load recordings.' }); });
+        return () => controller.abort();
+    }, [zoneMenu?.code]);
     const style = useMemo(buildMapStyle, []);
     // A dragged camera stays where it was dropped until the server's next snapshot moves it there (or back).
     const [dropped, setDropped] = useState<{ cameras: MapSnapshot['cameras']; at: Record<string, LngLat> }>({ cameras: snapshot.cameras, at: {} });
@@ -182,6 +198,16 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                     {
                         onSelectAlert?.(id);
                     }
+                }}
+                onContextMenu={event =>
+                {
+                    if (editing || !layers.zones) return;
+                    const feature = event.target.queryRenderedFeatures(event.point, { layers: ['zone-fill'] })[0];
+                    const code = feature?.properties?.code;
+                    if (typeof code !== 'string') return;
+                    event.originalEvent.preventDefault();
+                    setHistory({ loading: true, recordings: [], error: null });
+                    setZoneMenu({ code, position: [event.lngLat.lng, event.lngLat.lat] });
                 }}
                 onError={event =>
                 {
@@ -409,6 +435,22 @@ const footprintsGeoJson = useMemo<FeatureCollection>(() => ({
                         </button>
                     </Marker>
                 ))}
+                {zoneMenu && !editing && (() =>
+                {
+                    const zone = snapshot.zones.find(item => item.code === zoneMenu.code);
+                    return <Popup longitude={zoneMenu.position[0]} latitude={zoneMenu.position[1]} anchor="bottom" maxWidth="290px" closeButton={false} className="zone-history-popup" onClose={() => setZoneMenu(null)}>
+                        <div className="w-64 rounded-lg bg-night-900 p-3 text-ink">
+                            <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold">Zone {zoneMenu.code}</p><p className="text-xs text-ink-muted">{zone?.name ?? 'Beach zone'} · {zone?.activityLevel.toLowerCase() ?? 'unknown'} activity</p></div><button type="button" onClick={() => setZoneMenu(null)} aria-label="Close zone details" className="rounded p-0.5 text-ink-muted hover:text-ink"><X className="h-4 w-4" /></button></div>
+                            <p className="mt-3 text-[10px] font-semibold tracking-[0.12em] text-ink-muted uppercase">Historical playback</p>
+                            {history.loading && <p className="mt-1 text-xs text-ink-muted">Loading recordings…</p>}
+                            {history.error && <p role="alert" className="mt-1 text-xs text-[#FFB3BA]">{history.error}</p>}
+                            {!history.loading && !history.error && history.recordings.length === 0 && <p className="mt-1 text-xs text-ink-muted">No saved footage for this zone.</p>}
+                            <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+                                {history.recordings.map(row => <button key={row.video.id} type="button" onClick={() => { onPlayRecording?.(row.cameraId, row.video); setZoneMenu(null); }} className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-amber">Camera {row.cameraCode} · {recordingTime.format(new Date(row.recordedAt))}</button>)}
+                            </div>
+                        </div>
+                    </Popup>;
+                })()}
             </Map>
 
             {imageryOffline && (
