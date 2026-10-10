@@ -1,12 +1,11 @@
 'use server';
 
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { authenticate } from '@/lib/auth/authenticate';
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/session';
 import { authSecret } from '@/lib/auth/guard';
-import { isHttpsRequest } from '@/lib/auth/requestSecurity';
 
 export type LoginState = { error: string | null };
 
@@ -30,6 +29,6 @@ export async function loginAction(_prev: LoginState, form: FormData): Promise<Lo
     }
 
     const store = await cookies();
-    store.set(SESSION_COOKIE, await createSessionToken(user, authSecret()), sessionCookieOptions({ secure: isHttpsRequest(await headers()) }));
+    store.set(SESSION_COOKIE, await createSessionToken(user, authSecret()), sessionCookieOptions());
     redirect('/');
 }
