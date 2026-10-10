@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "nesttrace.people v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "people", "note"],
+  "properties": {
+    "schema": {"const": "nesttrace.people"},
+    "version": {"const": 1},
+    "note": {"type": "string"},
+    "people": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "points", "max_height_m"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^person-[0-9]+$"},
+          "max_height_m": {"type": "number"},
+          "points": {
+            "type": "array",
+            "minItems": 2,
+            "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}
+          }
+        }
+      }
+    }
+  }
+}
