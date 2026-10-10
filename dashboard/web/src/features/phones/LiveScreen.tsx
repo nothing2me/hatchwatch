@@ -117,7 +117,7 @@ function Tile({ device }: { device: LiveDeviceView })
                 {board && <span className="absolute top-2.5 right-2.5"><MotionBadge motion={device.motion} /></span>}
             </div>
             <div className="flex flex-wrap items-end gap-x-3 gap-y-3 p-4">
-                <div className="min-w-0 flex-1">
+                <div className={cn('min-w-0 flex-1', board && 'basis-52')}>
                     <p className="truncate font-semibold text-ink">{device.name}</p>
                     <p className="mt-0.5 truncate text-xs text-ink-muted">{board ? `Camera board · added by ${device.ownerName}` : `by ${device.ownerName}`}</p>
                     <p className={cn('mt-1.5 text-xs', device.cameraCode ? 'font-mono text-amber' : 'text-ink-muted')}>{device.cameraCode ? `Camera ${device.cameraCode}` : 'Not linked to a map camera'}</p>
@@ -275,12 +275,12 @@ export function LiveScreen({ user, bar, connect }: { user: SessionUser; bar: Top
                         <p className="mt-1.5 text-sm text-ink-muted">Phones sending over the local Wi-Fi. Pictures refresh about five times a second.</p>
                     </div>
                     {isAdmin && (
-                        <div className="flex shrink-0 flex-wrap gap-2 max-sm:w-full">
-                            <button ref={addRef} type="button" onClick={() => setAdding(true)} className={cn(action, 'h-10 justify-center px-4 text-sm max-sm:flex-1')}>
+                        <div className="flex shrink-0 gap-2 max-sm:w-full max-sm:flex-col">
+                            <button ref={addRef} type="button" onClick={() => setAdding(true)} className={cn(action, 'h-10 justify-center px-4 text-sm')}>
                                 <Cpu aria-hidden className="h-4 w-4" />
                                 Add board camera
                             </button>
-                            <button type="button" onClick={() => setConnecting(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-night-950 transition-colors hover:bg-amber/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber max-sm:flex-1">
+                            <button type="button" onClick={() => setConnecting(true)} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-night-950 transition-colors hover:bg-amber/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber">
                                 <QrCode aria-hidden className="h-4 w-4" />
                                 Connect phone
                             </button>
