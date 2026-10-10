@@ -102,6 +102,15 @@ Admins click the pencil on the map to enter edit mode. Esc or Done leaves edit m
 
 Open a camera to see its feed. The expand button shows it large (Escape closes it) and the left edge of the camera panel can be dragged, or moved with the arrow keys, to resize it; the width is remembered in the browser.
 
+## Phones and laptops as live cameras
+
+1. Set `LAN_HOST` in `dashboard/.env` to this computer's Wi-Fi IP address (macOS: `ipconfig getifaddr en0`; Windows: the Wi-Fi adapter's IPv4 address in `ipconfig`), then `docker compose up -d --build`. The address changes with the network (a phone hotspot gives a different one): update it and rebuild when you move.
+2. On the dashboard (admin), click **Connect device** in the top bar and scan the QR code with the phone on the same Wi-Fi. The page is served by Caddy on `https://<LAN_HOST>:3443/cam` with a self-signed certificate: tap **Advanced → Proceed** once.
+3. Sign in on the phone (it comes back to the camera page), pick the rear camera, tap **Start streaming**, and keep the page open with the screen on. A reload keeps the same device, so its camera assignment survives.
+4. On the dashboard, open a camera and pick the device under **Source**. The camera plays **LIVE** on the map and on the Cameras page; if the phone stops, it falls back to the simulation loop within about 15 s. Choose **Simulation loop** to unassign it.
+
+Only port 3443 is open to the network and every page there needs a login; the app (3000) and Postgres (5433) stay on this machine. Video goes directly between browsers over Wi-Fi (WebRTC, no STUN/TURN) and is not recorded or analysed; the server only relays the connection set-up. Up to four viewers per device. Signalling lives in memory in the one `web` process. If the phone can't reach the page, allow port 3443 through the computer's firewall and check that the Wi-Fi does not isolate devices from each other (guest networks often do).
+
 ## Limits
 
 Map imagery comes from Esri World Imagery and needs internet; without it the map shows zones and cameras on a dark background. Zone and camera positions were converted from the earlier map image and are accurate to roughly ±20 m. Alerts never confirm a nest; only a person in the field can mark an alert field-confirmed.
