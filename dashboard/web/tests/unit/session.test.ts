@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SignJWT } from 'jose';
-import { createSessionToken, readSessionToken, type SessionUser } from '@/lib/auth/session';
+import { createSessionToken, readSessionToken, sessionCookieOptions, type SessionUser } from '@/lib/auth/session';
 
 const secret = 'test-secret-that-is-long-enough-0123456789';
 const user: SessionUser = { id: 'u1', email: 'a@b.c', name: 'A', role: 'ADMIN' };
@@ -56,5 +56,23 @@ describe('session tokens', () =>
     {
         const token = await createSessionToken({ ...user, role: 'ROOT' as never }, secret);
         expect(await readSessionToken(token, secret)).toBeNull();
+    });
+});
+
+describe('sessionCookieOptions', () =>
+{
+    it('forces Secure for HTTPS requests even with INSECURE_COOKIES', () =>
+    {
+        const previous = process.env.INSECURE_COOKIES;
+        process.env.INSECURE_COOKIES = '1';
+        try
+        {
+            expect(sessionCookieOptions({ secure: true }).secure).toBe(true);
+            expect(sessionCookieOptions().secure).toBe(false);
+        }
+        finally
+        {
+            if (previous === undefined) delete process.env.INSECURE_COOKIES; else process.env.INSECURE_COOKIES = previous;
+        }
     });
 });

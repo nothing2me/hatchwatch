@@ -60,12 +60,12 @@ export async function readSessionToken(token: string | undefined, secret: string
     }
 }
 
-export function sessionCookieOptions()
+export function sessionCookieOptions(options: { secure?: boolean } = {})
 {
     return {
         httpOnly: true as const,
         sameSite: 'lax' as const,
-        secure: process.env.NODE_ENV === 'production' && process.env.INSECURE_COOKIES !== '1',
+        secure: options.secure === true || (process.env.NODE_ENV === 'production' && process.env.INSECURE_COOKIES !== '1'),
         path: '/' as const,
         maxAge: SESSION_TTL_SECONDS,
     };
